@@ -1,7 +1,7 @@
 // src/api/auth.tsx
 import axios from "axios";
 
-const API_BASE_URL = "https://your-api-server.com"; // 🔁 Đổi sang URL thật 
+const API_BASE_URL = "http://localhost:3000/"; // 🔁 Đổi sang URL thật 
 
 //  Tạo instance axios dùng chung
 const api = axios.create({ baseURL: API_BASE_URL });
