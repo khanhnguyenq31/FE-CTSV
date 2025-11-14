@@ -1,12 +1,23 @@
-
 import { Input, Button, Form, Card, Typography } from "antd";
 import { useMutation } from "@tanstack/react-query";
-import { loginApi } from "../api/auth";
-import { useAuthStore } from "../store/auth";
-import { UserOutlined, LockOutlined } from "@ant-design/icons"; 
+import { MailOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
+
+const forgotPasswordApi = async (email: string) => {
+  console.log("Forgot Password Request for Email:", email);
+  
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      
+      resolve({ message: "Email đặt lại mật khẩu đã được gửi." });
+      
+    }, 1000);
+  });
+};
+
 const { Title, Text, Paragraph } = Typography;
+
 
 function Illustration() {
   return (
@@ -31,65 +42,62 @@ function Illustration() {
   );
 }
 
-export default function Login({ messageApi }: { messageApi: any }) {
-  const login = useAuthStore((s) => s.login);
+export default function ForgotPassword({ messageApi }: { messageApi: any }) {
   const [form] = Form.useForm();
   const navigate = useNavigate();
 
   const mutation = useMutation({
-    mutationFn: ({ email, password }: { email: string; password: string }) =>
-      loginApi(email, password),
-    onSuccess: () => {
-      login();
-      messageApi.success("Đăng nhập thành công!");
-      navigate("/home"); // Chuyển đến trang home
+    mutationFn: ({ email }: { email: string }) => forgotPasswordApi(email),
+    onSuccess: (data: any) => {
+     
+      messageApi.success(data?.message || "Yêu cầu đã được gửi! Vui lòng kiểm tra email.");
+      
     },
     onError: (err: any) => {
       const errMsg =
-        err?.response?.data?.message || err?.message || "Đăng nhập thất bại";
+        err?.response?.data?.message || err?.message || "Gửi yêu cầu thất bại.";
       messageApi.error(errMsg);
     },
   });
 
   const onFinish = (values: any) => {
     mutation.mutate({
-      email: values.email, 
-      password: values.password,
+      email: values.email,
     });
   };
 
   return (
     <>
-      
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="w-full max-w-5xl bg-transparent rounded-xl shadow-sm flex overflow-hidden">
-          {/* Left: Card with form */}
+         
           <Card
             bordered={false}
             bodyStyle={{ padding: 32 }}
             className="w-full md:w-1/2 rounded-l-xl bg-gray-100"
             style={{ borderRadius: 16, backgroundColor: "#f5f5f5" }}
           >
-
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 rounded overflow-hidden flex items-center justify-center bg-white">
                 <img
-                  src="/src/assets/logo.png" 
+                  src="/src/assets/logo.png"
                   alt="Logo"
                   className="w-full h-full object-contain"
                 />
               </div>
               <div>
                 <Text strong>SMS BK</Text>
-                <div className="text-sm text-gray-500">Hệ thống quản lý Công tác sinh viên</div>
+                <div className="text-sm text-gray-500">
+                  Hệ thống quản lý Công tác sinh viên
+                </div>
               </div>
             </div>
 
             <Title level={2} className="!m-0 !mb-3">
-              Đăng nhập
+              Quên mật khẩu
             </Title>
             <Paragraph className="!mt-0 text-gray-600">
-              Vui lòng nhập thông tin tài khoản của bạn để sử dụng hệ thống quản lý công tác sinh viên.
+             Vui lòng nhập **Email** bạn đã dùng để đăng ký tài khoản. Chúng tôi sẽ gửi một liên kết khôi phục mật khẩu đến địa chỉ này để bạn đặt lại mật khẩu một cách nhanh chóng và an toàn.
             </Paragraph>
 
             <Form
@@ -97,34 +105,21 @@ export default function Login({ messageApi }: { messageApi: any }) {
               layout="vertical"
               onFinish={onFinish}
               className="mt-4"
-              initialValues={{ email: "", password: "" }}
+              initialValues={{ email: "" }}
             >
               {/* Email */}
               <Form.Item
                 label="Email"
                 name="email"
                 rules={[
-                    { required: true, message: "Vui lòng nhập email!" },
-                    { type: "email", message: "Email không hợp lệ!" },
-                  ]}
-                >
+                  { required: true, message: "Vui lòng nhập email!" },
+                  { type: "email", message: "Email không hợp lệ!" },
+                ]}
+              >
                 <Input
                   size="large"
-                  placeholder="Nhập email"
-                  prefix={<UserOutlined className="text-gray-400" />} 
-                />
-              </Form.Item>
-
-              {/* Password */}
-              <Form.Item
-                label="Mật khẩu"
-                name="password"
-                rules={[{ required: true, message: "Nhập mật khẩu!" }]}
-              >
-                <Input.Password
-                  size="large"
-                  placeholder="Mật khẩu"
-                  prefix={<LockOutlined className="text-gray-400" />} 
+                  placeholder="Nhập email đã đăng ký"
+                  prefix={<MailOutlined className="text-gray-400" />}
                 />
               </Form.Item>
 
@@ -132,34 +127,31 @@ export default function Login({ messageApi }: { messageApi: any }) {
                 <Button
                   type="primary"
                   htmlType="submit"
-                  loading={(mutation as any).isPending || (mutation as any).isLoading}
+                  loading={
+                    (mutation as any).isPending || (mutation as any).isLoading
+                  }
                   className="w-full hover:bg-gray-800 hover:border-gray-800 hover:scale-[1.02] transition duration-200"
                   size="large"
                   style={{ backgroundColor: "#000", borderColor: "#000" }}
                 >
-                  Đăng nhập
+                  Gửi yêu cầu đặt lại mật khẩu
                 </Button>
               </Form.Item>
 
-              <div className="flex justify-between items-center text-sm mt-2">
-                <a
-                  className="text-black underline hover:opacity-80"
-                  onClick={() => navigate("/forgot-password")}
-                >
-                  Quên mật khẩu?
-                </a>
-                <a
-                  className="text-black underline hover:opacity-80"
-                 onClick={() => navigate("/register")}
-                >
-                  Đăng ký tài khoản
-                </a>
+              <div className="flex justify-center items-center text-sm mt-2">
+                <Text type="secondary">
+                  <a
+                    className="text-black underline hover:opacity-80 font-medium"
+                    onClick={() => navigate("/login")}
+                  >
+                    Quay lại Đăng nhập
+                  </a>
+                </Text>
               </div>
-
             </Form>
           </Card>
 
-          {/* Right: Full image section */}
+         
           <div className="hidden md:flex md:w-1/2 rounded-r-xl overflow-hidden">
             <img
               src="/src/assets/logo1.png"
