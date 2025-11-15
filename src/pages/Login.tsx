@@ -42,7 +42,7 @@ export default function Login({ messageApi }: { messageApi: any }) {
     onSuccess: () => {
       login();
       messageApi.success("Đăng nhập thành công!");
-      navigate("/home"); // Chuyển đến trang home
+      navigate("/technician/home"); // Chuyển đến trang home của kỹ thuật viên
     },
     onError: (err: any) => {
       const errMsg =

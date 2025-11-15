@@ -19,90 +19,78 @@ import {
   PlusOutlined,
   EyeOutlined,
   SearchOutlined,
-  CheckCircleOutlined, // Icon cho trạng thái "Đã duyệt"
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-// Giả định các components Sidebar và Layout/Content được import đúng cách
-import Sidebar from "../components/Sidebar";
-import CustomHeader from "../components/CustomHeader";
+
+import CustomHeader from "../../components/CustomHeader";
 import { Layout } from "antd";
 const { Content } = Layout;
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 
-// 1. Cấu trúc dữ liệu cho Điểm rèn luyện
-type Classification = "Xuất sắc" | "Tốt" | "Khá" | "Trung bình" | "Yếu";
-type Status = "Đã duyệt" | "Chờ duyệt";
+// 1. Cấu trúc dữ liệu cho Yêu cầu chứng nhận
+type RequestStatus = "Chờ xử lý" | "Đang xử lý" | "Sẵn sàng" | "Đã từ chối";
 
 type RowData = {
   key: string;
   stt: string;
   name: string;
   studentId: string; // Mã SV
-  semester: string; // Học kỳ
-  academicYear: string; // Năm học
-  score: number; // Tổng điểm
-  classification: Classification; // Xếp loại
-  status: Status; // Trạng thái
+  certificateType: string; // Loại chứng nhận (VD: Giấy xác nhận sinh viên)
+  purpose: string; // Mục đích (VD: Xin visa du học, nộp hồ sơ học bổng)
+  requestDate: string; // Ngày yêu cầu
+  expiryDate: string; // Ngày hoàn thành dự kiến/Ngày hoàn thành
+  status: RequestStatus; // Trạng thái xử lý
 };
 
 // Hàm tạo dữ liệu mock
 function generateMock(n = 30): RowData[] {
   const rows: RowData[] = [];
   for (let i = 1; i <= n; i++) {
-    let score: number;
-    let classification: Classification;
-
-    if (i % 3 === 0) { // Xuất sắc (90-100)
-        score = 92;
-        classification = "Xuất sắc";
-    } else if (i % 5 === 0) { // Tốt (80-89)
-        score = 85;
-        classification = "Tốt";
-    } else { // Khá, TB, Yếu
-        score = 75;
-        classification = "Khá";
+    let status: RequestStatus;
+    if (i % 5 === 0) {
+      status = "Chờ xử lý";
+    } else if (i % 4 === 0) {
+      status = "Đang xử lý";
+    } else if (i % 3 === 0) {
+      status = "Đã từ chối";
+    } else {
+      status = "Sẵn sàng";
     }
-    
+
     rows.push({
       key: String(i),
       stt: i < 10 ? `0${i}` : `${i}`,
       name: i % 2 === 0 ? "Trần Thị Bình" : "Nguyễn Văn An",
       studentId: `2211${i < 10 ? `00${i}` : `0${i}`}`,
-      semester: i % 2 === 0 ? "HK1" : "HK2",
-      academicYear: "2024-2025",
-      score: score,
-      classification: classification,
-      status: i % 7 === 0 ? "Chờ duyệt" : "Đã duyệt",
+      certificateType: i % 2 === 0 ? "Giấy xác nhận sinh viên" : "Bảng điểm tạm thời",
+      purpose: i % 2 === 0 ? "Xin visa du học" : "Nộp hồ sơ học bổng",
+      requestDate: "01/06/2025",
+      expiryDate: status === "Sẵn sàng" ? "05/06/2025" : "-",
+      status: status,
     });
   }
   return rows;
 }
 
-// Hàm render Tag cho Xếp loại
-const ClassificationTag: React.FC<{ classification: Classification }> = ({ classification }) => {
-  let color = "blue";
-  if (classification === "Xuất sắc") {
-    color = "green";
-  } else if (classification === "Tốt") {
-    color = "cyan";
-  } else if (classification === "Yếu") {
+// Hàm render Tag cho Trạng thái
+const StatusTag: React.FC<{ status: RequestStatus }> = ({ status }) => {
+  let color = "default";
+  if (status === "Sẵn sàng") {
+    color = "success";
+  } else if (status === "Chờ xử lý") {
+    color = "orange";
+  } else if (status === "Đang xử lý") {
+    color = "blue";
+  } else if (status === "Đã từ chối") {
     color = "red";
   }
 
-  return <Tag color={color} style={{ fontWeight: 600 }}>{classification}</Tag>;
+  return <Tag color={color} style={{ fontWeight: 600 }}>{status}</Tag>;
 };
 
-// Hàm render Tag cho Trạng thái
-const StatusTag: React.FC<{ status: Status }> = ({ status }) => {
-    if (status === "Đã duyệt") {
-        return <Tag color="success" icon={<CheckCircleOutlined />} style={{ fontWeight: 600 }}>{status}</Tag>;
-    }
-    return <Tag color="orange" style={{ fontWeight: 600 }}>{status}</Tag>;
-};
-
-export default function ScorePage({ messageApi }: { messageApi: any }) {
+export default function CertificatePage({  }: { messageApi: any }) {
   const navigate = useNavigate();
   const [data] = useState<RowData[]>(() => generateMock(60));
   const [search, setSearch] = useState("");
@@ -123,7 +111,7 @@ export default function ScorePage({ messageApi }: { messageApi: any }) {
     return filtered.slice(start, start + pageSize);
   }, [filtered, page, pageSize]);
 
-  // 2. Cột cho bảng Điểm rèn luyện
+  // 2. Cột cho bảng Yêu cầu chứng nhận
   const columns: ColumnsType<RowData> = [
     {
       title: "STT",
@@ -154,41 +142,38 @@ export default function ScorePage({ messageApi }: { messageApi: any }) {
       render: (v: string) => <Text>{v}</Text>,
     },
     {
-      title: "Học kỳ",
-      dataIndex: "semester",
-      key: "semester",
-      width: 100,
+      title: "Loại chứng nhận",
+      dataIndex: "certificateType",
+      key: "certificateType",
+      render: (v: string) => <Text type="secondary">{v}</Text>,
+    },
+    {
+      title: "Mục đích",
+      dataIndex: "purpose",
+      key: "purpose",
       responsive: ["lg"] as any,
+      render: (v: string) => <Text>{v}</Text>,
     },
     {
-      title: "Năm học",
-      dataIndex: "academicYear",
-      key: "academicYear",
+      title: "Ngày yêu cầu",
+      dataIndex: "requestDate",
+      key: "requestDate",
       width: 120,
-      responsive: ["lg"] as any,
+      responsive: ["md"] as any,
     },
     {
-      title: "Tổng điểm",
-      dataIndex: "score",
-      key: "score",
-      width: 100,
-      align: "center",
-      render: (v: number) => <Text style={{ fontWeight: 600 }}>{v}</Text>,
-    },
-    {
-      title: "Xếp loại",
-      dataIndex: "classification",
-      key: "classification",
-      width: 120,
-      align: "center",
-      render: (c: Classification) => <ClassificationTag classification={c} />,
+      title: "Ngày hoàn thành",
+      dataIndex: "expiryDate",
+      key: "expiryDate",
+      width: 130,
+      responsive: ["md"] as any,
     },
     {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       width: 120,
-      render: (s: Status) => <StatusTag status={s} />,
+      render: (s: RequestStatus) => <StatusTag status={s} />,
       align: "center",
     },
     {
@@ -197,12 +182,12 @@ export default function ScorePage({ messageApi }: { messageApi: any }) {
       width: 60,
       render: (_: any, record: RowData) => (
         <Space>
-          <Tooltip title="Xem chi tiết đánh giá">
+          <Tooltip title="Xem chi tiết yêu cầu">
             <Button
               type="text"
               icon={<EyeOutlined />}
               onClick={() => {
-                alert(`Xem đánh giá ĐRL: ${record.semester} - ${record.academicYear} của ${record.name}`);
+                alert(`Xem yêu cầu: ${record.certificateType} của ${record.name}`);
               }}
             />
           </Tooltip>
@@ -212,16 +197,15 @@ export default function ScorePage({ messageApi }: { messageApi: any }) {
   ];
 
   // Tính toán số liệu thống kê (Mock dựa trên dữ liệu giả)
-  const totalAssessments = data.length;
-  const excellent = data.filter(r => r.classification === "Xuất sắc").length;
-  const good = data.filter(r => r.classification === "Tốt").length;
-  // Tính điểm trung bình (chỉ tính 1 lần cho đơn giản)
-  const averageScore = 92.0; 
+  const totalRequests = data.length;
+  const pending = data.filter(r => r.status === "Chờ xử lý").length;
+  const processing = data.filter(r => r.status === "Đang xử lý").length;
+  const ready = data.filter(r => r.status === "Sẵn sàng").length;
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
       {/* Sidebar dùng chung */}
-      <Sidebar messageApi={messageApi} />
+      
 
       {/* Nội dung chính */}
       <Layout>
@@ -234,23 +218,23 @@ export default function ScorePage({ messageApi }: { messageApi: any }) {
                 <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} />
                 <div>
                   <Title level={4} style={{ margin: 0 }}>
-                    Điểm rèn luyện
+                    Đăng ký chứng nhận
                   </Title>
-                  <Text type="secondary">Quản lý và đánh giá điểm rèn luyện sinh viên</Text>
+                  <Text type="secondary">Quản lý các yêu cầu chứng nhận trực tuyến của sinh viên</Text>
                 </div>
               </Space>
             </Col>
 
             <Col>
               <Space>
-                {/* Nút Tạo đánh giá */}
+                {/* Nút Thêm yêu cầu */}
                 <Button
                   type="primary"
                   icon={<PlusOutlined />}
                   style={{ borderRadius: 8, fontWeight: 600 }}
-                  onClick={() => alert("Chức năng tạo đánh giá")}
+                  onClick={() => alert("Chức năng thêm yêu cầu")}
                 >
-                  Tạo đánh giá
+                   Thêm yêu cầu
                 </Button>
               </Space>
             </Col>
@@ -260,26 +244,26 @@ export default function ScorePage({ messageApi }: { messageApi: any }) {
           <Row gutter={16} style={{ marginBottom: 18 }}>
             <Col xs={24} sm={12} lg={6}>
               <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Tổng đánh giá</Text>
-                <Title level={3} style={{ margin: 0 }}>{totalAssessments}</Title>
+                <Text type="secondary">Tổng yêu cầu</Text>
+                <Title level={3} style={{ margin: 0 }}>{totalRequests}</Title>
               </Card>
             </Col>
             <Col xs={24} sm={12} lg={6}>
               <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Xuất sắc</Text>
-                <Title level={3} style={{ margin: 0 }}>{excellent}</Title>
+                <Text type="secondary">Chờ xử lý</Text>
+                <Title level={3} style={{ margin: 0 }}>{pending}</Title>
               </Card>
             </Col>
             <Col xs={24} sm={12} lg={6}>
               <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Tốt</Text>
-                <Title level={3} style={{ margin: 0 }}>{good}</Title>
+                <Text type="secondary">Đang xử lý</Text>
+                <Title level={3} style={{ margin: 0 }}>{processing}</Title>
               </Card>
             </Col>
             <Col xs={24} sm={12} lg={6}>
               <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Điểm trung bình</Text>
-                <Title level={3} style={{ margin: 0 }}>{averageScore.toFixed(1)}</Title>
+                <Text type="secondary">Sẵn sàng</Text>
+                <Title level={3} style={{ margin: 0 }}>{ready}</Title>
               </Card>
             </Col>
           </Row>
@@ -288,8 +272,8 @@ export default function ScorePage({ messageApi }: { messageApi: any }) {
           <Card style={{ borderRadius: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, flexDirection: "column" }}>
               <div>
-                <Title level={5} style={{ margin: 0 }}>Danh sách điểm rèn luyện</Title>
-                <Text type="secondary">Quản lý và đánh giá điểm rèn luyện của sinh viên</Text>
+                <Title level={5} style={{ margin: 0 }}>Danh sách yêu cầu chứng nhận</Title>
+                <Text type="secondary">Quản lý và xử lý yêu cầu chứng nhận của sinh viên</Text>
               </div>
 
               <div style={{ minWidth: 320, marginTop: 12 }}>
@@ -314,7 +298,7 @@ export default function ScorePage({ messageApi }: { messageApi: any }) {
               rowKey="key"
               bordered={false}
               style={{ background: "transparent" }}
-              scroll={{ x: 800 }} 
+              scroll={{ x: 1000 }} 
             />
 
             {/* Phân trang */}

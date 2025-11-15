@@ -23,9 +23,9 @@ import {
   RightOutlined,
 } from "@ant-design/icons";
 
-import Sidebar from "../components/Sidebar";
-import CustomHeader from "../components/CustomHeader";
-import adminImg from "../assets/logo2.png";
+
+import CustomHeader from "../../components/CustomHeader";
+import adminImg from "../../assets/logo2.png";
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -156,7 +156,7 @@ function CustomCalendar() {
   );
 }
 
-export default function HomePage({ messageApi }: { messageApi: any }) {
+export default function HomePage({  }: { messageApi: any }) {
   
   
   const stats = [
@@ -204,7 +204,7 @@ export default function HomePage({ messageApi }: { messageApi: any }) {
 
  return (
     <Layout style={{ minHeight: "100vh" }}>
-      <Sidebar messageApi={messageApi} />
+    
 
       <Layout>
         <CustomHeader />

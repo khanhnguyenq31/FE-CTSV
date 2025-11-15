@@ -22,8 +22,8 @@ import {
   SearchOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "../components/Sidebar";
-import CustomHeader from "../components/CustomHeader";
+
+import CustomHeader from "../../components/CustomHeader";
 import { Layout } from "antd";
 const { Content } = Layout;
 
@@ -62,7 +62,7 @@ function generateMock(n = 24): RowData[] {
   return rows;
 }
 
-export default function ManagePage({ messageApi }: { messageApi: any }) {
+export default function ManagePage({ }: { messageApi: any }) {
   const navigate = useNavigate();
   const [data] = useState<RowData[]>(() => generateMock(60));
   const [search, setSearch] = useState("");
@@ -184,7 +184,7 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
   return (
     <Layout style={{ minHeight: "100vh" }}>
       {/* Sidebar dùng chung */}
-      <Sidebar messageApi={messageApi} />
+      
 
       {/* Nội dung chính */}
       <Layout>

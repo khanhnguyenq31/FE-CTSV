@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import  { useMemo, useState } from "react";
 import type { ColumnsType } from "antd/es/table";
 import {
   Row,
@@ -21,88 +21,65 @@ import {
   SearchOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "../components/Sidebar";
-import CustomHeader from "../components/CustomHeader";
+
+ 
+import CustomHeader from "../../components/CustomHeader";
 import { Layout } from "antd";
 const { Content } = Layout;
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 
-// 1. Cấu trúc dữ liệu cho Yêu cầu chứng nhận
-type RequestStatus = "Chờ xử lý" | "Đang xử lý" | "Sẵn sàng" | "Đã từ chối";
 
 type RowData = {
   key: string;
   stt: string;
   name: string;
-  studentId: string; // Mã SV
-  certificateType: string; // Loại chứng nhận (VD: Giấy xác nhận sinh viên)
-  purpose: string; // Mục đích (VD: Xin visa du học, nộp hồ sơ học bổng)
-  requestDate: string; // Ngày yêu cầu
-  expiryDate: string; // Ngày hoàn thành dự kiến/Ngày hoàn thành
-  status: RequestStatus; // Trạng thái xử lý
+  studentId: string; 
+  classId: string; 
+  major: string; 
+  course: string; 
+  gpa: number; 
+  trainingScore: number; 
+  status: "Đang học" | "Đã tốt nghiệp" | "Bảo lưu"; 
 };
 
-// Hàm tạo dữ liệu mock
-function generateMock(n = 30): RowData[] {
+
+function generateMock(n = 60): RowData[] {
   const rows: RowData[] = [];
   for (let i = 1; i <= n; i++) {
-    let status: RequestStatus;
-    if (i % 5 === 0) {
-      status = "Chờ xử lý";
-    } else if (i % 4 === 0) {
-      status = "Đang xử lý";
-    } else if (i % 3 === 0) {
-      status = "Đã từ chối";
-    } else {
-      status = "Sẵn sàng";
-    }
-
     rows.push({
       key: String(i),
       stt: i < 10 ? `0${i}` : `${i}`,
-      name: i % 2 === 0 ? "Trần Thị Bình" : "Nguyễn Văn An",
-      studentId: `2211${i < 10 ? `00${i}` : `0${i}`}`,
-      certificateType: i % 2 === 0 ? "Giấy xác nhận sinh viên" : "Bảng điểm tạm thời",
-      purpose: i % 2 === 0 ? "Xin visa du học" : "Nộp hồ sơ học bổng",
-      requestDate: "01/06/2025",
-      expiryDate: status === "Sẵn sàng" ? "05/06/2025" : "-",
-      status: status,
+      name: "Phạm Thị Dung",
+      studentId: `2211000${i < 10 ? `0${i}` : `${i}`}`,
+      classId: "MT22K404",
+      major: "Công nghệ thông tin",
+      course: "K22",
+      gpa: 3.45,
+      trainingScore: 85,
+      
+      status: i % 5 === 0 ? "Bảo lưu" : "Đang học", 
     });
   }
   return rows;
 }
 
-// Hàm render Tag cho Trạng thái
-const StatusTag: React.FC<{ status: RequestStatus }> = ({ status }) => {
-  let color = "default";
-  if (status === "Sẵn sàng") {
-    color = "success";
-  } else if (status === "Chờ xử lý") {
-    color = "orange";
-  } else if (status === "Đang xử lý") {
-    color = "blue";
-  } else if (status === "Đã từ chối") {
-    color = "red";
-  }
-
-  return <Tag color={color} style={{ fontWeight: 600 }}>{status}</Tag>;
-};
-
-export default function CertificatePage({ messageApi }: { messageApi: any }) {
+export default function ProfilePage({  }: { messageApi: any }) {
   const navigate = useNavigate();
-  const [data] = useState<RowData[]>(() => generateMock(60));
+  const [data] = useState<RowData[]>(() => generateMock());
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Logic lọc theo Mã SV
+  
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return data;
     return data.filter(
-      (r) => r.studentId.toLowerCase().includes(q)
+      (r) =>
+        r.name.toLowerCase().includes(q) ||
+        r.studentId.toLowerCase().includes(q)
     );
   }, [data, search]);
 
@@ -111,7 +88,7 @@ export default function CertificatePage({ messageApi }: { messageApi: any }) {
     return filtered.slice(start, start + pageSize);
   }, [filtered, page, pageSize]);
 
-  // 2. Cột cho bảng Yêu cầu chứng nhận
+  
   const columns: ColumnsType<RowData> = [
     {
       title: "STT",
@@ -124,7 +101,7 @@ export default function CertificatePage({ messageApi }: { messageApi: any }) {
       title: "Họ và tên",
       dataIndex: "name",
       key: "name",
-      width: 150,
+      width: 180,
       render: (name: string) => (
         <Space>
           <Avatar size="small" style={{ background: "#f0f0f0", color: "#000" }}>
@@ -142,38 +119,60 @@ export default function CertificatePage({ messageApi }: { messageApi: any }) {
       render: (v: string) => <Text>{v}</Text>,
     },
     {
-      title: "Loại chứng nhận",
-      dataIndex: "certificateType",
-      key: "certificateType",
+      title: "Lớp",
+      dataIndex: "classId",
+      key: "classId",
+      width: 100,
+      responsive: ["lg"] as any,
       render: (v: string) => <Text type="secondary">{v}</Text>,
     },
     {
-      title: "Mục đích",
-      dataIndex: "purpose",
-      key: "purpose",
+      title: "Ngành",
+      dataIndex: "major",
+      key: "major",
+      width: 180,
       responsive: ["lg"] as any,
-      render: (v: string) => <Text>{v}</Text>,
+      render: (v: string) => <Text type="secondary">{v}</Text>,
     },
     {
-      title: "Ngày yêu cầu",
-      dataIndex: "requestDate",
-      key: "requestDate",
-      width: 120,
+      title: "Khóa",
+      dataIndex: "course",
+      key: "course",
+      width: 80,
       responsive: ["md"] as any,
+      align: "center",
     },
     {
-      title: "Ngày hoàn thành",
-      dataIndex: "expiryDate",
-      key: "expiryDate",
-      width: 130,
+      title: "GPA",
+      dataIndex: "gpa",
+      key: "gpa",
+      width: 80,
       responsive: ["md"] as any,
+      render: (v: number) => <Text style={{ fontWeight: 600 }}>{v.toFixed(2)}</Text>,
+      align: "center",
+    },
+    {
+      title: "Điểm RL",
+      dataIndex: "trainingScore",
+      key: "trainingScore",
+      width: 90,
+      responsive: ["md"] as any,
+      render: (v: number) => <Text>{v}</Text>,
+      align: "center",
     },
     {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       width: 120,
-      render: (s: RequestStatus) => <StatusTag status={s} />,
+      render: (s: RowData["status"]) =>
+        s === "Đang học" ? (
+          <Tag color="success" style={{ fontWeight: 600 }}>{s}</Tag>
+        ) : s === "Bảo lưu" ? (
+          <Tag color="orange" style={{ fontWeight: 600 }}>{s}</Tag>
+        ) : (
+          <Tag style={{ fontWeight: 600 }}>{s}</Tag>
+        ),
       align: "center",
     },
     {
@@ -182,12 +181,12 @@ export default function CertificatePage({ messageApi }: { messageApi: any }) {
       width: 60,
       render: (_: any, record: RowData) => (
         <Space>
-          <Tooltip title="Xem chi tiết yêu cầu">
+          <Tooltip title="Xem chi tiết hồ sơ">
             <Button
               type="text"
               icon={<EyeOutlined />}
               onClick={() => {
-                alert(`Xem yêu cầu: ${record.certificateType} của ${record.name}`);
+                alert(`Xem hồ sơ sinh viên: ${record.name} (${record.studentId})`);
               }}
             />
           </Tooltip>
@@ -196,16 +195,10 @@ export default function CertificatePage({ messageApi }: { messageApi: any }) {
     },
   ];
 
-  // Tính toán số liệu thống kê (Mock dựa trên dữ liệu giả)
-  const totalRequests = data.length;
-  const pending = data.filter(r => r.status === "Chờ xử lý").length;
-  const processing = data.filter(r => r.status === "Đang xử lý").length;
-  const ready = data.filter(r => r.status === "Sẵn sàng").length;
-
   return (
     <Layout style={{ minHeight: "100vh" }}>
       {/* Sidebar dùng chung */}
-      <Sidebar messageApi={messageApi} />
+      
 
       {/* Nội dung chính */}
       <Layout>
@@ -218,67 +211,80 @@ export default function CertificatePage({ messageApi }: { messageApi: any }) {
                 <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} />
                 <div>
                   <Title level={4} style={{ margin: 0 }}>
-                    Đăng ký chứng nhận
+                    Hồ sơ sinh viên
                   </Title>
-                  <Text type="secondary">Quản lý các yêu cầu chứng nhận trực tuyến của sinh viên</Text>
+                  <Text type="secondary">Quản lý thông tin và hồ sơ của sinh viên</Text>
                 </div>
               </Space>
             </Col>
 
             <Col>
               <Space>
-                {/* Nút Thêm yêu cầu */}
+                {/* Nút Thêm sinh viên */}
                 <Button
                   type="primary"
                   icon={<PlusOutlined />}
                   style={{ borderRadius: 8, fontWeight: 600 }}
-                  onClick={() => alert("Chức năng thêm yêu cầu")}
+                  onClick={() => alert("Chức năng thêm sinh viên")}
                 >
-                   Thêm yêu cầu
+                   Thêm sinh viên
                 </Button>
               </Space>
             </Col>
           </Row>
 
-          {/* Các card thống kê */}
+          {/* 5. Các card thống kê theo thiết kế ảnh */}
           <Row gutter={16} style={{ marginBottom: 18 }}>
             <Col xs={24} sm={12} lg={6}>
               <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Tổng yêu cầu</Text>
-                <Title level={3} style={{ margin: 0 }}>{totalRequests}</Title>
+                <Text type="secondary">Tổng sinh viên</Text>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <Title level={3} style={{ margin: 0 }}>3000</Title>
+                  <Text style={{ color: "#39b54a", fontWeight: 600, fontSize: 13 }}>+12% so với năm trước</Text>
+                </div>
               </Card>
             </Col>
             <Col xs={24} sm={12} lg={6}>
               <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Chờ xử lý</Text>
-                <Title level={3} style={{ margin: 0 }}>{pending}</Title>
+                <Text type="secondary">Đang học</Text>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <Title level={3} style={{ margin: 0 }}>2980</Title>
+                  <Text style={{ color: "#39b54a", fontWeight: 600, fontSize: 13 }}>+15% so với năm trước</Text>
+                </div>
               </Card>
             </Col>
             <Col xs={24} sm={12} lg={6}>
               <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Đang xử lý</Text>
-                <Title level={3} style={{ margin: 0 }}>{processing}</Title>
+                <Text type="secondary">GPA trung bình</Text>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <Title level={3} style={{ margin: 0 }}>2.88</Title>
+                  <Text style={{ color: "#39b54a", fontWeight: 600, fontSize: 13 }}>+0.12 so với kỳ trước</Text>
+                </div>
               </Card>
             </Col>
             <Col xs={24} sm={12} lg={6}>
               <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Sẵn sàng</Text>
-                <Title level={3} style={{ margin: 0 }}>{ready}</Title>
+                <Text type="secondary">Điểm rèn luyện TB</Text>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <Title level={3} style={{ margin: 0 }}>85.0</Title>
+                  <Text style={{ color: "#39b54a", fontWeight: 600, fontSize: 13 }}>+2.5 so với kỳ trước</Text>
+                </div>
               </Card>
             </Col>
           </Row>
 
-          {/* Bảng dữ liệu - Đã chỉnh Search nằm dưới tiêu đề */}
+          {/* Bảng dữ liệu */}
           <Card style={{ borderRadius: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, flexDirection: "column" }}>
               <div>
-                <Title level={5} style={{ margin: 0 }}>Danh sách yêu cầu chứng nhận</Title>
-                <Text type="secondary">Quản lý và xử lý yêu cầu chứng nhận của sinh viên</Text>
+                <Title level={5} style={{ margin: 0 }}>Danh sách sinh viên</Title>
+                <Text type="secondary">Quản lý thông tin và hồ sơ của tất cả sinh viên</Text>
               </div>
 
               <div style={{ minWidth: 320, marginTop: 12 }}>
+                {/* 6. Cập nhật placeholder cho ô tìm kiếm */}
                 <Search
-                  placeholder="Tìm kiếm theo Mã SV"
+                  placeholder="Tìm kiếm theo tên hoặc Mã SV"
                   allowClear
                   onSearch={(val) => {
                     setSearch(val);

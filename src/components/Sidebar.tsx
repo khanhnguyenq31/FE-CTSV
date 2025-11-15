@@ -27,15 +27,15 @@ export default function Sidebar({ messageApi }: { messageApi: any }) {
 
   
   const pathToKey: Record<string, string> = {
-    "/home": "1",
-    "/manage": "2",
-    "/profile": "3",
-    "/decision": "4",
-    "/praise": "5",
-    "/certificate": "6",
-    "/score": "7",
-    "/event": "8",
-    "/scholarship": "9",
+    "/technician/home": "1",
+    "/technician/manage": "2",
+    "/technician/profile": "3",
+    "/technician/decision": "4",
+    "/technician/praise": "5",
+    "/technician/certificate": "6",
+    "/technician/score": "7",
+    "/technician/event": "8",
+    "/technician/scholarship": "9",
   };
 
   
@@ -80,31 +80,31 @@ export default function Sidebar({ messageApi }: { messageApi: any }) {
         mode="inline"
         selectedKeys={[selectedKey]} 
       >
-        <Menu.Item key="1" icon={<HomeOutlined />} onClick={() => navigate("/home")}>
+        <Menu.Item key="1" icon={<HomeOutlined />} onClick={() => navigate("/technician/home")}>
           Tổng quan
         </Menu.Item>
-        <Menu.Item key="2" icon={<UserOutlined />} onClick={() => navigate("/manage")}>
+        <Menu.Item key="2" icon={<UserOutlined />} onClick={() => navigate("/technician/manage")}>
           Quản lý nhập học
         </Menu.Item>
-        <Menu.Item key="3" icon={<FileTextOutlined />} onClick={() => navigate("/profile")}>
+        <Menu.Item key="3" icon={<FileTextOutlined />} onClick={() => navigate("/technician/profile")}>
         Hồ sơ sinh viên
         </Menu.Item>
-        <Menu.Item key="4" icon={<SolutionOutlined />} onClick={() => navigate("/decision")}>
+        <Menu.Item key="4" icon={<SolutionOutlined />} onClick={() => navigate("/technician/decision")}>
         Quyết định học vụ
         </Menu.Item>
-        <Menu.Item key="5" icon={<TrophyOutlined />} onClick={() => navigate("/praise")}>
+        <Menu.Item key="5" icon={<TrophyOutlined />} onClick={() => navigate("/technician/praise")}>
         Khen thưởng & Kỷ luật
         </Menu.Item>
-        <Menu.Item key="6" icon={<BookOutlined />} onClick={() => navigate("/certificate")}>
+        <Menu.Item key="6" icon={<BookOutlined />} onClick={() => navigate("/technician/certificate")}>
         Chứng nhận
         </Menu.Item>
-        <Menu.Item key="7" icon={<ScheduleOutlined />} onClick={() => navigate("/score")}>
+        <Menu.Item key="7" icon={<ScheduleOutlined />} onClick={() => navigate("/technician/score")}>
         Điểm rèn luyện
         </Menu.Item>
-        <Menu.Item key="8" icon={<CalendarOutlined />} onClick={() => navigate("/event")}>
+        <Menu.Item key="8" icon={<CalendarOutlined />} onClick={() => navigate("/technician/event")}>
         Sự kiện & hoạt động
         </Menu.Item>
-        <Menu.Item key="9" icon={<GiftOutlined />} onClick={() => navigate("/scholarship")}>
+        <Menu.Item key="9" icon={<GiftOutlined />} onClick={() => navigate("/technician/scholarship")}>
         Học bổng
         </Menu.Item>
       </Menu>

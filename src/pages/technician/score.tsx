@@ -1,4 +1,4 @@
-import  { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import type { ColumnsType } from "antd/es/table";
 import {
   Row,
@@ -19,67 +19,102 @@ import {
   PlusOutlined,
   EyeOutlined,
   SearchOutlined,
+  CheckCircleOutlined, // Icon cho trạng thái "Đã duyệt"
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+// Giả định các components Sidebar và Layout/Content được import đúng cách
 
-import Sidebar from "../components/Sidebar"; 
-import CustomHeader from "../components/CustomHeader";
+import CustomHeader from "../../components/CustomHeader";
 import { Layout } from "antd";
 const { Content } = Layout;
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 
+// 1. Cấu trúc dữ liệu cho Điểm rèn luyện
+type Classification = "Xuất sắc" | "Tốt" | "Khá" | "Trung bình" | "Yếu";
+type Status = "Đã duyệt" | "Chờ duyệt";
 
 type RowData = {
   key: string;
   stt: string;
   name: string;
-  studentId: string; 
-  classId: string; 
-  major: string; 
-  course: string; 
-  gpa: number; 
-  trainingScore: number; 
-  status: "Đang học" | "Đã tốt nghiệp" | "Bảo lưu"; 
+  studentId: string; // Mã SV
+  semester: string; // Học kỳ
+  academicYear: string; // Năm học
+  score: number; // Tổng điểm
+  classification: Classification; // Xếp loại
+  status: Status; // Trạng thái
 };
 
-
-function generateMock(n = 60): RowData[] {
+// Hàm tạo dữ liệu mock
+function generateMock(n = 30): RowData[] {
   const rows: RowData[] = [];
   for (let i = 1; i <= n; i++) {
+    let score: number;
+    let classification: Classification;
+
+    if (i % 3 === 0) { // Xuất sắc (90-100)
+        score = 92;
+        classification = "Xuất sắc";
+    } else if (i % 5 === 0) { // Tốt (80-89)
+        score = 85;
+        classification = "Tốt";
+    } else { // Khá, TB, Yếu
+        score = 75;
+        classification = "Khá";
+    }
+    
     rows.push({
       key: String(i),
       stt: i < 10 ? `0${i}` : `${i}`,
-      name: "Phạm Thị Dung",
-      studentId: `2211000${i < 10 ? `0${i}` : `${i}`}`,
-      classId: "MT22K404",
-      major: "Công nghệ thông tin",
-      course: "K22",
-      gpa: 3.45,
-      trainingScore: 85,
-      
-      status: i % 5 === 0 ? "Bảo lưu" : "Đang học", 
+      name: i % 2 === 0 ? "Trần Thị Bình" : "Nguyễn Văn An",
+      studentId: `2211${i < 10 ? `00${i}` : `0${i}`}`,
+      semester: i % 2 === 0 ? "HK1" : "HK2",
+      academicYear: "2024-2025",
+      score: score,
+      classification: classification,
+      status: i % 7 === 0 ? "Chờ duyệt" : "Đã duyệt",
     });
   }
   return rows;
 }
 
-export default function ProfilePage({ messageApi }: { messageApi: any }) {
+// Hàm render Tag cho Xếp loại
+const ClassificationTag: React.FC<{ classification: Classification }> = ({ classification }) => {
+  let color = "blue";
+  if (classification === "Xuất sắc") {
+    color = "green";
+  } else if (classification === "Tốt") {
+    color = "cyan";
+  } else if (classification === "Yếu") {
+    color = "red";
+  }
+
+  return <Tag color={color} style={{ fontWeight: 600 }}>{classification}</Tag>;
+};
+
+// Hàm render Tag cho Trạng thái
+const StatusTag: React.FC<{ status: Status }> = ({ status }) => {
+    if (status === "Đã duyệt") {
+        return <Tag color="success" icon={<CheckCircleOutlined />} style={{ fontWeight: 600 }}>{status}</Tag>;
+    }
+    return <Tag color="orange" style={{ fontWeight: 600 }}>{status}</Tag>;
+};
+
+export default function ScorePage({  }: { messageApi: any }) {
   const navigate = useNavigate();
-  const [data] = useState<RowData[]>(() => generateMock());
+  const [data] = useState<RowData[]>(() => generateMock(60));
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  
+  // Logic lọc theo Mã SV
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return data;
     return data.filter(
-      (r) =>
-        r.name.toLowerCase().includes(q) ||
-        r.studentId.toLowerCase().includes(q)
+      (r) => r.studentId.toLowerCase().includes(q)
     );
   }, [data, search]);
 
@@ -88,7 +123,7 @@ export default function ProfilePage({ messageApi }: { messageApi: any }) {
     return filtered.slice(start, start + pageSize);
   }, [filtered, page, pageSize]);
 
-  
+  // 2. Cột cho bảng Điểm rèn luyện
   const columns: ColumnsType<RowData> = [
     {
       title: "STT",
@@ -101,7 +136,7 @@ export default function ProfilePage({ messageApi }: { messageApi: any }) {
       title: "Họ và tên",
       dataIndex: "name",
       key: "name",
-      width: 180,
+      width: 150,
       render: (name: string) => (
         <Space>
           <Avatar size="small" style={{ background: "#f0f0f0", color: "#000" }}>
@@ -119,60 +154,41 @@ export default function ProfilePage({ messageApi }: { messageApi: any }) {
       render: (v: string) => <Text>{v}</Text>,
     },
     {
-      title: "Lớp",
-      dataIndex: "classId",
-      key: "classId",
+      title: "Học kỳ",
+      dataIndex: "semester",
+      key: "semester",
       width: 100,
       responsive: ["lg"] as any,
-      render: (v: string) => <Text type="secondary">{v}</Text>,
     },
     {
-      title: "Ngành",
-      dataIndex: "major",
-      key: "major",
-      width: 180,
+      title: "Năm học",
+      dataIndex: "academicYear",
+      key: "academicYear",
+      width: 120,
       responsive: ["lg"] as any,
-      render: (v: string) => <Text type="secondary">{v}</Text>,
     },
     {
-      title: "Khóa",
-      dataIndex: "course",
-      key: "course",
-      width: 80,
-      responsive: ["md"] as any,
+      title: "Tổng điểm",
+      dataIndex: "score",
+      key: "score",
+      width: 100,
       align: "center",
+      render: (v: number) => <Text style={{ fontWeight: 600 }}>{v}</Text>,
     },
     {
-      title: "GPA",
-      dataIndex: "gpa",
-      key: "gpa",
-      width: 80,
-      responsive: ["md"] as any,
-      render: (v: number) => <Text style={{ fontWeight: 600 }}>{v.toFixed(2)}</Text>,
+      title: "Xếp loại",
+      dataIndex: "classification",
+      key: "classification",
+      width: 120,
       align: "center",
-    },
-    {
-      title: "Điểm RL",
-      dataIndex: "trainingScore",
-      key: "trainingScore",
-      width: 90,
-      responsive: ["md"] as any,
-      render: (v: number) => <Text>{v}</Text>,
-      align: "center",
+      render: (c: Classification) => <ClassificationTag classification={c} />,
     },
     {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       width: 120,
-      render: (s: RowData["status"]) =>
-        s === "Đang học" ? (
-          <Tag color="success" style={{ fontWeight: 600 }}>{s}</Tag>
-        ) : s === "Bảo lưu" ? (
-          <Tag color="orange" style={{ fontWeight: 600 }}>{s}</Tag>
-        ) : (
-          <Tag style={{ fontWeight: 600 }}>{s}</Tag>
-        ),
+      render: (s: Status) => <StatusTag status={s} />,
       align: "center",
     },
     {
@@ -181,12 +197,12 @@ export default function ProfilePage({ messageApi }: { messageApi: any }) {
       width: 60,
       render: (_: any, record: RowData) => (
         <Space>
-          <Tooltip title="Xem chi tiết hồ sơ">
+          <Tooltip title="Xem chi tiết đánh giá">
             <Button
               type="text"
               icon={<EyeOutlined />}
               onClick={() => {
-                alert(`Xem hồ sơ sinh viên: ${record.name} (${record.studentId})`);
+                alert(`Xem đánh giá ĐRL: ${record.semester} - ${record.academicYear} của ${record.name}`);
               }}
             />
           </Tooltip>
@@ -195,10 +211,17 @@ export default function ProfilePage({ messageApi }: { messageApi: any }) {
     },
   ];
 
+  // Tính toán số liệu thống kê (Mock dựa trên dữ liệu giả)
+  const totalAssessments = data.length;
+  const excellent = data.filter(r => r.classification === "Xuất sắc").length;
+  const good = data.filter(r => r.classification === "Tốt").length;
+  // Tính điểm trung bình (chỉ tính 1 lần cho đơn giản)
+  const averageScore = 92.0; 
+
   return (
     <Layout style={{ minHeight: "100vh" }}>
       {/* Sidebar dùng chung */}
-      <Sidebar messageApi={messageApi} />
+    
 
       {/* Nội dung chính */}
       <Layout>
@@ -211,80 +234,67 @@ export default function ProfilePage({ messageApi }: { messageApi: any }) {
                 <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} />
                 <div>
                   <Title level={4} style={{ margin: 0 }}>
-                    Hồ sơ sinh viên
+                    Điểm rèn luyện
                   </Title>
-                  <Text type="secondary">Quản lý thông tin và hồ sơ của sinh viên</Text>
+                  <Text type="secondary">Quản lý và đánh giá điểm rèn luyện sinh viên</Text>
                 </div>
               </Space>
             </Col>
 
             <Col>
               <Space>
-                {/* Nút Thêm sinh viên */}
+                {/* Nút Tạo đánh giá */}
                 <Button
                   type="primary"
                   icon={<PlusOutlined />}
                   style={{ borderRadius: 8, fontWeight: 600 }}
-                  onClick={() => alert("Chức năng thêm sinh viên")}
+                  onClick={() => alert("Chức năng tạo đánh giá")}
                 >
-                   Thêm sinh viên
+                  Tạo đánh giá
                 </Button>
               </Space>
             </Col>
           </Row>
 
-          {/* 5. Các card thống kê theo thiết kế ảnh */}
+          {/* Các card thống kê */}
           <Row gutter={16} style={{ marginBottom: 18 }}>
             <Col xs={24} sm={12} lg={6}>
               <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Tổng sinh viên</Text>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <Title level={3} style={{ margin: 0 }}>3000</Title>
-                  <Text style={{ color: "#39b54a", fontWeight: 600, fontSize: 13 }}>+12% so với năm trước</Text>
-                </div>
+                <Text type="secondary">Tổng đánh giá</Text>
+                <Title level={3} style={{ margin: 0 }}>{totalAssessments}</Title>
               </Card>
             </Col>
             <Col xs={24} sm={12} lg={6}>
               <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Đang học</Text>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <Title level={3} style={{ margin: 0 }}>2980</Title>
-                  <Text style={{ color: "#39b54a", fontWeight: 600, fontSize: 13 }}>+15% so với năm trước</Text>
-                </div>
+                <Text type="secondary">Xuất sắc</Text>
+                <Title level={3} style={{ margin: 0 }}>{excellent}</Title>
               </Card>
             </Col>
             <Col xs={24} sm={12} lg={6}>
               <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">GPA trung bình</Text>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <Title level={3} style={{ margin: 0 }}>2.88</Title>
-                  <Text style={{ color: "#39b54a", fontWeight: 600, fontSize: 13 }}>+0.12 so với kỳ trước</Text>
-                </div>
+                <Text type="secondary">Tốt</Text>
+                <Title level={3} style={{ margin: 0 }}>{good}</Title>
               </Card>
             </Col>
             <Col xs={24} sm={12} lg={6}>
               <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Điểm rèn luyện TB</Text>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <Title level={3} style={{ margin: 0 }}>85.0</Title>
-                  <Text style={{ color: "#39b54a", fontWeight: 600, fontSize: 13 }}>+2.5 so với kỳ trước</Text>
-                </div>
+                <Text type="secondary">Điểm trung bình</Text>
+                <Title level={3} style={{ margin: 0 }}>{averageScore.toFixed(1)}</Title>
               </Card>
             </Col>
           </Row>
 
-          {/* Bảng dữ liệu */}
+          {/* Bảng dữ liệu - Đã chỉnh Search nằm dưới tiêu đề */}
           <Card style={{ borderRadius: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, flexDirection: "column" }}>
               <div>
-                <Title level={5} style={{ margin: 0 }}>Danh sách sinh viên</Title>
-                <Text type="secondary">Quản lý thông tin và hồ sơ của tất cả sinh viên</Text>
+                <Title level={5} style={{ margin: 0 }}>Danh sách điểm rèn luyện</Title>
+                <Text type="secondary">Quản lý và đánh giá điểm rèn luyện của sinh viên</Text>
               </div>
 
               <div style={{ minWidth: 320, marginTop: 12 }}>
-                {/* 6. Cập nhật placeholder cho ô tìm kiếm */}
                 <Search
-                  placeholder="Tìm kiếm theo tên hoặc Mã SV"
+                  placeholder="Tìm kiếm theo Mã SV"
                   allowClear
                   onSearch={(val) => {
                     setSearch(val);
@@ -304,7 +314,7 @@ export default function ProfilePage({ messageApi }: { messageApi: any }) {
               rowKey="key"
               bordered={false}
               style={{ background: "transparent" }}
-              scroll={{ x: 1000 }} 
+              scroll={{ x: 800 }} 
             />
 
             {/* Phân trang */}
