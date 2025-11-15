@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom'
 import { Layout, message as antdMessage } from 'antd'
 import { Navigate } from "react-router-dom";
-
+import ProtectedRoute from './components/ProtectedRoute';
 // Imports cho các trang Đăng nhập / Đăng ký
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -21,6 +21,7 @@ import ScholarshipPage from './pages/technician/scholarship'
 // Imports cho Sidebar
 import Sidebar from './components/Sidebar' // Technician Sidebar (Sidebar.tsx gốc)
 import StudentSidebar from './components/StudentSidebar' // Student Sidebar
+import AdminSidebar from './components/AdminSidebar';
 
 // Imports cho các trang SINH VIÊN 
 import StudentHome from './pages/student/StudentHome'
@@ -29,6 +30,10 @@ import StudentCourse from './pages/student/StudentCourse'
 import StudentScholarship from './pages/student/StudentScholarship'
 import StudentEvent from './pages/student/StudentEvent'
 
+// Imports cho các trang ADMIN
+import AdminOverview from './pages/admin/Overview';
+import ManageTechnician from './pages/admin/ManageTechnician';
+import ManageStudent from './pages/admin/ManageStudent';
 
 const queryClient = new QueryClient()
 const { Content } = Layout
@@ -63,6 +68,18 @@ const StudentLayout = ({ messageApi }: { messageApi: any }) => (
   </Layout>
 );
 
+// --- 3. ADMIN LAYOUT COMPONENT ---
+// Component Layout dùng cho Admin
+const AdminLayout = ({ messageApi }: { messageApi: any }) => (
+  <Layout style={{ minHeight: "100vh" }}>
+    <AdminSidebar />
+    <Layout>
+      <Content style={{ margin: "24px 16px 0", overflow: "initial", padding: 24, backgroundColor: '#fff', borderRadius: 8 }}>
+        <Outlet />
+      </Content>
+    </Layout>
+  </Layout>
+);
 
 function App() {
   const [messageApi, contextHolder] = antdMessage.useMessage();
@@ -78,29 +95,40 @@ function App() {
           <Route path="/register" element={<Register messageApi={messageApi} />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage messageApi={messageApi} />} />
 
-
-          {/* --- ROUTE CỦA TECHNICIAN / KỸ THUẬT VIÊN (DÙNG TechnicianLayout) --- */}
-          <Route path="/technician" element={<TechnicianLayout messageApi={messageApi} />}>
-            <Route path="home" element={<HomePage messageApi={messageApi} />} />
-            <Route path="manage" element={<ManagePage messageApi={messageApi} />} />
-            <Route path="profile" element={<ProfilePage messageApi={messageApi} />} />
-            <Route path="decision" element={<DecisionPage messageApi={messageApi} />} />
-            <Route path="praise" element={<PraisePage messageApi={messageApi} />} />
-            <Route path="certificate" element={<CertificatePage messageApi={messageApi} />} />
-            <Route path="score" element={<ScorePage messageApi={messageApi} />} />
-            <Route path="event" element={<EventPage messageApi={messageApi} />} />
-            <Route path="scholarship" element={<ScholarshipPage messageApi={messageApi} />} />
+          {/* --- ROUTE CỦA ADMIN (DÙNG AdminLayout) --- */}
+          <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]} />}>
+            <Route element={<AdminLayout messageApi={messageApi} />}>
+              <Route path="overview" element={<AdminOverview messageApi={messageApi} />} />
+              <Route path="manage-technician" element={<ManageTechnician messageApi={messageApi} />} />
+              <Route path="manage-student" element={<ManageStudent messageApi={messageApi} />} />
+            </Route>
           </Route>
 
+          {/* --- ROUTE CỦA TECHNICIAN / KỸ THUẬT VIÊN (DÙNG TechnicianLayout) --- */}
+          <Route path="/technician" element={<ProtectedRoute allowedRoles={["technician"]} />}>
+            <Route element={<TechnicianLayout messageApi={messageApi} />}>
+              <Route path="home" element={<HomePage messageApi={messageApi} />} />
+              <Route path="manage" element={<ManagePage messageApi={messageApi} />} />
+              <Route path="profile" element={<ProfilePage messageApi={messageApi} />} />
+              <Route path="decision" element={<DecisionPage messageApi={messageApi} />} />
+              <Route path="praise" element={<PraisePage messageApi={messageApi} />} />
+              <Route path="certificate" element={<CertificatePage messageApi={messageApi} />} />
+              <Route path="score" element={<ScorePage messageApi={messageApi} />} />
+              <Route path="event" element={<EventPage messageApi={messageApi} />} />
+              <Route path="scholarship" element={<ScholarshipPage messageApi={messageApi} />} />
+            </Route>
+          </Route>
 
           {/* --- ROUTE CỦA SINH VIÊN (DÙNG StudentLayout) --- */}
-          <Route path="/student" element={<StudentLayout messageApi={messageApi} />}>
-            <Route index element={<StudentHome />} /> {/* /student */}
-            <Route path="home" element={<StudentHome />} />
-            <Route path="profile" element={<StudentProfile />} />
-            <Route path="course" element={<StudentCourse />} />
-            <Route path="scholarship" element={<StudentScholarship />} />
-            <Route path="event" element={<StudentEvent />} />
+          <Route path="/student" element={<ProtectedRoute allowedRoles={["student"]} />}>
+            <Route element={<StudentLayout messageApi={messageApi} />}>
+              <Route index element={<StudentHome />} /> {/* /student */}
+              <Route path="home" element={<StudentHome />} />
+              <Route path="profile" element={<StudentProfile />} />
+              <Route path="course" element={<StudentCourse />} />
+              <Route path="scholarship" element={<StudentScholarship />} />
+              <Route path="event" element={<StudentEvent />} />
+            </Route>
           </Route>
           
           <Route path="*" element={<Login messageApi={messageApi} />} />

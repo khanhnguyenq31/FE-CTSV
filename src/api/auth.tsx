@@ -37,16 +37,17 @@ export async function loginApi(email: string, password: string) {
   try {
     const response = await api.post("/auth/login", { email, password });
 
-    const { accessToken, refreshToken } = response.data;
+    const { accessToken, refreshToken, role } = response.data;
 
     // Lưu token vào localStorage
     localStorage.setItem("accessToken", accessToken);
     localStorage.setItem("refreshToken", refreshToken);
+    localStorage.setItem("role", role);
 
     // Gắn token mặc định cho các request sau
     api.defaults.headers.Authorization = `Bearer ${accessToken}`;
 
-    return { accessToken, refreshToken };
+    return { accessToken, refreshToken, role };
   } catch (error: any) {
     const message =
       error?.response?.data?.message || "Đăng nhập thất bại, vui lòng thử lại";
@@ -88,4 +89,22 @@ export async function logoutApi() {
   await api.post("/auth/logout", { refreshToken });
   localStorage.removeItem("accessToken");
   localStorage.removeItem("refreshToken");
+}
+
+// Tạo tài khoản chuyên viên
+export async function createTechnicianApi(email: string) {
+  const accessToken = localStorage.getItem('accessToken');
+  const response = await api.post('/auth/create-technician', { email }, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+  return response.data;
+}
+
+// Tạo tài khoản sinh viên
+export async function createStudentApi(email: string) {
+  const accessToken = localStorage.getItem('accessToken');
+  const response = await api.post('/auth/create-student', { email }, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+  return response.data;
 }

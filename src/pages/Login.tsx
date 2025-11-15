@@ -1,4 +1,3 @@
-
 import { Input, Button, Form, Card, Typography } from "antd";
 import { useMutation } from "@tanstack/react-query";
 import { loginApi } from "../api/auth";
@@ -39,10 +38,12 @@ export default function Login({ messageApi }: { messageApi: any }) {
   const mutation = useMutation({
     mutationFn: ({ email, password }: { email: string; password: string }) =>
       loginApi(email, password),
-    onSuccess: () => {
+    onSuccess: (data) => {
       login();
       messageApi.success("Đăng nhập thành công!");
-      navigate("/technician/home"); // Chuyển đến trang home của kỹ thuật viên
+      if (data.role === "admin") navigate("/admin/overview");
+      else if (data.role === "student") navigate("/student/home");
+      else navigate("/technician/home");
     },
     onError: (err: any) => {
       const errMsg =

@@ -14,9 +14,10 @@ const { Header } = Layout;
 
 interface CustomHeaderProps {
   showBackButton?: boolean; 
+  title?: string;
 }
 
-const CustomHeader: React.FC<CustomHeaderProps> = ({ showBackButton = false }) => {
+const CustomHeader: React.FC<CustomHeaderProps> = ({ showBackButton = false, title }) => {
   const navigate = useNavigate();
 
   const handleBack = () => {
@@ -57,7 +58,9 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({ showBackButton = false }) =
             }}
           />
         )}
-        
+        {title && (
+          <span style={{ fontWeight: 700, fontSize: 22, marginRight: 24 }}>{title}</span>
+        )}
         {/* Thanh Tìm kiếm */}
         <Input
           placeholder="Tìm kiếm"
