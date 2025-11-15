@@ -1,0 +1,235 @@
+import { Input, Button, Form, Card, Typography } from "antd";
+import { useMutation } from "@tanstack/react-query";
+
+import {
+  UserOutlined,
+  LockOutlined,
+  MailOutlined,
+  CheckCircleOutlined,
+} from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+
+
+const registerApi = async (data: any) => {
+  console.log("Register data:", data);
+  return new Promise((resolve) => setTimeout(resolve, 1000));
+};
+
+const { Title, Text, Paragraph } = Typography;
+
+
+function Illustration() {
+  return (
+    <div className="w-full h-full flex items-center justify-center p-6">
+      <svg
+        width="320"
+        height="320"
+        viewBox="0 0 320 320"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="max-w-full"
+      >
+        <rect width="320" height="320" rx="12" fill="transparent" />
+        <g transform="translate(30,10)">
+          <rect x="120" y="130" width="100" height="60" rx="10" fill="#E6F0F6" />
+          <ellipse cx="110" cy="50" rx="36" ry="36" fill="#FFDAB3" />
+          <path d="M60 100 C80 90, 120 90, 140 100 L120 140 L70 140 Z" fill="#2D3B6F" />
+          <path d="M40 85 C60 75, 90 75, 110 85 L120 115 L62 115 Z" fill="#FF8A00" />
+        </g>
+      </svg>
+    </div>
+  );
+}
+
+export default function Register({ messageApi }: { messageApi: any }) {
+  
+  const [form] = Form.useForm();
+  const navigate = useNavigate();
+
+  const mutation = useMutation({
+    mutationFn: ({
+      fullName,
+      email,
+      password,
+    }: {
+      fullName: string;
+      email: string;
+      password: string;
+    }) => registerApi({ fullName, email, password }),
+    onSuccess: () => {
+      messageApi.success("Đăng ký thành công! Vui lòng đăng nhập.");
+      navigate("/login"); 
+    },
+    onError: (err: any) => {
+      const errMsg =
+        err?.response?.data?.message || err?.message || "Đăng ký thất bại";
+      messageApi.error(errMsg);
+    },
+  });
+
+  const onFinish = (values: any) => {
+    mutation.mutate({
+      fullName: values.fullName,
+      email: values.email,
+      password: values.password,
+    });
+  };
+
+  return (
+    <>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="w-full max-w-5xl bg-transparent rounded-xl shadow-sm flex overflow-hidden">
+          
+          <Card
+            bordered={false}
+            bodyStyle={{ padding: 32 }}
+            className="w-full md:w-1/2 rounded-l-xl bg-gray-100"
+            style={{ borderRadius: 16, backgroundColor: "#f5f5f5" }}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded overflow-hidden flex items-center justify-center bg-white">
+                
+                <img
+                  src="/src/assets/logo.png"
+                  alt="Logo"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div>
+                <Text strong>SMS BK</Text>
+                <div className="text-sm text-gray-500">
+                  Hệ thống quản lý Công tác sinh viên
+                </div>
+              </div>
+            </div>
+
+            <Title level={2} className="!m-0 !mb-3">
+              Đăng ký tài khoản
+            </Title>
+            <Paragraph className="!mt-0 text-gray-600">
+              Vui lòng nhập các thông tin cần thiết để tạo tài khoản mới.
+            </Paragraph>
+
+            <Form
+              form={form}
+              layout="vertical"
+              onFinish={onFinish}
+              className="mt-4"
+              initialValues={{ fullName: "", email: "", password: "", confirm: "" }}
+            >
+              {/* Họ và tên */}
+              <Form.Item
+                label="Họ và tên"
+                name="fullName"
+                rules={[{ required: true, message: "Vui lòng nhập Họ và tên!" }]}
+              >
+                <Input
+                  size="large"
+                  placeholder="Nhập họ và tên của bạn"
+                  prefix={<UserOutlined className="text-gray-400" />}
+                />
+              </Form.Item>
+
+              {/* Email */}
+              <Form.Item
+                label="Email"
+                name="email"
+                rules={[
+                  { required: true, message: "Vui lòng nhập email!" },
+                  { type: "email", message: "Email không hợp lệ!" },
+                ]}
+              >
+                <Input
+                  size="large"
+                  placeholder="Nhập email"
+                  prefix={<MailOutlined className="text-gray-400" />} 
+                />
+              </Form.Item>
+
+              
+              <Form.Item
+                label="Mật khẩu"
+                name="password"
+                rules={[{ required: true, message: "Vui lòng nhập mật khẩu!" }]}
+                hasFeedback
+              >
+                <Input.Password
+                  size="large"
+                  placeholder="Mật khẩu"
+                  prefix={<LockOutlined className="text-gray-400" />}
+                />
+              </Form.Item>
+
+              
+              <Form.Item
+                label="Xác nhận mật khẩu"
+                name="confirm"
+                dependencies={["password"]} 
+                hasFeedback
+                rules={[
+                  {
+                    required: true,
+                    message: "Vui lòng xác nhận mật khẩu!",
+                  },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      if (!value || getFieldValue("password") === value) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(
+                        new Error("Hai mật khẩu bạn nhập không khớp!")
+                      );
+                    },
+                  }),
+                ]}
+              >
+                <Input.Password
+                  size="large"
+                  placeholder="Xác nhận mật khẩu"
+                  prefix={<CheckCircleOutlined className="text-gray-400" />}
+                />
+              </Form.Item>
+
+              <Form.Item>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  loading={
+                    (mutation as any).isPending || (mutation as any).isLoading
+                  }
+                  className="w-full hover:bg-gray-800 hover:border-gray-800 hover:scale-[1.02] transition duration-200"
+                  size="large"
+                  style={{ backgroundColor: "#000", borderColor: "#000" }}
+                >
+                  Đăng ký
+                </Button>
+              </Form.Item>
+
+              <div className="flex justify-center items-center text-sm mt-2">
+                <Text type="secondary">
+                  Đã có tài khoản?{" "}
+                  <a
+                    className="text-black underline hover:opacity-80 font-medium"
+                    onClick={() => navigate("/login")}
+                  >
+                    Đăng nhập ngay
+                  </a>
+                </Text>
+              </div>
+            </Form>
+          </Card>
+
+          
+          <div className="hidden md:flex md:w-1/2 rounded-r-xl overflow-hidden">
+            
+            <img
+              src="/src/assets/logo1.png"
+              alt="Logo1"
+              className="w-full h-full object-contain"
+            />
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
