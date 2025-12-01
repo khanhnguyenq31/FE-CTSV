@@ -2,22 +2,9 @@ import { Input, Button, Form, Card, Typography } from "antd";
 import { useMutation } from "@tanstack/react-query";
 import { MailOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-
-
-const forgotPasswordApi = async (email: string) => {
-  console.log("Forgot Password Request for Email:", email);
-  
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      
-      resolve({ message: "Email đặt lại mật khẩu đã được gửi." });
-      
-    }, 1000);
-  });
-};
+import { forgotPasswordApi } from '../api/auth';
 
 const { Title, Text, Paragraph } = Typography;
-
 
 function Illustration() {
   return (
@@ -49,9 +36,8 @@ export default function ForgotPassword({ messageApi }: { messageApi: any }) {
   const mutation = useMutation({
     mutationFn: ({ email }: { email: string }) => forgotPasswordApi(email),
     onSuccess: (data: any) => {
-     
       messageApi.success(data?.message || "Yêu cầu đã được gửi! Vui lòng kiểm tra email.");
-      
+      navigate('/verify-code');
     },
     onError: (err: any) => {
       const errMsg =
@@ -61,6 +47,7 @@ export default function ForgotPassword({ messageApi }: { messageApi: any }) {
   });
 
   const onFinish = (values: any) => {
+    localStorage.setItem('resetEmail', values.email);
     mutation.mutate({
       email: values.email,
     });
@@ -97,7 +84,7 @@ export default function ForgotPassword({ messageApi }: { messageApi: any }) {
               Quên mật khẩu
             </Title>
             <Paragraph className="!mt-0 text-gray-600">
-             Vui lòng nhập **Email** bạn đã dùng để đăng ký tài khoản. Chúng tôi sẽ gửi một liên kết khôi phục mật khẩu đến địa chỉ này để bạn đặt lại mật khẩu một cách nhanh chóng và an toàn.
+             Vui lòng nhập **Email** bạn đã dùng để đăng ký tài khoản. Chúng tôi sẽ gửi một mã gồm 6 số khôi phục mật khẩu đến địa chỉ này để bạn đặt lại mật khẩu một cách nhanh chóng và an toàn.
             </Paragraph>
 
             <Form

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layout, Input, Button, Avatar } from 'antd';
+import { Layout, Input, Button, Avatar, Dropdown, Menu } from 'antd';
 import {
   SearchOutlined,
   BellOutlined,
@@ -96,12 +96,24 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({ showBackButton = false, tit
             style={{ width: 40, height: 40, borderRadius: '50%' }}
         />
         
-        {/* Avatar */}
-        <Avatar 
-            size={40} 
-            icon={<UserOutlined />} 
-            style={{ marginLeft: 10, cursor: 'pointer', backgroundColor: '#000', color: '#fff' }} 
-        />
+        {/* Avatar với Dropdown */}
+        <Dropdown
+          overlay={
+            <Menu>
+              <Menu.Item key="change-password" onClick={() => navigate('/change-password')}>
+                Đổi mật khẩu
+              </Menu.Item>
+            </Menu>
+          }
+          placement="bottomRight"
+          trigger={["click"]}
+        >
+          <Avatar
+            size={40}
+            icon={<UserOutlined />}
+            style={{ marginLeft: 10, cursor: 'pointer', backgroundColor: '#000', color: '#fff' }}
+          />
+        </Dropdown>
       </div>
     </Header>
   );

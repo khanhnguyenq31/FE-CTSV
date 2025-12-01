@@ -7,6 +7,9 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login'
 import Register from './pages/Register'
 import ForgotPasswordPage from './pages/ForgotPassword'
+import VerifyCode from './pages/VerifyCode';
+import ChangePassword from './pages/ChangePassword';
+import ResetPassword from './pages/ResetPassword';
 
 // Imports cho các trang TECHNICIAN (routes cũ)
 import HomePage from './pages/technician/home'
@@ -34,6 +37,8 @@ import StudentEvent from './pages/student/StudentEvent'
 import AdminOverview from './pages/admin/Overview';
 import ManageTechnician from './pages/admin/ManageTechnician';
 import ManageStudent from './pages/admin/ManageStudent';
+
+import CustomHeader from './components/CustomHeader';
 
 const queryClient = new QueryClient()
 const { Content } = Layout
@@ -81,6 +86,49 @@ const AdminLayout = ({ messageApi }: { messageApi: any }) => (
   </Layout>
 );
 
+// Layout đổi mật khẩu cho mọi role
+const ChangePasswordLayout = ({ messageApi }: { messageApi: any }) => {
+  const role = localStorage.getItem('role');
+  if (role === 'admin') {
+    return (
+      <Layout style={{ minHeight: '100vh' }}>
+        <AdminSidebar />
+        <Layout>
+          <CustomHeader title="Đổi mật khẩu" />
+          <Content style={{ margin: '24px 16px 0', overflow: 'initial', padding: 24, backgroundColor: '#fff', borderRadius: 8 }}>
+            <ChangePassword messageApi={messageApi} />
+          </Content>
+        </Layout>
+      </Layout>
+    );
+  }
+  if (role === 'student') {
+    return (
+      <Layout style={{ minHeight: '100vh' }}>
+        <StudentSidebar messageApi={messageApi} />
+        <Layout>
+          <CustomHeader title="Đổi mật khẩu" />
+          <Content style={{ margin: '24px 16px 0', overflow: 'initial', padding: 24, backgroundColor: '#fff', borderRadius: 8 }}>
+            <ChangePassword messageApi={messageApi} />
+          </Content>
+        </Layout>
+      </Layout>
+    );
+  }
+  // technician
+  return (
+    <Layout style={{ minHeight: '100vh' }}>
+      <Sidebar messageApi={messageApi} />
+      <Layout>
+        <CustomHeader title="Đổi mật khẩu" />
+        <Content style={{ margin: '24px 16px 0', overflow: 'initial', padding: 24, backgroundColor: '#fff', borderRadius: 8 }}>
+          <ChangePassword messageApi={messageApi} />
+        </Content>
+      </Layout>
+    </Layout>
+  );
+};
+
 function App() {
   const [messageApi, contextHolder] = antdMessage.useMessage();
 
@@ -94,7 +142,12 @@ function App() {
           <Route path="/login" element={<Login messageApi={messageApi} />} />
           <Route path="/register" element={<Register messageApi={messageApi} />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage messageApi={messageApi} />} />
-
+          <Route path="/verify-code" element={<VerifyCode messageApi={messageApi} />} />
+          <Route path="/reset-password" element={<ResetPassword messageApi={messageApi} />} />
+          <Route path="/change-password" element={<ProtectedRoute allowedRoles={["admin", "technician", "student"]} />}>
+  <Route index element={<ChangePasswordLayout messageApi={messageApi} />} />
+</Route>
+    
           {/* --- ROUTE CỦA ADMIN (DÙNG AdminLayout) --- */}
           <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]} />}>
             <Route element={<AdminLayout messageApi={messageApi} />}>

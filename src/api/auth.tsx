@@ -108,3 +108,33 @@ export async function createStudentApi(email: string) {
   });
   return response.data;
 }
+
+// Quên mật khẩu - gửi mã xác thực
+export async function forgotPasswordApi(email: string) {
+  const response = await api.post('/auth/forgot-password', { email });
+  return response.data;
+}
+
+// Đổi mật khẩu khi đã đăng nhập
+export async function changePasswordApi(oldPassword: string, newPassword: string, confirmPassword: string) {
+  const accessToken = localStorage.getItem('accessToken');
+  const response = await api.post('/auth/change-password', {
+    oldPassword,
+    newPassword,
+    confirmPassword,
+  }, {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+  return response.data;
+}
+
+// Đặt lại mật khẩu khi quên mật khẩu
+export async function resetPasswordApi(email: string, code: string, newPassword: string, confirmPassword: string) {
+  const response = await api.post('/auth/reset-password', {
+    email,
+    code,
+    newPassword,
+    confirmPassword,
+  });
+  return response.data;
+}
