@@ -72,7 +72,7 @@ export default function Sidebar({ messageApi }: { messageApi: any }) {
         }}
       >
         <AppstoreOutlined style={{ marginRight: 8 }} />
-        SMS BK
+        SMS BK - TECHNICIAN
       </div>
 
       <Menu
@@ -87,7 +87,7 @@ export default function Sidebar({ messageApi }: { messageApi: any }) {
           Quản lý nhập học
         </Menu.Item>
         <Menu.Item key="3" icon={<FileTextOutlined />} onClick={() => navigate("/technician/profile")}>
-        Hồ sơ sinh viên
+        Danh sách sinh viên
         </Menu.Item>
         <Menu.Item key="4" icon={<SolutionOutlined />} onClick={() => navigate("/technician/decision")}>
         Quyết định học vụ
