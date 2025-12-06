@@ -1,60 +1,502 @@
-import { Typography, Form, Input, Button, Card, Row, Col } from 'antd';
+import { Typography, Form, Input, Button, Card, Row, Col, Select, DatePicker } from 'antd';
+import dayjs from 'dayjs';
+
+// --- Import các kiểu dữ liệu từ Ant Design (Bắt buộc cho TypeScript) ---
+import type{ ColProps } from 'antd'; 
+import type { Rule } from 'antd/lib/form';
 
 const { Title } = Typography;
+const { Option } = Select;
+const { TextArea } = Input;
 
-export default function StudentProfile() {
-  const onFinish = (values: any) => {
-    console.log('Thông tin hồ sơ được cập nhật:', values);
-    // Logic gọi API cập nhật hồ sơ
-  };
+// Định nghĩa kiểu cho Select Options
+interface OptionType {
+    value: string | number;
+    label: string;
+}
 
-  return (
-    <div style={{ padding: 24 }}>
-      <Title level={2}>Hồ sơ cá nhân</Title>
-      <Card>
-        <Form
-          name="student_profile"
-          layout="vertical"
-          onFinish={onFinish}
-          initialValues={{ 
-            name: 'Nguyễn Văn A', 
-            studentId: '2019XXXX',
-            email: 'nguyenvana@hcmut.edu.vn'
-            // Thêm các trường dữ liệu ban đầu khác
-          }}
-        >
-          <Row gutter={24}>
-            <Col span={12}>
-              <Form.Item label="Họ và Tên" name="name">
-                <Input disabled />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="Mã số sinh viên" name="studentId">
-                <Input disabled />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={24}>
-            <Col span={12}>
-              <Form.Item label="Email" name="email" rules={[{ type: 'email' }]}>
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="Số điện thoại" name="phone">
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
-          
-          <Form.Item>
-            <Button type="primary" htmlType="submit">
-              Cập nhật hồ sơ
-            </Button>
-          </Form.Item>
-        </Form>
-      </Card>
-    </div>
-  );
+// --- Dữ liệu Mẫu (Mô phỏng dữ liệu từ API) ---
+const initialData = {
+    // THÔNG TIN CÁ NHÂN
+    studentId: '22111010',
+    fullName: 'NGUYỄN TRẦN ĐÀO',
+    className: 'KHÓA', // Khóa học
+    major: 'Ngành học',
+    dateOfBirth: dayjs('2004-11-08'),
+    gender: 'Nam',
+    idCard: '088309049291', // Số CMND/CCCD
+    idCardIssueDate: dayjs('2021-04-25'), // Ngày cấp CMND/CCCD
+    idCardIssuePlace: 'LA', // Tỉnh Long An
+    nationality: 'VN', // Quốc tịch
+    birthPlace: 'Kiên Giang', // Nơi sinh (Tỉnh/Thành)
+    birthPlaceDetail: 'Khu vực 2NT', // Khu vực ưu tiên (Giá trị cũ, giờ chuyển sang dùng cho Input/Select nếu cần)
+    religion: 'PG', // Tôn giáo
+    
+    // ⭐ GIÁ TRỊ MẪU MỚI:
+    ethnicity: 'Kinh', // Dân tộc
+    priorityArea: 'KV3', // Khu vực ưu tiên
+    //... (Các trường dữ liệu khác không đổi)
+
+    // THÔNG TIN LIÊN LẠC
+    phone: '0937837488',
+    emailStudent: 'nguyentrandao.edu@hcmut.edu.vn',
+    emailPersonal: 'basilinx.010822@gmail.com',
+    emailAlt: 'emailphong', // Email phòng
+
+    // THÔNG TIN ĐỊA CHỈ THƯỜNG TRÚ (Đã thay giá trị mẫu để tương thích với Select)
+    province: 'HCM',
+    district: 'Q1',
+    street: 'Số nhà',
+
+    // THÔNG TIN ĐỊA CHỈ LIÊN LẠC (Đã thay giá trị mẫu để tương thích với Select)
+    contactNationality: 'VN', // Thêm trường mới cho quốc gia tạm trú
+    contactProvince: 'HN',
+    contactDistrict: 'HK',
+    contactStreet: 'Số nhà',
+    contactPhone: '033374898', // Số điện thoại liên lạc
+    contactHomePhone: 'Số điện thoại gia đình',
+    contactRoom: 'Phòng/Ký túc xá',
+
+    // THÔNG TIN HỌC VỤ
+    faculty: 'Khoa',
+    department: 'Bộ môn/Khoa quản lý',
+    studentCode: 'MT22D0504', // Mã sinh viên
+    enrollmentDate: dayjs('2022-10-01'), // Thời điểm nhập học (Tháng/Năm)
+    graduationYear: '2027', // Năm dự kiến tốt nghiệp (TMT)
+    graduationType: 'Bao lưu', // Bảo lưu/Chuyển trường/Nghỉ học/Tốt nghiệp
+    totalCredits: '12', // Số học trình đã tích lũy (đã học)
+    gpaTotal: '8', // Điểm học trình đã tích lũy (điểm trung bình tích lũy)
+    gpaSemester: '-', // Điểm học kỳ
+    
+    // THÔNG TIN THAM GIA HOẠT ĐỘNG
+    activityType: 'Tham gia hoạt động (chính thức)',
+    activityDate: dayjs('2020-10-28'),
+    activityPlace: 'Bến xe',
+    activityContent: 'Đại học',
+    activityRole: 'Chính ủy',
+    activityDuration: 'Buổi tối',
+
+    // THÔNG TIN CƠ QUAN BỐ/MẸ (Mô phỏng theo các block "Thông tin Cha" và "Thông tin Mẹ")
+    fatherName: 'Nguyễn Văn Công',
+    fatherBirthYear: '1970',
+    fatherJob: 'Kế toán',
+    fatherWorkplace: 'Nơi công tác',
+    fatherPhone: '0932928895',
+
+    motherName: 'Trần Thị Tuyết Nhung',
+    motherBirthYear: '1976',
+    motherJob: 'Giáo viên',
+    motherWorkplace: 'Nơi công tác',
+    motherPhone: '0932928898',
+};
+
+
+// Dữ liệu Select cho Nơi cấp CCCD/CMND (Ví dụ)
+const idCardIssuePlaceOptions: OptionType[] = [
+    { value: 'HN', label: 'Hà Nội' },
+    { value: 'HCM', label: 'TP. Hồ Chí Minh' },
+    { value: 'DN', label: 'Đà Nẵng' },
+    { value: 'LA', label: 'Long An' },
+    { value: 'KG', label: 'Kiên Giang' },
+    // Thêm các tỉnh/thành phố khác ở đây...
+];
+
+const religionOptions: OptionType[] = [
+    { value: 'PG', label: 'Phật giáo' },
+    { value: 'CG', label: 'Công giáo' },
+    { value: 'TH', label: 'Tin lành' },
+    { value: 'KL', label: 'Không tôn giáo' },
+];
+
+// ⭐ DỮ LIỆU SELECT MỚI CHO DÂN TỘC
+const ethnicityOptions: OptionType[] = [
+    { value: 'Kinh', label: 'Kinh' },
+    { value: 'Tay', label: 'Tày' },
+    { value: 'Thai', label: 'Thái' },
+    { value: 'Hoa', label: 'Hoa' },
+    { value: 'Khmer', label: 'Khmer' },
+    // 54 dân tộc
+];
+
+// ⭐ DỮ LIỆU SELECT MỚI CHO KHU VỰC ƯU TIÊN
+const priorityAreaOptions: OptionType[] = [
+    { value: 'KV1', label: 'Khu vực 1' },
+    { value: 'KV2', label: 'Khu vực 2' },
+    { value: 'KV2-NT', label: 'Khu vực 2-Nông thôn' },
+    { value: 'KV3', label: 'Khu vực 3' },
+];
+
+// --- DỮ LIỆU SELECT MỚI CHO ĐỊA CHỈ ---
+const nationalityOptions: OptionType[] = [
+    { value: 'VN', label: 'Việt Nam' },
+    { value: 'US', label: 'Hoa Kỳ' },
+    { value: 'JP', label: 'Nhật Bản' },
+];
+
+const provinceOptions: OptionType[] = [
+    { value: 'HN', label: 'Hà Nội' },
+    { value: 'HCM', label: 'TP. Hồ Chí Minh' },
+    { value: 'DN', label: 'Đà Nẵng' },
+    { value: 'CT', label: 'Cần Thơ' },
+];
+
+// Giả định dữ liệu Phường/Xã phụ thuộc vào Tỉnh/Thành phố
+const districtOptions: OptionType[] = [
+    { value: 'Q1', label: 'Quận 1 (TP.HCM)' },
+    { value: 'Q3', label: 'Quận 3 (TP.HCM)' },
+    { value: 'HK', label: 'Hoàn Kiếm (HN)' },
+    { value: 'HD', label: 'Hải Châu (ĐN)' },
+];
+
+
+// Component chính
+export default function DetailedStudentProfile() {
+    const onFinish = (values: any) => { // Dùng 'any' cho values lớn để đơn giản hóa
+        // Xử lý chuyển đổi dayjs sang chuỗi trước khi gửi
+        const formattedValues = {
+            ...values,
+            dateOfBirth: values.dateOfBirth ? values.dateOfBirth.format('YYYY-MM-DD') : null,
+            idCardIssueDate: values.idCardIssueDate ? values.idCardIssueDate.format('YYYY-MM-DD') : null,
+            enrollmentDate: values.enrollmentDate ? values.enrollmentDate.format('YYYY-MM') : null,
+            activityDate: values.activityDate ? values.activityDate.format('YYYY-MM-DD') : null,
+        };
+        
+        console.log('Thông tin hồ sơ được cập nhật:', formattedValues);
+        // Logic gọi API cập nhật hồ sơ
+    };
+
+    // Props Responsive mặc định: 3 cột trên Desktop, 2 cột trên Tablet, 1 cột trên Mobile
+    const defaultColProps: ColProps = {
+        xs: 24,
+        sm: 24,
+        md: 12, // 1/2
+        lg: 8, // 1/3
+    };
+
+    // Hàm render trường Input (đã định kiểu)
+    const renderInput = (
+        label: string, 
+        name: string | number | (string | number)[], 
+        disabled: boolean = false, 
+        colProps: ColProps = defaultColProps, 
+        rules: Rule[] = []
+    ) => (
+        <Col {...colProps}>
+            <Form.Item label={label} name={name} rules={rules}>
+                <Input disabled={disabled} />
+            </Form.Item>
+        </Col>
+    );
+
+    // Hàm render trường Select (đã định kiểu)
+    const renderSelect = (
+        label: string, 
+        name: string | number | (string | number)[], 
+        options: OptionType[], 
+        placeholder: string = "Chọn...", 
+        colProps: ColProps = defaultColProps, 
+        disabled: boolean = false
+    ) => (
+        <Col {...colProps}>
+            <Form.Item label={label} name={name}>
+                <Select disabled={disabled} placeholder={placeholder}>
+                    {options.map(opt => <Option key={opt.value} value={opt.value}>{opt.label}</Option>)}
+                </Select>
+            </Form.Item>
+        </Col>
+    );
+
+    // Hàm render trường DatePicker (đã định kiểu)
+    const renderDatePicker = (
+        label: string, 
+        name: string | number | (string | number)[], 
+        format: string = "DD/MM/YYYY", 
+        colProps: ColProps = defaultColProps
+    ) => (
+        <Col {...colProps}>
+            <Form.Item label={label} name={name}>
+                <DatePicker style={{ width: '100%' }} format={format} />
+            </Form.Item>
+        </Col>
+    );
+    
+    // Định nghĩa props cho bố cục 1/4 (4 cột trên desktop)
+    const colProps4: ColProps = {
+        xs: 24,
+        sm: 24,
+        md: 12,
+        lg: 6, 
+    };
+    
+    // Định nghĩa props cho bố cục 1/5 hoặc 1/6 (5 hoặc 6 cột trên desktop)
+    const colProps6: ColProps = {
+        xs: 24,
+        sm: 24,
+        md: 12,
+        lg: 4, 
+    };
+
+    return (
+        <div style={{ padding: 24, background: '#f0f2f5' }}>
+            <Title level={3} style={{ marginBottom: 16 }}>
+                <span role="img" aria-label="profile">
+                    👤
+                </span>{' '}
+                Hồ sơ cá nhân sinh viên
+            </Title>
+            <Form
+                name="detailed_student_profile"
+                layout="vertical"
+                onFinish={onFinish}
+                initialValues={initialData}
+            >
+                
+                <Card title="Thông tin cá nhân" style={{ marginBottom: 20 }}>
+                    <Row gutter={[16, 16]}>
+                        {/* Cột Ảnh đại diện: 1 cột trên mobile, 4/24 trên desktop */}
+                        <Col xs={24} sm={24} md={8} lg={4}>
+                            <div style={{ 
+                                width: '100px', 
+                                height: '130px', 
+                                border: '1px solid #d9d9d9', 
+                                marginBottom: 8,
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                backgroundColor: '#e6f7ff'
+                            }}>
+                                Ảnh 3x4
+                            </div>
+                            <Button size="small">Cập nhật ảnh</Button>
+                        </Col>
+                        
+                        {/* Cột Thông tin chính: 1 cột trên mobile, 20/24 trên desktop */}
+                        <Col xs={24} sm={24} md={16} lg={20}>
+                            <Row gutter={[16, 16]}>
+                                {/* SỬ DỤNG defaultColProps (3 cột) */}
+                                {renderInput("Họ và Tên", "fullName", true)}
+                                {renderInput("Mã số sinh viên", "studentId", true)}
+                                {renderInput("Ngành học", "major", true)}
+
+                                {renderDatePicker("Ngày sinh", "dateOfBirth", "DD/MM/YYYY")}
+                                {renderInput("Khóa", "className", true)}
+                                {renderInput("Số CCCD", "idCard", false)}
+                                
+                                {renderSelect("Giới tính", "gender", [
+                                    { value: 'Nam', label: 'Nam' },
+                                    { value: 'Nữ', label: 'Nữ' },
+                                ], "Chọn giới tính")}
+                                
+                                {renderSelect(
+                                    "Tôn giáo", 
+                                    "religion", 
+                                    religionOptions, 
+                                    "Chọn tôn giáo"
+                                )}
+                                
+                                {renderDatePicker("Ngày cấp CCCD", "idCardIssueDate", "DD/MM/YYYY")}
+
+                                {/* ⭐ TRƯỜNG MỚI: Dân tộc */}
+                                {renderSelect(
+                                    "Dân tộc", 
+                                    "ethnicity", 
+                                    ethnicityOptions, 
+                                    "Chọn dân tộc"
+                                )}
+                                
+                                {/* ⭐ TRƯỜNG MỚI: Khu vực ưu tiên */}
+                                {renderSelect(
+                                    "Khu vực ưu tiên", 
+                                    "priorityArea", 
+                                    priorityAreaOptions, 
+                                    "Chọn khu vực"
+                                )}
+
+                                {renderSelect(
+                                    "Nơi cấp CCCD", 
+                                    "idCardIssuePlace", 
+                                    idCardIssuePlaceOptions, 
+                                    "Chọn Tỉnh/Thành phố nơi cấp"
+                                )}
+                                
+                            </Row>
+                        </Col>
+                    </Row>
+                </Card>
+
+                
+                <Card title="Thông tin liên lạc" style={{ marginBottom: 20 }}>
+                    <Row gutter={[16, 16]}>
+                        {/* Sử dụng colProps4 (6) */}
+                        {renderInput("Số điện thoại", "phone", false, colProps4)}
+                        {renderInput("Email sinh viên", "emailStudent", false, colProps4, [{ type: 'email' }])}
+                        {renderInput("Email liên lạc", "emailPersonal", false, colProps4, [{ type: 'email' }])}
+                        {renderInput("Email dự phòng", "emailAlt", false, colProps4, [{ type: 'email' }])}
+                    </Row>
+                </Card>
+
+                
+                <Card title="Thông tin học vụ" style={{ marginBottom: 20 }}>
+                    <Row gutter={[16, 16]}>
+                        {/* Hàng 1, dùng colProps4 (6) */}
+                        {renderInput("Khoa", "faculty", true, colProps4)}
+                        {renderInput("Bộ môn/Khoa quản lý", "department", true, colProps4)}
+                        {renderInput("Mã lớp", "studentCode", true, colProps4)}
+                        {renderDatePicker("Thời điểm nhập học", "enrollmentDate", "MM/YYYY", colProps4)}
+                    </Row>
+                    <Row gutter={[16, 16]}>
+                        {/* Hàng 2, dùng colProps4 (6) */}
+                        {renderInput("Tổng số Tín chỉ (đã học)", "totalCredits", true, colProps4)}
+                        {renderInput("GPA học kỳ", "gpaSemester", true, colProps4)}
+                        {renderInput("GPA tích lũy", "gpaTotal", true, colProps4)}
+                        {renderInput("Năm tốt nghiệp (dự kiến)", "graduationYear", true, colProps4)}
+                    </Row>
+                    <Row gutter={[16, 16]}>
+                        {/* Hàng 3, dùng colProps4 (6) */}
+                        {renderSelect("Hình thức đào tạo (chuẩn)", "trainingType", [
+                            { value: 'cq', label: 'Chính quy' },
+                            { value: 'lt', label: 'Liên thông' },
+                        ], "Chọn...", colProps4, true)}
+                        {renderInput("Ngành đào tạo", "trainingMajor", true, colProps4)}
+                        {renderInput("Loại hình đào tạo", "trainingFormat", true, colProps4)}
+                        {renderInput("Bảo lưu/Chuyển", "graduationType", true, colProps4)}
+                    </Row>
+                </Card>
+
+                
+                <Card title="Thông tin gia đình và liên hệ" style={{ marginBottom: 20 }}>
+                    <Title level={5}>Thông tin Cha</Title>
+                    <Row gutter={[16, 16]}>
+                        {/* 5 trường, dùng colProps6 (4) */}
+                        {renderInput("Họ tên", "fatherName", false, colProps6)}
+                        {renderInput("Năm sinh", "fatherBirthYear", false, colProps6)}
+                        {renderInput("Nghề nghiệp", "fatherJob", false, colProps6)}
+                        {renderInput("Nơi công tác", "fatherWorkplace", false, colProps6)}
+                        {renderInput("Số điện thoại", "fatherPhone", false, colProps6)}
+                    </Row>
+                    <Title level={5} style={{ marginTop: 16 }}>Thông tin Mẹ</Title>
+                    <Row gutter={[16, 16]}>
+                        {/* 5 trường, dùng colProps6 (4) */}
+                        {renderInput("Họ tên", "motherName", false, colProps6)}
+                        {renderInput("Năm sinh", "motherBirthYear", false, colProps6)}
+                        {renderInput("Nghề nghiệp", "motherJob", false, colProps6)}
+                        {renderInput("Nơi công tác", "motherWorkplace", false, colProps6)}
+                        {renderInput("Số điện thoại", "motherPhone", false, colProps6)}
+                    </Row>
+                    <Title level={5} style={{ marginTop: 16 }}>Thông tin Người giám hộ/Liên hệ khẩn cấp</Title>
+                    <Row gutter={[16, 16]}>
+                        {/* 5 trường, dùng colProps6 (4) */}
+                        {renderInput("Họ tên", "guardianName", false, colProps6)}
+                        {renderInput("Số điện thoại", "guardianPhone", false, colProps6)}
+                        {renderInput("Email liên lạc", "guardianEmail", false, colProps6)}
+                        {renderInput("Quan hệ", "guardianRelation", false, colProps6)}
+                        {renderInput("Địa chỉ", "guardianAddress", false, colProps6)}
+                    </Row>
+                </Card>
+
+                
+                <Card title="Địa chỉ thường trú và liên lạc" style={{ marginBottom: 20 }}>
+                    <Title level={5}>Địa chỉ Thường trú (Theo Hộ khẩu)</Title>
+                    <Row gutter={[16, 16]}>
+                        {/* 4 trường, dùng colProps4 (6) */}
+                        
+                        {/* ỔN ĐỊNH: Quốc gia (Select) */}
+                        {renderSelect(
+                            "Quốc gia", 
+                            "nationality", 
+                            nationalityOptions, 
+                            "Chọn quốc gia",
+                            colProps4
+                        )}
+
+                        {/* ỔN ĐỊNH: Tỉnh/Thành phố (Select) */}
+                        {renderSelect(
+                            "Tỉnh/Thành phố", 
+                            "province", 
+                            provinceOptions, 
+                            "Chọn Tỉnh/Thành phố",
+                            colProps4
+                        )}
+
+                        {/* ỔN ĐỊNH: Phường/Xã (Select) */}
+                        {renderSelect(
+                            "Phường/Xã", 
+                            "district", 
+                            districtOptions, 
+                            "Chọn Phường/Xã",
+                            colProps4
+                        )}
+
+                        {renderInput("Số nhà/Đường", "street", false, colProps4)}
+                    </Row>
+                    
+                    <Title level={5} style={{ marginTop: 16 }}>Địa chỉ Tạm trú/Liên lạc hiện tại</Title>
+                    <Row gutter={[16, 16]}>
+                        {/* 4 trường, dùng colProps4 (6) */}
+                        
+                        {/* Quốc gia tạm trú thành Select */}
+                        {renderSelect(
+                            "Quốc gia", 
+                            "contactNationality", 
+                            nationalityOptions, 
+                            "Chọn quốc gia",
+                            colProps4
+                        )}
+                        
+                        {/* Tỉnh/Thành phố tạm trú thành Select */}
+                        {renderSelect(
+                            "Tỉnh/Thành phố", 
+                            "contactProvince", 
+                            provinceOptions, 
+                            "Chọn Tỉnh/Thành phố",
+                            colProps4
+                        )}
+
+                        {/* Phường/Xã tạm trú thành Select */}
+                        {renderSelect(
+                            "Phường/Xã", 
+                            "contactDistrict", 
+                            districtOptions, 
+                            "Chọn Phường/Xã",
+                            colProps4
+                        )}
+
+                        {renderInput("Số nhà/Đường", "contactStreet", false, colProps4)}
+                    </Row>
+                    
+                    {/* Các trường còn lại trong phần Liên lạc */}
+                    <Row gutter={[16, 16]}>
+                        {renderInput("Khu vực KTX/Phòng", "contactRoom", false, colProps4)}
+                        {renderInput("SĐT liên hệ", "contactPhone", false, colProps4)}
+                        {renderInput("SĐT gia đình", "contactHomePhone", false, colProps4)}
+                        {/* Có thể thêm trường thứ 4 nếu cần */}
+                    </Row>
+                </Card>
+
+                
+                <Card title="Thông tin khác" style={{ marginBottom: 20 }}>
+                    <Title level={5}>Thông tin Tài khoản Ngân hàng</Title>
+                    <Row gutter={[16, 16]}>
+                        {/* 3 trường, dùng defaultColProps (8) */}
+                        {renderInput("Tên ngân hàng", "bankName", false)}
+                        {renderInput("Số tài khoản ngân hàng", "bankAccount", false)}
+                        {renderInput("Chi nhánh", "bankBranch", false)}
+                    </Row>
+                    {/* Ghi chú chiếm toàn bộ chiều rộng */}
+                    <Form.Item label="Ghi chú cá nhân" name="personalNotes">
+                        <TextArea rows={2} placeholder="Ghi chú về bản thân, các vấn đề đặc biệt..." />
+                    </Form.Item>
+                </Card>
+
+                
+                {/* --- NÚT CẬP NHẬT --- */}
+                <Form.Item style={{ textAlign: 'right' }}>
+                    <Button type="primary" htmlType="submit" size="large">
+                        
+                        Cập nhật toàn bộ Hồ sơ
+                    </Button>
+                </Form.Item>
+            </Form>
+        </div>
+    );
 }
