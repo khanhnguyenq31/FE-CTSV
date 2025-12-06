@@ -68,7 +68,7 @@ export default function StudentSidebar({ messageApi }: { messageApi: any }) {
         }}
       >
         <AppstoreOutlined style={{ marginRight: 8 }} />
-        SMS BK (SV)
+        SMS BK - STUDENT
       </div>
 
       {/* Cập nhật các mục Menu cho sinh viên */}

@@ -230,7 +230,7 @@ export default function HomePage({  }: { messageApi: any }) {
                 {/* 1. Phần Văn bản (Nằm bên trái) */}
                 <div>
                   <Title level={2} style={{ marginBottom: 4 }}>
-                    Hey Admin.
+                    Hey Technician.
                   </Title>
                   <Text type="secondary">
                     Chào mừng bạn đến với hệ thống quản lý công tác sinh viên.

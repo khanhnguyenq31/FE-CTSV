@@ -1,5 +1,5 @@
 import { Menu, Layout, Button } from 'antd';
-import { UserOutlined, TeamOutlined, HomeOutlined, LogoutOutlined, AppstoreOutlined, } from '@ant-design/icons';
+import { UserOutlined, TeamOutlined, HomeOutlined, LogoutOutlined, AppstoreOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
 const { Sider } = Layout;

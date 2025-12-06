@@ -142,20 +142,16 @@ export default function Login({ messageApi }: { messageApi: any }) {
                 </Button>
               </Form.Item>
 
-              <div className="flex justify-between items-center text-sm mt-2">
+              {/* PHẦN ĐÃ CHỈNH SỬA: Đưa "Quên mật khẩu?" vào giữa và loại bỏ "Đăng ký tài khoản" */}
+              <div className="flex justify-center items-center text-sm mt-2">
                 <a
                   className="text-black underline hover:opacity-80"
                   onClick={() => navigate("/forgot-password")}
                 >
                   Quên mật khẩu?
                 </a>
-                <a
-                  className="text-black underline hover:opacity-80"
-                 onClick={() => navigate("/register")}
-                >
-                  Đăng ký tài khoản
-                </a>
               </div>
+              {/* KẾT THÚC PHẦN CHỈNH SỬA */}
 
             </Form>
           </Card>
