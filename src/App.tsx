@@ -35,8 +35,7 @@ import StudentEvent from './pages/student/StudentEvent'
 
 // Imports cho các trang ADMIN
 import AdminOverview from './pages/admin/Overview';
-import ManageTechnician from './pages/admin/ManageTechnician';
-import ManageStudent from './pages/admin/ManageStudent';
+import ManageAccount from './pages/admin/ManageAccount';
 
 import CustomHeader from './components/CustomHeader';
 
@@ -152,8 +151,7 @@ function App() {
           <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]} />}>
             <Route element={<AdminLayout messageApi={messageApi} />}>
               <Route path="overview" element={<AdminOverview messageApi={messageApi} />} />
-              <Route path="manage-technician" element={<ManageTechnician messageApi={messageApi} />} />
-              <Route path="manage-student" element={<ManageStudent messageApi={messageApi} />} />
+              <Route path="manage-account" element={<ManageAccount messageApi={messageApi} />} />
             </Route>
           </Route>
 

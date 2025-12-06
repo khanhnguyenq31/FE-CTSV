@@ -1,5 +1,5 @@
 import { Menu, Layout, Button } from 'antd';
-import { UserOutlined, TeamOutlined, HomeOutlined, LogoutOutlined } from '@ant-design/icons';
+import { UserOutlined, TeamOutlined, HomeOutlined, LogoutOutlined, AppstoreOutlined, } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
 const { Sider } = Layout;
@@ -8,9 +8,19 @@ export default function AdminSidebar() {
   const navigate = useNavigate();
 
   return (
-    <Sider width={220} theme="dark">
-      <div className="text-white text-lg font-bold text-center p-4">
-        SMS BK - Admin
+    <Sider width={250} theme="dark">
+       <div
+        style={{
+          color: "#fff",
+          textAlign: "center",
+          padding: "20px 0",
+          fontSize: 20,
+          fontWeight: 600,
+          borderBottom: "1px solid rgba(255,255,255,0.1)",
+        }}
+      >
+        <AppstoreOutlined style={{ marginRight: 8 }} />
+        SMS BK - ADMIN
       </div>
       <Menu
         theme="dark"
@@ -19,8 +29,7 @@ export default function AdminSidebar() {
         onClick={({ key }) => navigate(`/admin/${key}`)}
         items={[
           { key: 'overview', icon: <HomeOutlined />, label: 'Tổng quan' },
-          { key: 'manage-technician', icon: <TeamOutlined />, label: 'Quản lý chuyên viên' },
-          { key: 'manage-student', icon: <UserOutlined />, label: 'Quản lý sinh viên' },
+          { key: 'manage-account', icon: <TeamOutlined />, label: 'Quản lý tài khoản' },
         ]}
       />
       {/* Nút Đăng xuất */}
