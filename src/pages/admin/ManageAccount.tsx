@@ -127,7 +127,7 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
       } else {
         // Gọi API tạo technician
         const token = localStorage.getItem('accessToken');
-        const res = await fetch('/auth/create-technician', {
+        const res = await fetch('http://localhost:3000/auth/create-technician', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -142,7 +142,7 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
       form.resetFields();
       // Reload lại danh sách từ API
       const token = localStorage.getItem('accessToken');
-      const res = await fetch('/auth/user-list', {
+      const res = await fetch('http://localhost:3000/auth/user-list', {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       const json = await res.json();
