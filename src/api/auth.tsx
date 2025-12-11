@@ -100,10 +100,10 @@ export async function createTechnicianApi(email: string) {
   return response.data;
 }
 
-// Tạo tài khoản sinh viên
-export async function createStudentApi(email: string) {
+// Tạo tài khoản sinh viên (bổ sung fullName)
+export async function createStudentApi(email: string, fullName: string) {
   const accessToken = localStorage.getItem('accessToken');
-  const response = await api.post('/auth/create-student', { email }, {
+  const response = await api.post('/auth/create-student', { email, fullName }, {
     headers: { Authorization: `Bearer ${accessToken}` }
   });
   return response.data;

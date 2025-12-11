@@ -1,9 +1,8 @@
 import { Button, Table, Modal, Form, Input, Select, Tag, Space, Card, Tooltip, message } from 'antd';
 import { PlusOutlined, EditOutlined, LockOutlined, DeleteOutlined, SearchOutlined, UserOutlined, ToolOutlined } from '@ant-design/icons';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import CustomHeader from '../../components/CustomHeader';
-// Giả định bạn đã export cả 2 hàm này từ api/auth
-import { createStudentApi, createTechnicianApi } from '../../api/auth';
+import { createStudentApi } from '../../api/auth';
 
 interface UserData {
   key: string;
@@ -19,14 +18,36 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [form] = Form.useForm();
+  const [dataSource, setDataSource] = useState<UserData[]>([]);
 
-  // Dummy data (Đã gộp)
-  const [dataSource, setDataSource] = useState<UserData[]>([
-    { key: '1', email: 'student1@example.com', name: 'Nguyễn Văn A', role: 'student', status: 'active', createdAt: '2023-10-01' },
-    { key: '2', email: 'tech1@example.com', name: 'Trần Thị B', role: 'technician', status: 'active', createdAt: '2023-09-15' },
-    { key: '3', email: 'student2@example.com', name: 'Phạm Văn C', role: 'student', status: 'locked', createdAt: '2023-08-20' },
-    { key: '4', email: 'tech2@example.com', name: 'Lê Thị D', role: 'technician', status: 'inactive', createdAt: '2023-11-05' },
-  ]);
+  // Fetch user list from API
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const token = localStorage.getItem('accessToken');
+        const res = await fetch('http://localhost:3000/auth/user-list', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (!res.ok) throw new Error('Không thể lấy danh sách tài khoản');
+        const json = await res.json();
+        const today = new Date().toISOString().split('T')[0];
+        const users: UserData[] = (json.users || []).map((u: any, idx: number) => ({
+          key: u.email || idx,
+          email: u.email,
+          name: u.fullName || '',
+          role: u.role,
+          status: 'active', // Mặc định đang hoạt động
+          createdAt: today,
+        }));
+        setDataSource(users);
+      } catch (e) {
+        setDataSource([]);
+      }
+    };
+    fetchUsers();
+  }, []);
 
   // Xử lý Search
   const filteredData = dataSource.filter((item) =>
@@ -101,27 +122,40 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
   const handleAdd = async (values: any) => {
     setLoading(true);
     try {
-      // Gọi API dựa trên Role được chọn
       if (values.role === 'student') {
-        await createStudentApi(values.email);
+        await createStudentApi(values.email, values.name);
       } else {
-        await createTechnicianApi(values.email);
+        // Gọi API tạo technician
+        const token = localStorage.getItem('accessToken');
+        const res = await fetch('/auth/create-technician', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ email: values.email, fullName: values.name }),
+        });
+        if (!res.ok) throw new Error('Tạo tài khoản chuyên viên thất bại!');
+        await res.json();
       }
-
       setOpen(false);
       form.resetFields();
-      
-      // Giả lập thêm vào bảng (thực tế bạn sẽ reload lại list từ API)
-      const newUser: UserData = {
-          key: Date.now().toString(),
-          email: values.email,
-          name: '',
-          role: values.role,
-          status: 'inactive',
-          createdAt: new Date().toISOString().split('T')[0]
-      };
-      setDataSource([newUser, ...dataSource]);
-
+      // Reload lại danh sách từ API
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch('/auth/user-list', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const json = await res.json();
+      const today = new Date().toISOString().split('T')[0];
+      const users: UserData[] = (json.users || []).map((u: any, idx: number) => ({
+        key: u.email || idx,
+        email: u.email,
+        name: u.fullName || '',
+        role: u.role,
+        status: 'active',
+        createdAt: today,
+      }));
+      setDataSource(users);
       messageApi.success(`Tạo tài khoản ${values.role === 'student' ? 'sinh viên' : 'chuyên viên'} thành công! Mật khẩu đã gửi tới email.`);
     } catch (err: any) {
       messageApi.error(err?.message || 'Tạo tài khoản thất bại!');
@@ -177,6 +211,7 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
                 }}
                 rowKey="key"
                 scroll={{ x: 1000 }} // Đảm bảo responsive trên mobile
+                loading={loading}
             />
         </Card>
       </div>
@@ -204,6 +239,14 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
                     <Space><ToolOutlined /> Chuyên viên (Technician)</Space>
                 </Select.Option>
             </Select>
+          </Form.Item>
+
+          <Form.Item
+            label="Họ và tên"
+            name="name"
+            rules={[{ required: true, message: 'Vui lòng nhập họ tên!' }]}
+          >
+            <Input size="large" placeholder="Nhập họ và tên" />
           </Form.Item>
 
           <Form.Item

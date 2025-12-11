@@ -1,8 +1,9 @@
+import React, { useEffect, useState } from 'react';
 import { Typography, Form, Input, Button, Card, Row, Col, Select, DatePicker } from 'antd';
 import dayjs from 'dayjs';
 
 // --- Import các kiểu dữ liệu từ Ant Design (Bắt buộc cho TypeScript) ---
-import type{ ColProps } from 'antd'; 
+import type { ColProps } from 'antd'; 
 import type { Rule } from 'antd/lib/form';
 
 const { Title } = Typography;
@@ -16,80 +17,7 @@ interface OptionType {
 }
 
 // --- Dữ liệu Mẫu (Mô phỏng dữ liệu từ API) ---
-const initialData = {
-    // THÔNG TIN CÁ NHÂN
-    studentId: '22111010',
-    fullName: 'NGUYỄN TRẦN ĐÀO',
-    className: 'KHÓA', // Khóa học
-    major: 'Ngành học',
-    dateOfBirth: dayjs('2004-11-08'),
-    gender: 'Nam',
-    idCard: '088309049291', // Số CMND/CCCD
-    idCardIssueDate: dayjs('2021-04-25'), // Ngày cấp CMND/CCCD
-    idCardIssuePlace: 'LA', // Tỉnh Long An
-    nationality: 'VN', // Quốc tịch
-    birthPlace: 'Kiên Giang', // Nơi sinh (Tỉnh/Thành)
-    birthPlaceDetail: 'Khu vực 2NT', // Khu vực ưu tiên (Giá trị cũ, giờ chuyển sang dùng cho Input/Select nếu cần)
-    religion: 'PG', // Tôn giáo
-    
-    // ⭐ GIÁ TRỊ MẪU MỚI:
-    ethnicity: 'Kinh', // Dân tộc
-    priorityArea: 'KV3', // Khu vực ưu tiên
-    //... (Các trường dữ liệu khác không đổi)
-
-    // THÔNG TIN LIÊN LẠC
-    phone: '0937837488',
-    emailStudent: 'nguyentrandao.edu@hcmut.edu.vn',
-    emailPersonal: 'basilinx.010822@gmail.com',
-    emailAlt: 'emailphong', // Email phòng
-
-    // THÔNG TIN ĐỊA CHỈ THƯỜNG TRÚ (Đã thay giá trị mẫu để tương thích với Select)
-    province: 'HCM',
-    district: 'Q1',
-    street: 'Số nhà',
-
-    // THÔNG TIN ĐỊA CHỈ LIÊN LẠC (Đã thay giá trị mẫu để tương thích với Select)
-    contactNationality: 'VN', // Thêm trường mới cho quốc gia tạm trú
-    contactProvince: 'HN',
-    contactDistrict: 'HK',
-    contactStreet: 'Số nhà',
-    contactPhone: '033374898', // Số điện thoại liên lạc
-    contactHomePhone: 'Số điện thoại gia đình',
-    contactRoom: 'Phòng/Ký túc xá',
-
-    // THÔNG TIN HỌC VỤ
-    faculty: 'Khoa',
-    department: 'Bộ môn/Khoa quản lý',
-    studentCode: 'MT22D0504', // Mã sinh viên
-    enrollmentDate: dayjs('2022-10-01'), // Thời điểm nhập học (Tháng/Năm)
-    graduationYear: '2027', // Năm dự kiến tốt nghiệp (TMT)
-    graduationType: 'Bao lưu', // Bảo lưu/Chuyển trường/Nghỉ học/Tốt nghiệp
-    totalCredits: '12', // Số học trình đã tích lũy (đã học)
-    gpaTotal: '8', // Điểm học trình đã tích lũy (điểm trung bình tích lũy)
-    gpaSemester: '-', // Điểm học kỳ
-    
-    // THÔNG TIN THAM GIA HOẠT ĐỘNG
-    activityType: 'Tham gia hoạt động (chính thức)',
-    activityDate: dayjs('2020-10-28'),
-    activityPlace: 'Bến xe',
-    activityContent: 'Đại học',
-    activityRole: 'Chính ủy',
-    activityDuration: 'Buổi tối',
-
-    // THÔNG TIN CƠ QUAN BỐ/MẸ (Mô phỏng theo các block "Thông tin Cha" và "Thông tin Mẹ")
-    fatherName: 'Nguyễn Văn Công',
-    fatherBirthYear: '1970',
-    fatherJob: 'Kế toán',
-    fatherWorkplace: 'Nơi công tác',
-    fatherPhone: '0932928895',
-
-    motherName: 'Trần Thị Tuyết Nhung',
-    motherBirthYear: '1976',
-    motherJob: 'Giáo viên',
-    motherWorkplace: 'Nơi công tác',
-    motherPhone: '0932928898',
-};
-
+const initialData = {};
 
 // Dữ liệu Select cho Nơi cấp CCCD/CMND (Ví dụ)
 const idCardIssuePlaceOptions: OptionType[] = [
@@ -151,18 +79,88 @@ const districtOptions: OptionType[] = [
 
 // Component chính
 export default function DetailedStudentProfile() {
-    const onFinish = (values: any) => { // Dùng 'any' cho values lớn để đơn giản hóa
-        // Xử lý chuyển đổi dayjs sang chuỗi trước khi gửi
-        const formattedValues = {
-            ...values,
-            dateOfBirth: values.dateOfBirth ? values.dateOfBirth.format('YYYY-MM-DD') : null,
-            idCardIssueDate: values.idCardIssueDate ? values.idCardIssueDate.format('YYYY-MM-DD') : null,
-            enrollmentDate: values.enrollmentDate ? values.enrollmentDate.format('YYYY-MM') : null,
-            activityDate: values.activityDate ? values.activityDate.format('YYYY-MM-DD') : null,
+    const [loading, setLoading] = useState(false);
+    const [initialValues, setInitialValues] = useState<any>(initialData);
+    const [form] = Form.useForm();
+
+    // Fetch profile on mount
+    useEffect(() => {
+        const fetchProfile = async () => {
+            setLoading(true);
+            try {
+                const token = localStorage.getItem('accessToken');
+                const res = await fetch('http://localhost:3000/student/profile', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+                if (!res.ok) throw new Error('Không thể lấy hồ sơ');
+                const data = await res.json();
+                // Chuyển đổi các trường ngày sang dayjs
+                const profile = data.profile;
+                const dateFields = [
+                    'dateOfBirth',
+                    'idCardIssueDate',
+                    'enrollmentDate',
+                    'activityDate',
+                ];
+                dateFields.forEach(field => {
+                    if (profile[field]) profile[field] = dayjs(profile[field]);
+                });
+                setInitialValues(profile);
+                form.setFieldsValue(profile);
+            } catch (e) {
+                // Có thể show message lỗi ở đây
+                console.log(e)
+            } finally {
+                setLoading(false);
+            }
         };
-        
-        console.log('Thông tin hồ sơ được cập nhật:', formattedValues);
-        // Logic gọi API cập nhật hồ sơ
+        fetchProfile();
+        // eslint-disable-next-line
+    }, []);
+
+    const onFinish = async (values: any) => {
+        setLoading(true);
+        try {
+            // Chuyển đổi dayjs sang string đúng format API
+            const formattedValues = {
+                ...values,
+                dateOfBirth: values.dateOfBirth ? values.dateOfBirth.format('YYYY-MM-DD') : null,
+                idCardIssueDate: values.idCardIssueDate ? values.idCardIssueDate.format('YYYY-MM-DD') : null,
+                enrollmentDate: values.enrollmentDate ? values.enrollmentDate.format('YYYY-MM-DD') : null,
+                activityDate: values.activityDate ? values.activityDate.format('YYYY-MM-DD') : null,
+            };
+            const token = localStorage.getItem('accessToken');
+            const res = await fetch('http://localhost:3000/student/profile', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify(formattedValues),
+            });
+            if (!res.ok) throw new Error('Cập nhật thất bại');
+            const data = await res.json();
+            // Cập nhật lại form với dữ liệu mới
+            const profile = data.profile;
+            const dateFields = [
+                'dateOfBirth',
+                'idCardIssueDate',
+                'enrollmentDate',
+                'activityDate',
+            ];
+            dateFields.forEach(field => {
+                if (profile[field]) profile[field] = dayjs(profile[field]);
+            });
+            setInitialValues(profile);
+            form.setFieldsValue(profile);
+            // Có thể show message thành công ở đây
+        } catch (e) {
+            // Có thể show message lỗi ở đây
+        } finally {
+            setLoading(false);
+        }
     };
 
     // Props Responsive mặc định: 3 cột trên Desktop, 2 cột trên Tablet, 1 cột trên Mobile
@@ -177,13 +175,13 @@ export default function DetailedStudentProfile() {
     const renderInput = (
         label: string, 
         name: string | number | (string | number)[], 
-        disabled: boolean = false, 
+        _disabled: boolean = false, 
         colProps: ColProps = defaultColProps, 
         rules: Rule[] = []
     ) => (
         <Col {...colProps}>
             <Form.Item label={label} name={name} rules={rules}>
-                <Input disabled={disabled} />
+                <Input />
             </Form.Item>
         </Col>
     );
@@ -195,11 +193,11 @@ export default function DetailedStudentProfile() {
         options: OptionType[], 
         placeholder: string = "Chọn...", 
         colProps: ColProps = defaultColProps, 
-        disabled: boolean = false
+        _disabled: boolean = false
     ) => (
         <Col {...colProps}>
             <Form.Item label={label} name={name}>
-                <Select disabled={disabled} placeholder={placeholder}>
+                <Select placeholder={placeholder}>
                     {options.map(opt => <Option key={opt.value} value={opt.value}>{opt.label}</Option>)}
                 </Select>
             </Form.Item>
@@ -245,10 +243,12 @@ export default function DetailedStudentProfile() {
                 Hồ sơ cá nhân sinh viên
             </Title>
             <Form
+                form={form}
                 name="detailed_student_profile"
                 layout="vertical"
                 onFinish={onFinish}
-                initialValues={initialData}
+                initialValues={initialValues}
+                disabled={loading}
             >
                 
                 <Card title="Thông tin cá nhân" style={{ marginBottom: 20 }}>
@@ -274,13 +274,13 @@ export default function DetailedStudentProfile() {
                         <Col xs={24} sm={24} md={16} lg={20}>
                             <Row gutter={[16, 16]}>
                                 {/* SỬ DỤNG defaultColProps (3 cột) */}
-                                {renderInput("Họ và Tên", "fullName", true)}
-                                {renderInput("Mã số sinh viên", "studentId", true)}
-                                {renderInput("Ngành học", "major", true)}
+                                {renderInput("Họ và Tên", "fullName")}
+                                {renderInput("Mã số sinh viên", "studentId")}
+                                {renderInput("Ngành học", "major")}
 
                                 {renderDatePicker("Ngày sinh", "dateOfBirth", "DD/MM/YYYY")}
-                                {renderInput("Khóa", "className", true)}
-                                {renderInput("Số CCCD", "idCard", false)}
+                                {renderInput("Khóa", "studentCode")}
+                                {renderInput("Số CCCD", "idCard")}
                                 
                                 {renderSelect("Giới tính", "gender", [
                                     { value: 'Nam', label: 'Nam' },
@@ -339,27 +339,27 @@ export default function DetailedStudentProfile() {
                 <Card title="Thông tin học vụ" style={{ marginBottom: 20 }}>
                     <Row gutter={[16, 16]}>
                         {/* Hàng 1, dùng colProps4 (6) */}
-                        {renderInput("Khoa", "faculty", true, colProps4)}
-                        {renderInput("Bộ môn/Khoa quản lý", "department", true, colProps4)}
-                        {renderInput("Mã lớp", "studentCode", true, colProps4)}
+                        {renderInput("Khoa", "faculty", false, colProps4)}
+                        {renderInput("Bộ môn/Khoa quản lý", "department", false, colProps4)}
+                        {renderInput("Mã lớp", "className", false, colProps4)}
                         {renderDatePicker("Thời điểm nhập học", "enrollmentDate", "MM/YYYY", colProps4)}
                     </Row>
                     <Row gutter={[16, 16]}>
                         {/* Hàng 2, dùng colProps4 (6) */}
-                        {renderInput("Tổng số Tín chỉ (đã học)", "totalCredits", true, colProps4)}
-                        {renderInput("GPA học kỳ", "gpaSemester", true, colProps4)}
-                        {renderInput("GPA tích lũy", "gpaTotal", true, colProps4)}
-                        {renderInput("Năm tốt nghiệp (dự kiến)", "graduationYear", true, colProps4)}
+                        {renderInput("Tổng số Tín chỉ (đã học)", "totalCredits", false, colProps4)}
+                        {renderInput("GPA học kỳ", "gpaSemester", false, colProps4)}
+                        {renderInput("GPA tích lũy", "gpaTotal", false, colProps4)}
+                        {renderInput("Năm tốt nghiệp (dự kiến)", "graduationYear", false, colProps4)}
                     </Row>
                     <Row gutter={[16, 16]}>
                         {/* Hàng 3, dùng colProps4 (6) */}
                         {renderSelect("Hình thức đào tạo (chuẩn)", "trainingType", [
                             { value: 'cq', label: 'Chính quy' },
                             { value: 'lt', label: 'Liên thông' },
-                        ], "Chọn...", colProps4, true)}
-                        {renderInput("Ngành đào tạo", "trainingMajor", true, colProps4)}
-                        {renderInput("Loại hình đào tạo", "trainingFormat", true, colProps4)}
-                        {renderInput("Bảo lưu/Chuyển", "graduationType", true, colProps4)}
+                        ], "Chọn...", colProps4)}
+                        {renderInput("Ngành đào tạo", "trainingMajor", false, colProps4)}
+                        {renderInput("Loại hình đào tạo", "trainingFormat", false, colProps4)}
+                        {renderInput("Bảo lưu/Chuyển", "graduationType", false, colProps4)}
                     </Row>
                 </Card>
 
@@ -464,13 +464,7 @@ export default function DetailedStudentProfile() {
                         {renderInput("Số nhà/Đường", "contactStreet", false, colProps4)}
                     </Row>
                     
-                    {/* Các trường còn lại trong phần Liên lạc */}
-                    <Row gutter={[16, 16]}>
-                        {renderInput("Khu vực KTX/Phòng", "contactRoom", false, colProps4)}
-                        {renderInput("SĐT liên hệ", "contactPhone", false, colProps4)}
-                        {renderInput("SĐT gia đình", "contactHomePhone", false, colProps4)}
-                        {/* Có thể thêm trường thứ 4 nếu cần */}
-                    </Row>
+                    
                 </Card>
 
                 
@@ -491,7 +485,7 @@ export default function DetailedStudentProfile() {
                 
                 {/* --- NÚT CẬP NHẬT --- */}
                 <Form.Item style={{ textAlign: 'right' }}>
-                    <Button type="primary" htmlType="submit" size="large">
+                    <Button type="primary" htmlType="submit" size="large" loading={loading}>
                         
                         Cập nhật toàn bộ Hồ sơ
                     </Button>
