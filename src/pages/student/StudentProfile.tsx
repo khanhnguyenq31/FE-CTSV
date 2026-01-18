@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Typography, Form, Input, Button, Card, Row, Col, Select, DatePicker } from 'antd';
+import { Typography, Form, Input, Button, Card, Row, Col, Select, DatePicker, message, Upload, Avatar } from 'antd';
+import { UploadOutlined, UserOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
 // --- Import các kiểu dữ liệu từ Ant Design (Bắt buộc cho TypeScript) ---
-import type { ColProps } from 'antd'; 
+import type { ColProps } from 'antd';
 import type { Rule } from 'antd/lib/form';
 
 const { Title } = Typography;
@@ -82,6 +83,8 @@ export default function DetailedStudentProfile() {
     const [loading, setLoading] = useState(false);
     const [initialValues, setInitialValues] = useState<any>(initialData);
     const [form] = Form.useForm();
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [previewAvatar, setPreviewAvatar] = useState<string>('');
 
     // Fetch profile on mount
     useEffect(() => {
@@ -89,14 +92,27 @@ export default function DetailedStudentProfile() {
             setLoading(true);
             try {
                 const token = localStorage.getItem('accessToken');
+                if (!token) {
+                    message.error('Vui lòng đăng nhập để xem hồ sơ');
+                    return;
+                }
+
                 const res = await fetch('http://localhost:3000/student/profile', {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                     },
                 });
-                if (!res.ok) throw new Error('Không thể lấy hồ sơ');
+
+                if (!res.ok) {
+                    if (res.status === 401) throw new Error('Phiên đăng nhập hết hạn');
+                    throw new Error('Không thể lấy hồ sơ');
+                }
+
                 const data = await res.json();
-                // Chuyển đổi các trường ngày sang dayjs
+                if (!data || !data.profile) {
+                    throw new Error('Dữ liệu hồ sơ không hợp lệ');
+                }
+
                 const profile = data.profile;
                 const dateFields = [
                     'dateOfBirth',
@@ -107,41 +123,68 @@ export default function DetailedStudentProfile() {
                 dateFields.forEach(field => {
                     if (profile[field]) profile[field] = dayjs(profile[field]);
                 });
+
                 setInitialValues(profile);
                 form.setFieldsValue(profile);
-            } catch (e) {
-                // Có thể show message lỗi ở đây
-                console.log(e)
+                setPreviewAvatar(profile.avatar || '');
+            } catch (e: any) {
+                console.error(e);
+                message.error(e.message || 'Có lỗi xảy ra khi tải hồ sơ');
             } finally {
                 setLoading(false);
             }
         };
         fetchProfile();
         // eslint-disable-next-line
-    }, []);
+    }, [form]);
 
     const onFinish = async (values: any) => {
         setLoading(true);
         try {
-            // Chuyển đổi dayjs sang string đúng format API
-            const formattedValues = {
+            const token = localStorage.getItem('accessToken');
+
+            // Format dates
+            const commonData = {
                 ...values,
                 dateOfBirth: values.dateOfBirth ? values.dateOfBirth.format('YYYY-MM-DD') : null,
                 idCardIssueDate: values.idCardIssueDate ? values.idCardIssueDate.format('YYYY-MM-DD') : null,
                 enrollmentDate: values.enrollmentDate ? values.enrollmentDate.format('YYYY-MM-DD') : null,
                 activityDate: values.activityDate ? values.activityDate.format('YYYY-MM-DD') : null,
             };
-            const token = localStorage.getItem('accessToken');
+
+            let body: any;
+            let headers: any = {
+                'Authorization': `Bearer ${token}`,
+            };
+
+            if (avatarFile) {
+                // Use FormData if there's a new avatar
+                const formData = new FormData();
+                Object.keys(commonData).forEach(key => {
+                    if (commonData[key] !== null && commonData[key] !== undefined) {
+                        formData.append(key, commonData[key]);
+                    }
+                });
+                formData.append('avatar', avatarFile);
+                body = formData;
+                // Content-Type is auto-set to multipart/form-data by browser
+            } else {
+                // Use JSON otherwise
+                body = JSON.stringify(commonData);
+                headers['Content-Type'] = 'application/json';
+            }
+
             const res = await fetch('http://localhost:3000/student/profile', {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify(formattedValues),
+                headers: headers,
+                body: body,
             });
+
             if (!res.ok) throw new Error('Cập nhật thất bại');
             const data = await res.json();
+
+            message.success('Cập nhật hồ sơ thành công');
+
             // Cập nhật lại form với dữ liệu mới
             const profile = data.profile;
             const dateFields = [
@@ -155,12 +198,30 @@ export default function DetailedStudentProfile() {
             });
             setInitialValues(profile);
             form.setFieldsValue(profile);
-            // Có thể show message thành công ở đây
-        } catch (e) {
-            // Có thể show message lỗi ở đây
+            setPreviewAvatar(profile.avatar || '');
+            setAvatarFile(null); // Reset uploaded file
+        } catch (e: any) {
+            message.error(e.message || 'Có lỗi xảy ra khi cập nhật');
         } finally {
             setLoading(false);
         }
+    };
+
+    // Handle file selection
+    const handleFileChange = (info: any) => {
+        const file = info.file;
+        if (file) {
+            setAvatarFile(file);
+            // Create local preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                if (e.target?.result) {
+                    setPreviewAvatar(e.target.result as string);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+        return false; // Prevent auto uplaod
     };
 
     // Props Responsive mặc định: 3 cột trên Desktop, 2 cột trên Tablet, 1 cột trên Mobile
@@ -173,10 +234,10 @@ export default function DetailedStudentProfile() {
 
     // Hàm render trường Input (đã định kiểu)
     const renderInput = (
-        label: string, 
-        name: string | number | (string | number)[], 
-        _disabled: boolean = false, 
-        colProps: ColProps = defaultColProps, 
+        label: string,
+        name: string | number | (string | number)[],
+        _disabled: boolean = false,
+        colProps: ColProps = defaultColProps,
         rules: Rule[] = []
     ) => (
         <Col {...colProps}>
@@ -188,11 +249,11 @@ export default function DetailedStudentProfile() {
 
     // Hàm render trường Select (đã định kiểu)
     const renderSelect = (
-        label: string, 
-        name: string | number | (string | number)[], 
-        options: OptionType[], 
-        placeholder: string = "Chọn...", 
-        colProps: ColProps = defaultColProps, 
+        label: string,
+        name: string | number | (string | number)[],
+        options: OptionType[],
+        placeholder: string = "Chọn...",
+        colProps: ColProps = defaultColProps,
         _disabled: boolean = false
     ) => (
         <Col {...colProps}>
@@ -206,9 +267,9 @@ export default function DetailedStudentProfile() {
 
     // Hàm render trường DatePicker (đã định kiểu)
     const renderDatePicker = (
-        label: string, 
-        name: string | number | (string | number)[], 
-        format: string = "DD/MM/YYYY", 
+        label: string,
+        name: string | number | (string | number)[],
+        format: string = "DD/MM/YYYY",
         colProps: ColProps = defaultColProps
     ) => (
         <Col {...colProps}>
@@ -217,21 +278,21 @@ export default function DetailedStudentProfile() {
             </Form.Item>
         </Col>
     );
-    
+
     // Định nghĩa props cho bố cục 1/4 (4 cột trên desktop)
     const colProps4: ColProps = {
         xs: 24,
         sm: 24,
         md: 12,
-        lg: 6, 
+        lg: 6,
     };
-    
+
     // Định nghĩa props cho bố cục 1/5 hoặc 1/6 (5 hoặc 6 cột trên desktop)
     const colProps6: ColProps = {
         xs: 24,
         sm: 24,
         md: 12,
-        lg: 4, 
+        lg: 4,
     };
 
     return (
@@ -250,26 +311,37 @@ export default function DetailedStudentProfile() {
                 initialValues={initialValues}
                 disabled={loading}
             >
-                
+
                 <Card title="Thông tin cá nhân" style={{ marginBottom: 20 }}>
                     <Row gutter={[16, 16]}>
                         {/* Cột Ảnh đại diện: 1 cột trên mobile, 4/24 trên desktop */}
                         <Col xs={24} sm={24} md={8} lg={4}>
-                            <div style={{ 
-                                width: '100px', 
-                                height: '130px', 
-                                border: '1px solid #d9d9d9', 
-                                marginBottom: 8,
-                                display: 'flex', 
-                                alignItems: 'center', 
+                            <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
                                 justifyContent: 'center',
-                                backgroundColor: '#e6f7ff'
+                                marginBottom: 16
                             }}>
-                                Ảnh 3x4
+                                <Avatar
+                                    size={120}
+                                    src={previewAvatar}
+                                    icon={<UserOutlined />}
+                                    style={{ marginBottom: 16, border: '1px solid #d9d9d9' }}
+                                />
+                                <Upload
+                                    showUploadList={false}
+                                    beforeUpload={(file) => {
+                                        handleFileChange({ file });
+                                        return false; // Prevent auto upload
+                                    }}
+                                    accept="image/*"
+                                >
+                                    <Button icon={<UploadOutlined />}>Đổi ảnh đại diện</Button>
+                                </Upload>
                             </div>
-                            <Button size="small">Cập nhật ảnh</Button>
                         </Col>
-                        
+
                         {/* Cột Thông tin chính: 1 cột trên mobile, 20/24 trên desktop */}
                         <Col xs={24} sm={24} md={16} lg={20}>
                             <Row gutter={[16, 16]}>
@@ -281,50 +353,50 @@ export default function DetailedStudentProfile() {
                                 {renderDatePicker("Ngày sinh", "dateOfBirth", "DD/MM/YYYY")}
                                 {renderInput("Khóa", "studentCode")}
                                 {renderInput("Số CCCD", "idCard")}
-                                
+
                                 {renderSelect("Giới tính", "gender", [
                                     { value: 'Nam', label: 'Nam' },
                                     { value: 'Nữ', label: 'Nữ' },
                                 ], "Chọn giới tính")}
-                                
+
                                 {renderSelect(
-                                    "Tôn giáo", 
-                                    "religion", 
-                                    religionOptions, 
+                                    "Tôn giáo",
+                                    "religion",
+                                    religionOptions,
                                     "Chọn tôn giáo"
                                 )}
-                                
+
                                 {renderDatePicker("Ngày cấp CCCD", "idCardIssueDate", "DD/MM/YYYY")}
 
                                 {/* ⭐ TRƯỜNG MỚI: Dân tộc */}
                                 {renderSelect(
-                                    "Dân tộc", 
-                                    "ethnicity", 
-                                    ethnicityOptions, 
+                                    "Dân tộc",
+                                    "ethnicity",
+                                    ethnicityOptions,
                                     "Chọn dân tộc"
                                 )}
-                                
+
                                 {/* ⭐ TRƯỜNG MỚI: Khu vực ưu tiên */}
                                 {renderSelect(
-                                    "Khu vực ưu tiên", 
-                                    "priorityArea", 
-                                    priorityAreaOptions, 
+                                    "Khu vực ưu tiên",
+                                    "priorityArea",
+                                    priorityAreaOptions,
                                     "Chọn khu vực"
                                 )}
 
                                 {renderSelect(
-                                    "Nơi cấp CCCD", 
-                                    "idCardIssuePlace", 
-                                    idCardIssuePlaceOptions, 
+                                    "Nơi cấp CCCD",
+                                    "idCardIssuePlace",
+                                    idCardIssuePlaceOptions,
                                     "Chọn Tỉnh/Thành phố nơi cấp"
                                 )}
-                                
+
                             </Row>
                         </Col>
                     </Row>
                 </Card>
 
-                
+
                 <Card title="Thông tin liên lạc" style={{ marginBottom: 20 }}>
                     <Row gutter={[16, 16]}>
                         {/* Sử dụng colProps4 (6) */}
@@ -335,7 +407,7 @@ export default function DetailedStudentProfile() {
                     </Row>
                 </Card>
 
-                
+
                 <Card title="Thông tin học vụ" style={{ marginBottom: 20 }}>
                     <Row gutter={[16, 16]}>
                         {/* Hàng 1, dùng colProps4 (6) */}
@@ -363,7 +435,7 @@ export default function DetailedStudentProfile() {
                     </Row>
                 </Card>
 
-                
+
                 <Card title="Thông tin gia đình và liên hệ" style={{ marginBottom: 20 }}>
                     <Title level={5}>Thông tin Cha</Title>
                     <Row gutter={[16, 16]}>
@@ -394,80 +466,80 @@ export default function DetailedStudentProfile() {
                     </Row>
                 </Card>
 
-                
+
                 <Card title="Địa chỉ thường trú và liên lạc" style={{ marginBottom: 20 }}>
                     <Title level={5}>Địa chỉ Thường trú (Theo Hộ khẩu)</Title>
                     <Row gutter={[16, 16]}>
                         {/* 4 trường, dùng colProps4 (6) */}
-                        
+
                         {/* ỔN ĐỊNH: Quốc gia (Select) */}
                         {renderSelect(
-                            "Quốc gia", 
-                            "nationality", 
-                            nationalityOptions, 
+                            "Quốc gia",
+                            "nationality",
+                            nationalityOptions,
                             "Chọn quốc gia",
                             colProps4
                         )}
 
                         {/* ỔN ĐỊNH: Tỉnh/Thành phố (Select) */}
                         {renderSelect(
-                            "Tỉnh/Thành phố", 
-                            "province", 
-                            provinceOptions, 
+                            "Tỉnh/Thành phố",
+                            "province",
+                            provinceOptions,
                             "Chọn Tỉnh/Thành phố",
                             colProps4
                         )}
 
                         {/* ỔN ĐỊNH: Phường/Xã (Select) */}
                         {renderSelect(
-                            "Phường/Xã", 
-                            "district", 
-                            districtOptions, 
+                            "Phường/Xã",
+                            "district",
+                            districtOptions,
                             "Chọn Phường/Xã",
                             colProps4
                         )}
 
                         {renderInput("Số nhà/Đường", "street", false, colProps4)}
                     </Row>
-                    
+
                     <Title level={5} style={{ marginTop: 16 }}>Địa chỉ Tạm trú/Liên lạc hiện tại</Title>
                     <Row gutter={[16, 16]}>
                         {/* 4 trường, dùng colProps4 (6) */}
-                        
+
                         {/* Quốc gia tạm trú thành Select */}
                         {renderSelect(
-                            "Quốc gia", 
-                            "contactNationality", 
-                            nationalityOptions, 
+                            "Quốc gia",
+                            "contactNationality",
+                            nationalityOptions,
                             "Chọn quốc gia",
                             colProps4
                         )}
-                        
+
                         {/* Tỉnh/Thành phố tạm trú thành Select */}
                         {renderSelect(
-                            "Tỉnh/Thành phố", 
-                            "contactProvince", 
-                            provinceOptions, 
+                            "Tỉnh/Thành phố",
+                            "contactProvince",
+                            provinceOptions,
                             "Chọn Tỉnh/Thành phố",
                             colProps4
                         )}
 
                         {/* Phường/Xã tạm trú thành Select */}
                         {renderSelect(
-                            "Phường/Xã", 
-                            "contactDistrict", 
-                            districtOptions, 
+                            "Phường/Xã",
+                            "contactDistrict",
+                            districtOptions,
                             "Chọn Phường/Xã",
                             colProps4
                         )}
 
                         {renderInput("Số nhà/Đường", "contactStreet", false, colProps4)}
                     </Row>
-                    
-                    
+
+
                 </Card>
 
-                
+
                 <Card title="Thông tin khác" style={{ marginBottom: 20 }}>
                     <Title level={5}>Thông tin Tài khoản Ngân hàng</Title>
                     <Row gutter={[16, 16]}>
@@ -482,11 +554,11 @@ export default function DetailedStudentProfile() {
                     </Form.Item>
                 </Card>
 
-                
+
                 {/* --- NÚT CẬP NHẬT --- */}
                 <Form.Item style={{ textAlign: 'right' }}>
                     <Button type="primary" htmlType="submit" size="large" loading={loading}>
-                        
+
                         Cập nhật toàn bộ Hồ sơ
                     </Button>
                 </Form.Item>
