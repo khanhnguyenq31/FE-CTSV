@@ -24,11 +24,6 @@ import {
   WarningOutlined, // Icon Kỷ luật
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-// Giả định các components Sidebar và Layout/Content được import đúng cách
-
-import CustomHeader from "../../components/CustomHeader";
-import { Layout } from "antd";
-const { Content } = Layout;
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -80,14 +75,14 @@ const TypeTag: React.FC<{ type: DecisionType }> = ({ type }) => {
   return <Tag color="red" icon={<WarningOutlined />} style={{ fontWeight: 600 }}>{type}</Tag>;
 };
 
-export default function PraisePage({  }: { messageApi: any }) {
+export default function PraisePage({ }: { messageApi: any }) {
   const navigate = useNavigate();
   const [data] = useState<RowData[]>(() => generateMock(60));
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   // State quản lý tab đang chọn: 'all', 'praise', 'discipline'
-  const [activeTab, setActiveTab] = useState('all'); 
+  const [activeTab, setActiveTab] = useState('all');
 
   // Logic lọc theo Mã SV và Tab đang chọn
   const filtered = useMemo(() => {
@@ -100,15 +95,15 @@ export default function PraisePage({  }: { messageApi: any }) {
     } else if (activeTab === 'discipline') {
       result = result.filter(r => r.type === "Kỷ luật");
     }
-    
+
     // 2. Lọc theo Search
     if (q) {
-        result = result.filter(
-            (r) =>
-                r.studentId.toLowerCase().includes(q)
-        );
+      result = result.filter(
+        (r) =>
+          r.studentId.toLowerCase().includes(q)
+      );
     }
-    
+
     return result;
   }, [data, search, activeTab]);
 
@@ -210,144 +205,135 @@ export default function PraisePage({  }: { messageApi: any }) {
 
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
-      {/* Sidebar dùng chung */}
-      
-
-      {/* Nội dung chính */}
-      <Layout>
-        <CustomHeader showBackButton={false} />
-        <Content style={{ padding: 24, background: "#f5f5f5" }}>
-          {/* Header */}
-          <Row align="middle" justify="space-between" style={{ marginBottom: 18 }}>
-            <Col>
-              <Space align="center">
-                <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} />
-                <div>
-                  <Title level={4} style={{ margin: 0 }}>
-                    Khen thưởng & Kỷ luật
-                  </Title>
-                  <Text type="secondary">Quản lý khen thưởng và kỷ luật sinh viên</Text>
-                </div>
-              </Space>
-            </Col>
-
-            <Col>
-              <Space>
-                {/* Nút Thêm mới */}
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  style={{ borderRadius: 8, fontWeight: 600 }}
-                  onClick={() => alert("Chức năng thêm mới")}
-                >
-                   Thêm mới
-                </Button>
-              </Space>
-            </Col>
-          </Row>
-
-          {/* Các card thống kê */}
-          <Row gutter={16} style={{ marginBottom: 18 }}>
-            <Col xs={24} sm={12} lg={6}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Tổng số</Text>
-                <Title level={3} style={{ margin: 0 }}>{totalDecisions}</Title>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Khen thưởng</Text>
-                <Title level={3} style={{ margin: 0, color: "#39b54a" }}>{totalPraise}</Title>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Kỷ luật</Text>
-                <Title level={3} style={{ margin: 0, color: "#f5222d" }}>{totalDiscipline}</Title>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Đang hiệu lực</Text>
-                <Title level={3} style={{ margin: 0 }}>{totalIssued}</Title>
-              </Card>
-            </Col>
-          </Row>
-
-          {/* Bảng dữ liệu với Tabs */}
-          <Card style={{ borderRadius: 12, padding: 0 }}>
-            {/* Header và Search - Đã chỉnh để Search nằm dưới */}
-            <div style={{ padding: '16px 24px 0 24px' }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, flexDirection: "column" }}>
-                    <div>
-                        <Title level={5} style={{ margin: 0 }}>Danh sách khen thưởng & kỷ luật</Title>
-                        <Text type="secondary">Tất cả các quyết định khen thưởng và kỷ luật của sinh viên</Text>
-                    </div>
-
-                    <div style={{ minWidth: 320, marginTop: 12 }}>
-                        <Search
-                          placeholder="Tìm kiếm theo Mã SV"
-                          allowClear
-                          onSearch={(val) => {
-                            setSearch(val);
-                            setPage(1);
-                          }}
-                          onChange={(e) => setSearch(e.target.value)}
-                          value={search}
-                          enterButton={<SearchOutlined />}
-                        />
-                    </div>
-                </div>
+    <div>
+      {/* Header */}
+      <Row align="middle" justify="space-between" style={{ marginBottom: 18 }}>
+        <Col>
+          <Space align="center">
+            <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} />
+            <div>
+              <Title level={4} style={{ margin: 0 }}>
+                Khen thưởng & Kỷ luật
+              </Title>
+              <Text type="secondary">Quản lý khen thưởng và kỷ luật sinh viên</Text>
             </div>
+          </Space>
+        </Col>
 
-            {/* Tabs cho bảng */}
-            <Tabs 
-                defaultActiveKey="all" 
-                activeKey={activeTab} 
-                onChange={(key) => {
-                    setActiveTab(key);
-                    setPage(1); // Reset trang khi chuyển tab
-                }} 
-                style={{ padding: '0 24px' }}
+        <Col>
+          <Space>
+            {/* Nút Thêm mới */}
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              style={{ borderRadius: 8, fontWeight: 600 }}
+              onClick={() => alert("Chức năng thêm mới")}
             >
-              <TabPane tab="Tất cả" key="all" />
-              <TabPane tab="Khen thưởng" key="praise" />
-              <TabPane tab="Kỷ luật" key="discipline" />
-            </Tabs>
-            
-            {/* Bảng */}
-            <div style={{ padding: '0 24px' }}>
-                <Table
-                  columns={columns}
-                  dataSource={paged}
-                  pagination={false}
-                  rowKey="key"
-                  bordered={false}
-                  style={{ background: "transparent" }}
-                  scroll={{ x: 900 }} 
-                />
+              Thêm mới
+            </Button>
+          </Space>
+        </Col>
+      </Row>
+
+      {/* Các card thống kê */}
+      <Row gutter={16} style={{ marginBottom: 18 }}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Tổng số</Text>
+            <Title level={3} style={{ margin: 0 }}>{totalDecisions}</Title>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Khen thưởng</Text>
+            <Title level={3} style={{ margin: 0, color: "#39b54a" }}>{totalPraise}</Title>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Kỷ luật</Text>
+            <Title level={3} style={{ margin: 0, color: "#f5222d" }}>{totalDiscipline}</Title>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Đang hiệu lực</Text>
+            <Title level={3} style={{ margin: 0 }}>{totalIssued}</Title>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Bảng dữ liệu với Tabs */}
+      <Card style={{ borderRadius: 12, padding: 0 }}>
+        {/* Header và Search - Đã chỉnh để Search nằm dưới */}
+        <div style={{ padding: '16px 24px 0 24px' }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, flexDirection: "column" }}>
+            <div>
+              <Title level={5} style={{ margin: 0 }}>Danh sách khen thưởng & kỷ luật</Title>
+              <Text type="secondary">Tất cả các quyết định khen thưởng và kỷ luật của sinh viên</Text>
             </div>
 
-
-            {/* Phân trang */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, padding: '16px 24px' }}>
-              <Text type="secondary">Hiển thị {filtered.length} kết quả</Text>
-              <Pagination
-                current={page}
-                pageSize={pageSize}
-                total={filtered.length}
-                showSizeChanger
-                pageSizeOptions={["5", "10", "20", "50"]}
-                onChange={(p, ps) => {
-                  setPage(p);
-                  setPageSize(ps);
+            <div style={{ minWidth: 320, marginTop: 12 }}>
+              <Search
+                placeholder="Tìm kiếm theo Mã SV"
+                allowClear
+                onSearch={(val) => {
+                  setSearch(val);
+                  setPage(1);
                 }}
+                onChange={(e) => setSearch(e.target.value)}
+                value={search}
+                enterButton={<SearchOutlined />}
               />
             </div>
-          </Card>
-        </Content>
-      </Layout>
-    </Layout>
+          </div>
+        </div>
+
+        {/* Tabs cho bảng */}
+        <Tabs
+          defaultActiveKey="all"
+          activeKey={activeTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            setPage(1); // Reset trang khi chuyển tab
+          }}
+          style={{ padding: '0 24px' }}
+        >
+          <TabPane tab="Tất cả" key="all" />
+          <TabPane tab="Khen thưởng" key="praise" />
+          <TabPane tab="Kỷ luật" key="discipline" />
+        </Tabs>
+
+        {/* Bảng */}
+        <div style={{ padding: '0 24px' }}>
+          <Table
+            columns={columns}
+            dataSource={paged}
+            pagination={false}
+            rowKey="key"
+            bordered={false}
+            style={{ background: "transparent" }}
+            scroll={{ x: 900 }}
+          />
+        </div>
+
+
+        {/* Phân trang */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, padding: '16px 24px' }}>
+          <Text type="secondary">Hiển thị {filtered.length} kết quả</Text>
+          <Pagination
+            current={page}
+            pageSize={pageSize}
+            total={filtered.length}
+            showSizeChanger
+            pageSizeOptions={["5", "10", "20", "50"]}
+            onChange={(p, ps) => {
+              setPage(p);
+              setPageSize(ps);
+            }}
+          />
+        </div>
+      </Card>
+    </div>
   );
 }

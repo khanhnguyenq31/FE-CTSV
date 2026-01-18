@@ -21,11 +21,6 @@ import {
   SearchOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-// Giả định các components Sidebar và Layout/Content được import đúng cách
-
-import CustomHeader from "../../components/CustomHeader";
-import { Layout } from "antd";
-const { Content } = Layout;
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -54,7 +49,7 @@ function generateMock(n = 30): RowData[] {
   const rows: RowData[] = [];
   for (let i = 1; i <= n; i++) {
     let status: Status = i % 4 === 0 ? "Đã kết thúc" : "Đang mở";
-    
+
     rows.push({
       key: String(i),
       stt: i < 10 ? `0${i}` : `${i}`,
@@ -80,14 +75,14 @@ const StatusTag: React.FC<{ status: Status }> = ({ status }) => {
   return <Tag color="default" style={{ fontWeight: 600 }}>{status}</Tag>;
 };
 
-export default function ScholarshipPage({  }: { messageApi: any }) {
+export default function ScholarshipPage({ }: { messageApi: any }) {
   const navigate = useNavigate();
   const [data] = useState<RowData[]>(() => generateMock(60));
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   // State quản lý tab đang chọn: 'all' hoặc 'applications'
-  const [activeTab, setActiveTab] = useState('all'); 
+  const [activeTab, setActiveTab] = useState('all');
 
   // Logic lọc theo Tên Học bổng và Tab đang chọn
   const filtered = useMemo(() => {
@@ -97,17 +92,17 @@ export default function ScholarshipPage({  }: { messageApi: any }) {
     // Lọc theo Tab (Nếu Tab là 'applications', ta sẽ hiển thị các đơn đăng ký
     // Trong ví dụ mock này, ta chỉ hiển thị các học bổng đang mở)
     if (activeTab === 'applications') {
-        result = result.filter(r => r.applications > 0); // Giả định chỉ hiển thị các học bổng có đơn
+      result = result.filter(r => r.applications > 0); // Giả định chỉ hiển thị các học bổng có đơn
     }
-    
+
     // Lọc theo Search
     if (q) {
-        result = result.filter(
-            (r) =>
-                r.scholarshipName.toLowerCase().includes(q)
-        );
+      result = result.filter(
+        (r) =>
+          r.scholarshipName.toLowerCase().includes(q)
+      );
     }
-    
+
     return result;
   }, [data, search, activeTab]);
 
@@ -210,143 +205,134 @@ export default function ScholarshipPage({  }: { messageApi: any }) {
   const totalApplications = data.reduce((sum, r) => sum + r.applications, 0);
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
-      {/* Sidebar dùng chung */}
-      
-
-      {/* Nội dung chính */}
-      <Layout>
-        <CustomHeader showBackButton={false} />
-        <Content style={{ padding: 24, background: "#f5f5f5" }}>
-          {/* Header */}
-          <Row align="middle" justify="space-between" style={{ marginBottom: 18 }}>
-            <Col>
-              <Space align="center">
-                <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} />
-                <div>
-                  <Title level={4} style={{ margin: 0 }}>
-                    Học bổng sinh viên
-                  </Title>
-                  <Text type="secondary">Quản lý lý học bổng và đăng ký học bổng</Text>
-                </div>
-              </Space>
-            </Col>
-
-            <Col>
-              <Space>
-                {/* Nút Tạo học bổng */}
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  style={{ borderRadius: 8, fontWeight: 600 }}
-                  onClick={() => alert("Chức năng tạo học bổng")}
-                >
-                  Tạo học bổng
-                </Button>
-              </Space>
-            </Col>
-          </Row>
-
-          {/* Các card thống kê */}
-          <Row gutter={16} style={{ marginBottom: 18 }}>
-            <Col xs={24} sm={12} lg={6}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Tổng học bổng</Text>
-                <Title level={3} style={{ margin: 0 }}>{totalScholarships}</Title>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Đang mở</Text>
-                <Title level={3} style={{ margin: 0 }}>{currentlyOpen}</Title>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Tổng giá trị</Text>
-                <Title level={3} style={{ margin: 0 }}>{totalValue}</Title>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Đơn đăng ký</Text>
-                <Title level={3} style={{ margin: 0 }}>{totalApplications}</Title>
-              </Card>
-            </Col>
-          </Row>
-
-          {/* Bảng dữ liệu với Tabs */}
-          <Card style={{ borderRadius: 12, padding: 0 }}>
-            {/* Header và Search - Đã chỉnh để Search nằm dưới */}
-            <div style={{ padding: '16px 24px 0 24px' }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, flexDirection: "column" }}>
-                    <div>
-                        <Title level={5} style={{ margin: 0 }}>Danh sách học bổng</Title>
-                        <Text type="secondary">Quản lý lý các học bổng dành cho sinh viên</Text>
-                    </div>
-
-                    <div style={{ minWidth: 320, marginTop: 12 }}>
-                        <Search
-                          placeholder="Tìm kiếm theo Tên HB"
-                          allowClear
-                          onSearch={(val) => {
-                            setSearch(val);
-                            setPage(1);
-                          }}
-                          onChange={(e) => setSearch(e.target.value)}
-                          value={search}
-                          enterButton={<SearchOutlined />}
-                        />
-                    </div>
-                </div>
+    <div>
+      {/* Header */}
+      <Row align="middle" justify="space-between" style={{ marginBottom: 18 }}>
+        <Col>
+          <Space align="center">
+            <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} />
+            <div>
+              <Title level={4} style={{ margin: 0 }}>
+                Học bổng sinh viên
+              </Title>
+              <Text type="secondary">Quản lý lý học bổng và đăng ký học bổng</Text>
             </div>
+          </Space>
+        </Col>
 
-            {/* Tabs cho bảng */}
-            <Tabs 
-                defaultActiveKey="all" 
-                activeKey={activeTab} 
-                onChange={(key) => {
-                    setActiveTab(key);
-                    setPage(1); // Reset trang khi chuyển tab
-                }} 
-                style={{ padding: '0 24px' }}
+        <Col>
+          <Space>
+            {/* Nút Tạo học bổng */}
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              style={{ borderRadius: 8, fontWeight: 600 }}
+              onClick={() => alert("Chức năng tạo học bổng")}
             >
-              <TabPane tab="Tất cả" key="all" />
-              <TabPane tab="Đơn đăng ký" key="applications" />
-            </Tabs>
-            
-            {/* Bảng */}
-            <div style={{ padding: '0 24px' }}>
-                <Table
-                  columns={columns}
-                  dataSource={paged}
-                  pagination={false}
-                  rowKey="key"
-                  bordered={false}
-                  style={{ background: "transparent" }}
-                  scroll={{ x: 1000 }} 
-                />
+              Tạo học bổng
+            </Button>
+          </Space>
+        </Col>
+      </Row>
+
+      {/* Các card thống kê */}
+      <Row gutter={16} style={{ marginBottom: 18 }}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Tổng học bổng</Text>
+            <Title level={3} style={{ margin: 0 }}>{totalScholarships}</Title>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Đang mở</Text>
+            <Title level={3} style={{ margin: 0 }}>{currentlyOpen}</Title>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Tổng giá trị</Text>
+            <Title level={3} style={{ margin: 0 }}>{totalValue}</Title>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Đơn đăng ký</Text>
+            <Title level={3} style={{ margin: 0 }}>{totalApplications}</Title>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Bảng dữ liệu với Tabs */}
+      <Card style={{ borderRadius: 12, padding: 0 }}>
+        {/* Header và Search - Đã chỉnh để Search nằm dưới */}
+        <div style={{ padding: '16px 24px 0 24px' }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, flexDirection: "column" }}>
+            <div>
+              <Title level={5} style={{ margin: 0 }}>Danh sách học bổng</Title>
+              <Text type="secondary">Quản lý lý các học bổng dành cho sinh viên</Text>
             </div>
 
-
-            {/* Phân trang */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, padding: '16px 24px' }}>
-              <Text type="secondary">Hiển thị {filtered.length} kết quả</Text>
-              <Pagination
-                current={page}
-                pageSize={pageSize}
-                total={filtered.length}
-                showSizeChanger
-                pageSizeOptions={["5", "10", "20", "50"]}
-                onChange={(p, ps) => {
-                  setPage(p);
-                  setPageSize(ps);
+            <div style={{ minWidth: 320, marginTop: 12 }}>
+              <Search
+                placeholder="Tìm kiếm theo Tên HB"
+                allowClear
+                onSearch={(val) => {
+                  setSearch(val);
+                  setPage(1);
                 }}
+                onChange={(e) => setSearch(e.target.value)}
+                value={search}
+                enterButton={<SearchOutlined />}
               />
             </div>
-          </Card>
-        </Content>
-      </Layout>
-    </Layout>
+          </div>
+        </div>
+
+        {/* Tabs cho bảng */}
+        <Tabs
+          defaultActiveKey="all"
+          activeKey={activeTab}
+          onChange={(key) => {
+            setActiveTab(key);
+            setPage(1); // Reset trang khi chuyển tab
+          }}
+          style={{ padding: '0 24px' }}
+        >
+          <TabPane tab="Tất cả" key="all" />
+          <TabPane tab="Đơn đăng ký" key="applications" />
+        </Tabs>
+
+        {/* Bảng */}
+        <div style={{ padding: '0 24px' }}>
+          <Table
+            columns={columns}
+            dataSource={paged}
+            pagination={false}
+            rowKey="key"
+            bordered={false}
+            style={{ background: "transparent" }}
+            scroll={{ x: 1000 }}
+          />
+        </div>
+
+
+        {/* Phân trang */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16, padding: '16px 24px' }}>
+          <Text type="secondary">Hiển thị {filtered.length} kết quả</Text>
+          <Pagination
+            current={page}
+            pageSize={pageSize}
+            total={filtered.length}
+            showSizeChanger
+            pageSizeOptions={["5", "10", "20", "50"]}
+            onChange={(p, ps) => {
+              setPage(p);
+              setPageSize(ps);
+            }}
+          />
+        </div>
+      </Card>
+    </div>
   );
 }

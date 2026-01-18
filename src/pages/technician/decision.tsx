@@ -22,11 +22,6 @@ import {
   WarningOutlined, // Icon cho Cảnh cáo
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-// Giả định các components Sidebar và Layout/Content được import đúng cách
-
-import CustomHeader from "../../components/CustomHeader";
-import { Layout } from "antd";
-const { Content } = Layout;
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -200,128 +195,119 @@ export default function DecisionPage({ }: { messageApi: any }) {
   const totalSuspensions = data.filter(r => r.type === "Đình chỉ").length;
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
-      {/* Sidebar dùng chung */}
-      
+    <div>
+      {/* Header */}
+      <Row align="middle" justify="space-between" style={{ marginBottom: 18 }}>
+        <Col>
+          <Space align="center">
+            <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} />
+            <div>
+              <Title level={4} style={{ margin: 0 }}>
+                Quyết định học vụ
+              </Title>
+              <Text type="secondary">Quản lý các quyết định học vụ đối với sinh viên</Text>
+            </div>
+          </Space>
+        </Col>
 
-      {/* Nội dung chính */}
-      <Layout>
-        <CustomHeader showBackButton={false} />
-        <Content style={{ padding: 24, background: "#f5f5f5" }}>
-          {/* Header */}
-          <Row align="middle" justify="space-between" style={{ marginBottom: 18 }}>
-            <Col>
-              <Space align="center">
-                <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} />
-                <div>
-                  <Title level={4} style={{ margin: 0 }}>
-                    Quyết định học vụ
-                  </Title>
-                  <Text type="secondary">Quản lý các quyết định học vụ đối với sinh viên</Text>
-                </div>
-              </Space>
-            </Col>
+        <Col>
+          <Space>
+            {/* Nút Tạo quyết định */}
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              style={{ borderRadius: 8, fontWeight: 600 }}
+              onClick={() => alert("Chức năng tạo quyết định")}
+            >
+              Tạo quyết định
+            </Button>
+          </Space>
+        </Col>
+      </Row>
 
-            <Col>
-              <Space>
-                {/* Nút Tạo quyết định */}
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  style={{ borderRadius: 8, fontWeight: 600 }}
-                  onClick={() => alert("Chức năng tạo quyết định")}
-                >
-                   Tạo quyết định
-                </Button>
-              </Space>
-            </Col>
-          </Row>
-
-          {/* Các card thống kê */}
-          <Row gutter={16} style={{ marginBottom: 18 }}>
-            <Col xs={24} sm={12} lg={5}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Tổng quyết định</Text>
-                <Title level={3} style={{ margin: 0 }}>{totalDecisions}</Title>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={5}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Cảnh cáo</Text>
-                <Title level={3} style={{ margin: 0 }}>{totalWarnings}</Title>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={5}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Học vụ</Text>
-                <Title level={3} style={{ margin: 0 }}>{totalSuspensions}</Title>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={5}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Đình chỉ</Text>
-                <Title level={3} style={{ margin: 0 }}>{totalSuspensions}</Title>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={4}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Đang hiệu lực</Text>
-                <Title level={3} style={{ margin: 0 }}>{currentEffective}</Title>
-              </Card>
-            </Col>
-          </Row>
-
-          {/* Bảng dữ liệu */}
+      {/* Các card thống kê */}
+      <Row gutter={16} style={{ marginBottom: 18 }}>
+        <Col xs={24} sm={12} lg={5}>
           <Card style={{ borderRadius: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, flexDirection: "column" }}>
-              <div>
-                <Title level={5} style={{ margin: 0 }}>Danh sách quyết định học vụ</Title>
-                <Text type="secondary">Quản lý các quyết định học vụ đối với sinh viên</Text>
-              </div>
-
-              <div style={{ minWidth: 320, marginTop: 12 }}>
-                <Search
-                  placeholder="Tìm kiếm theo Mã SV"
-                  allowClear
-                  onSearch={(val) => {
-                    setSearch(val);
-                    setPage(1);
-                  }}
-                  onChange={(e) => setSearch(e.target.value)}
-                  value={search}
-                  enterButton={<SearchOutlined />}
-                />
-              </div>
-            </div>
-
-            <Table
-              columns={columns}
-              dataSource={paged}
-              pagination={false}
-              rowKey="key"
-              bordered={false}
-              style={{ background: "transparent" }}
-              scroll={{ x: 1000 }} // Thêm scroll ngang cho màn hình nhỏ
-            />
-
-            {/* Phân trang */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16 }}>
-              <Text type="secondary">Hiển thị {filtered.length} kết quả</Text>
-              <Pagination
-                current={page}
-                pageSize={pageSize}
-                total={filtered.length}
-                showSizeChanger
-                pageSizeOptions={["5", "10", "20", "50"]}
-                onChange={(p, ps) => {
-                  setPage(p);
-                  setPageSize(ps);
-                }}
-              />
-            </div>
+            <Text type="secondary">Tổng quyết định</Text>
+            <Title level={3} style={{ margin: 0 }}>{totalDecisions}</Title>
           </Card>
-        </Content>
-      </Layout>
-    </Layout>
+        </Col>
+        <Col xs={24} sm={12} lg={5}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Cảnh cáo</Text>
+            <Title level={3} style={{ margin: 0 }}>{totalWarnings}</Title>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={5}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Học vụ</Text>
+            <Title level={3} style={{ margin: 0 }}>{totalSuspensions}</Title>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={5}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Đình chỉ</Text>
+            <Title level={3} style={{ margin: 0 }}>{totalSuspensions}</Title>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={4}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Đang hiệu lực</Text>
+            <Title level={3} style={{ margin: 0 }}>{currentEffective}</Title>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Bảng dữ liệu */}
+      <Card style={{ borderRadius: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, flexDirection: "column" }}>
+          <div>
+            <Title level={5} style={{ margin: 0 }}>Danh sách quyết định học vụ</Title>
+            <Text type="secondary">Quản lý các quyết định học vụ đối với sinh viên</Text>
+          </div>
+
+          <div style={{ minWidth: 320, marginTop: 12 }}>
+            <Search
+              placeholder="Tìm kiếm theo Mã SV"
+              allowClear
+              onSearch={(val) => {
+                setSearch(val);
+                setPage(1);
+              }}
+              onChange={(e) => setSearch(e.target.value)}
+              value={search}
+              enterButton={<SearchOutlined />}
+            />
+          </div>
+        </div>
+
+        <Table
+          columns={columns}
+          dataSource={paged}
+          pagination={false}
+          rowKey="key"
+          bordered={false}
+          style={{ background: "transparent" }}
+          scroll={{ x: 1000 }} // Thêm scroll ngang cho màn hình nhỏ
+        />
+
+        {/* Phân trang */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16 }}>
+          <Text type="secondary">Hiển thị {filtered.length} kết quả</Text>
+          <Pagination
+            current={page}
+            pageSize={pageSize}
+            total={filtered.length}
+            showSizeChanger
+            pageSizeOptions={["5", "10", "20", "50"]}
+            onChange={(p, ps) => {
+              setPage(p);
+              setPageSize(ps);
+            }}
+          />
+        </div>
+      </Card>
+    </div>
   );
 }

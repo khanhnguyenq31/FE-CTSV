@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom'
-import { Layout, message as antdMessage } from 'antd'
+import { Layout, message as antdMessage, Drawer, Grid } from 'antd'
 import { Navigate } from "react-router-dom";
 import ProtectedRoute from './components/ProtectedRoute';
+import { useState } from 'react';
 // Imports cho các trang Đăng nhập / Đăng ký
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -41,85 +42,132 @@ import CustomHeader from './components/CustomHeader';
 
 const queryClient = new QueryClient()
 const { Content } = Layout
+const { useBreakpoint } = Grid;
 
 // --- 1. TECHNICIAN LAYOUT COMPONENT ---
-// Component Layout dùng cho Technician
-const TechnicianLayout = ({ messageApi }: { messageApi: any }) => (
-  <Layout style={{ minHeight: "100vh" }}>
-    {/* Technician Sidebar */}
-    <Sidebar messageApi={messageApi} /> 
-    <Layout>
-      <Content style={{ margin: "24px 16px 0", overflow: "initial", padding: 24, backgroundColor: '#fff', borderRadius: 8 }}>
-        
-        <Outlet />
-      </Content>
+const TechnicianLayout = ({ messageApi }: { messageApi: any }) => {
+  const screens = useBreakpoint();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const isMobile = !screens.lg;
+
+  return (
+    <Layout style={{ minHeight: "100vh" }}>
+      {!isMobile && <Sidebar messageApi={messageApi} />}
+      {isMobile && (
+        <Drawer
+          placement="left"
+          onClose={() => setMobileOpen(false)}
+          open={mobileOpen}
+          width={250}
+          styles={{ body: { padding: 0 }, header: { display: 'none' } }}
+          closeIcon={null}
+        >
+          <Sidebar messageApi={messageApi} isMobile onClose={() => setMobileOpen(false)} />
+        </Drawer>
+      )}
+      <Layout>
+        <CustomHeader showMenuButton={isMobile} onMenuClick={() => setMobileOpen(true)} />
+        <Content style={{ margin: "24px 16px 0", overflow: "initial", padding: isMobile ? 12 : 24, backgroundColor: '#fff', borderRadius: 8 }}>
+          <Outlet />
+        </Content>
+      </Layout>
     </Layout>
-  </Layout>
-);
+  );
+};
 
 // --- 2. STUDENT LAYOUT COMPONENT ---
-// Component Layout dùng cho Sinh viên
-const StudentLayout = ({ messageApi }: { messageApi: any }) => (
-  <Layout style={{ minHeight: "100vh" }}>
-    
-    <StudentSidebar messageApi={messageApi} />
-    <Layout>
-      <Content style={{ margin: "24px 16px 0", overflow: "initial", padding: 24, backgroundColor: '#fff', borderRadius: 8 }}>
-        
-        <Outlet />
-      </Content>
+const StudentLayout = ({ messageApi }: { messageApi: any }) => {
+  const screens = useBreakpoint();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const isMobile = !screens.lg;
+
+  return (
+    <Layout style={{ minHeight: "100vh" }}>
+      {!isMobile && <StudentSidebar messageApi={messageApi} />}
+      {isMobile && (
+        <Drawer
+          placement="left"
+          onClose={() => setMobileOpen(false)}
+          open={mobileOpen}
+          width={250}
+          styles={{ body: { padding: 0 }, header: { display: 'none' } }}
+          closeIcon={null}
+        >
+          <StudentSidebar messageApi={messageApi} isMobile onClose={() => setMobileOpen(false)} />
+        </Drawer>
+      )}
+      <Layout>
+        <CustomHeader showMenuButton={isMobile} onMenuClick={() => setMobileOpen(true)} />
+        <Content style={{ margin: "24px 16px 0", overflow: "initial", padding: isMobile ? 12 : 24, backgroundColor: '#fff', borderRadius: 8 }}>
+          <Outlet />
+        </Content>
+      </Layout>
     </Layout>
-  </Layout>
-);
+  );
+};
 
 // --- 3. ADMIN LAYOUT COMPONENT ---
-// Component Layout dùng cho Admin
-const AdminLayout = ({ messageApi }: { messageApi: any }) => (
-  <Layout style={{ minHeight: "100vh" }}>
-    <AdminSidebar />
-    <Layout>
-      <Content style={{ margin: "24px 16px 0", overflow: "initial", padding: 24, backgroundColor: '#fff', borderRadius: 8 }}>
-        <Outlet />
-      </Content>
+const AdminLayout = ({ messageApi }: { messageApi: any }) => {
+  const screens = useBreakpoint();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const isMobile = !screens.lg;
+
+  return (
+    <Layout style={{ minHeight: "100vh" }}>
+      {!isMobile && <AdminSidebar />}
+      {isMobile && (
+        <Drawer
+          placement="left"
+          onClose={() => setMobileOpen(false)}
+          open={mobileOpen}
+          width={250}
+          styles={{ body: { padding: 0 }, header: { display: 'none' } }}
+          closeIcon={null}
+        >
+          <AdminSidebar isMobile onClose={() => setMobileOpen(false)} />
+        </Drawer>
+      )}
+      <Layout>
+        <CustomHeader showMenuButton={isMobile} onMenuClick={() => setMobileOpen(true)} title="Admin Dashboard" />
+        <Content style={{ margin: "24px 16px 0", overflow: "initial", padding: isMobile ? 12 : 24, backgroundColor: '#fff', borderRadius: 8 }}>
+          <Outlet />
+        </Content>
+      </Layout>
     </Layout>
-  </Layout>
-);
+  );
+};
 
 // Layout đổi mật khẩu cho mọi role
 const ChangePasswordLayout = ({ messageApi }: { messageApi: any }) => {
   const role = localStorage.getItem('role');
-  if (role === 'admin') {
-    return (
-      <Layout style={{ minHeight: '100vh' }}>
-        <AdminSidebar />
-        <Layout>
-          <CustomHeader title="Đổi mật khẩu" />
-          <Content style={{ margin: '24px 16px 0', overflow: 'initial', padding: 24, backgroundColor: '#fff', borderRadius: 8 }}>
-            <ChangePassword messageApi={messageApi} />
-          </Content>
-        </Layout>
-      </Layout>
-    );
-  }
-  if (role === 'student') {
-    return (
-      <Layout style={{ minHeight: '100vh' }}>
-        <StudentSidebar messageApi={messageApi} />
-        <Layout>
-          <CustomHeader title="Đổi mật khẩu" />
-          <Content style={{ margin: '24px 16px 0', overflow: 'initial', padding: 24, backgroundColor: '#fff', borderRadius: 8 }}>
-            <ChangePassword messageApi={messageApi} />
-          </Content>
-        </Layout>
-      </Layout>
-    );
-  }
-  // technician
+  const screens = useBreakpoint();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const isMobile = !screens.lg;
+
+  const renderSidebar = (isDrawer = false) => {
+    const commonProps = { isMobile: isDrawer, onClose: () => setMobileOpen(false) };
+    if (role === 'admin') return <AdminSidebar {...commonProps} />;
+    if (role === 'student') return <StudentSidebar messageApi={messageApi} {...commonProps} />;
+    return <Sidebar messageApi={messageApi} {...commonProps} />;
+  };
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sidebar messageApi={messageApi} />
+      {!isMobile && renderSidebar()}
+      {isMobile && (
+        <Drawer
+          placement="left"
+          onClose={() => setMobileOpen(false)}
+          open={mobileOpen}
+          width={250}
+          styles={{ body: { padding: 0 }, header: { display: 'none' } }}
+          closeIcon={null}
+        >
+          {renderSidebar(true)}
+        </Drawer>
+      )}
       <Layout>
-        <CustomHeader title="Đổi mật khẩu" />
+        <CustomHeader title="Đổi mật khẩu" showMenuButton={isMobile} onMenuClick={() => setMobileOpen(true)} />
         <Content style={{ margin: '24px 16px 0', overflow: 'initial', padding: 24, backgroundColor: '#fff', borderRadius: 8 }}>
           <ChangePassword messageApi={messageApi} />
         </Content>
@@ -144,9 +192,9 @@ function App() {
           <Route path="/verify-code" element={<VerifyCode messageApi={messageApi} />} />
           <Route path="/reset-password" element={<ResetPassword messageApi={messageApi} />} />
           <Route path="/change-password" element={<ProtectedRoute allowedRoles={["admin", "technician", "student"]} />}>
-  <Route index element={<ChangePasswordLayout messageApi={messageApi} />} />
-</Route>
-    
+            <Route index element={<ChangePasswordLayout messageApi={messageApi} />} />
+          </Route>
+
           {/* --- ROUTE CỦA ADMIN (DÙNG AdminLayout) --- */}
           <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]} />}>
             <Route element={<AdminLayout messageApi={messageApi} />}>
@@ -181,7 +229,7 @@ function App() {
               <Route path="event" element={<StudentEvent />} />
             </Route>
           </Route>
-          
+
           <Route path="*" element={<Login messageApi={messageApi} />} />
         </Routes>
       </BrowserRouter>

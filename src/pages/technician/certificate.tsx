@@ -22,10 +22,6 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
-import CustomHeader from "../../components/CustomHeader";
-import { Layout } from "antd";
-const { Content } = Layout;
-
 const { Title, Text } = Typography;
 const { Search } = Input;
 
@@ -90,7 +86,7 @@ const StatusTag: React.FC<{ status: RequestStatus }> = ({ status }) => {
   return <Tag color={color} style={{ fontWeight: 600 }}>{status}</Tag>;
 };
 
-export default function CertificatePage({  }: { messageApi: any }) {
+export default function CertificatePage({ }: { messageApi: any }) {
   const navigate = useNavigate();
   const [data] = useState<RowData[]>(() => generateMock(60));
   const [search, setSearch] = useState("");
@@ -203,122 +199,113 @@ export default function CertificatePage({  }: { messageApi: any }) {
   const ready = data.filter(r => r.status === "Sẵn sàng").length;
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
-      {/* Sidebar dùng chung */}
-      
+    <div>
+      {/* Header */}
+      <Row align="middle" justify="space-between" style={{ marginBottom: 18 }}>
+        <Col>
+          <Space align="center">
+            <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} />
+            <div>
+              <Title level={4} style={{ margin: 0 }}>
+                Đăng ký chứng nhận
+              </Title>
+              <Text type="secondary">Quản lý các yêu cầu chứng nhận trực tuyến của sinh viên</Text>
+            </div>
+          </Space>
+        </Col>
 
-      {/* Nội dung chính */}
-      <Layout>
-        <CustomHeader showBackButton={false} />
-        <Content style={{ padding: 24, background: "#f5f5f5" }}>
-          {/* Header */}
-          <Row align="middle" justify="space-between" style={{ marginBottom: 18 }}>
-            <Col>
-              <Space align="center">
-                <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} />
-                <div>
-                  <Title level={4} style={{ margin: 0 }}>
-                    Đăng ký chứng nhận
-                  </Title>
-                  <Text type="secondary">Quản lý các yêu cầu chứng nhận trực tuyến của sinh viên</Text>
-                </div>
-              </Space>
-            </Col>
+        <Col>
+          <Space>
+            {/* Nút Thêm yêu cầu */}
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              style={{ borderRadius: 8, fontWeight: 600 }}
+              onClick={() => alert("Chức năng thêm yêu cầu")}
+            >
+              Thêm yêu cầu
+            </Button>
+          </Space>
+        </Col>
+      </Row>
 
-            <Col>
-              <Space>
-                {/* Nút Thêm yêu cầu */}
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  style={{ borderRadius: 8, fontWeight: 600 }}
-                  onClick={() => alert("Chức năng thêm yêu cầu")}
-                >
-                   Thêm yêu cầu
-                </Button>
-              </Space>
-            </Col>
-          </Row>
-
-          {/* Các card thống kê */}
-          <Row gutter={16} style={{ marginBottom: 18 }}>
-            <Col xs={24} sm={12} lg={6}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Tổng yêu cầu</Text>
-                <Title level={3} style={{ margin: 0 }}>{totalRequests}</Title>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Chờ xử lý</Text>
-                <Title level={3} style={{ margin: 0 }}>{pending}</Title>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Đang xử lý</Text>
-                <Title level={3} style={{ margin: 0 }}>{processing}</Title>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Sẵn sàng</Text>
-                <Title level={3} style={{ margin: 0 }}>{ready}</Title>
-              </Card>
-            </Col>
-          </Row>
-
-          {/* Bảng dữ liệu - Đã chỉnh Search nằm dưới tiêu đề */}
+      {/* Các card thống kê */}
+      <Row gutter={16} style={{ marginBottom: 18 }}>
+        <Col xs={24} sm={12} lg={6}>
           <Card style={{ borderRadius: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, flexDirection: "column" }}>
-              <div>
-                <Title level={5} style={{ margin: 0 }}>Danh sách yêu cầu chứng nhận</Title>
-                <Text type="secondary">Quản lý và xử lý yêu cầu chứng nhận của sinh viên</Text>
-              </div>
-
-              <div style={{ minWidth: 320, marginTop: 12 }}>
-                <Search
-                  placeholder="Tìm kiếm theo Mã SV"
-                  allowClear
-                  onSearch={(val) => {
-                    setSearch(val);
-                    setPage(1);
-                  }}
-                  onChange={(e) => setSearch(e.target.value)}
-                  value={search}
-                  enterButton={<SearchOutlined />}
-                />
-              </div>
-            </div>
-
-            <Table
-              columns={columns}
-              dataSource={paged}
-              pagination={false}
-              rowKey="key"
-              bordered={false}
-              style={{ background: "transparent" }}
-              scroll={{ x: 1000 }} 
-            />
-
-            {/* Phân trang */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16 }}>
-              <Text type="secondary">Hiển thị {filtered.length} kết quả</Text>
-              <Pagination
-                current={page}
-                pageSize={pageSize}
-                total={filtered.length}
-                showSizeChanger
-                pageSizeOptions={["5", "10", "20", "50"]}
-                onChange={(p, ps) => {
-                  setPage(p);
-                  setPageSize(ps);
-                }}
-              />
-            </div>
+            <Text type="secondary">Tổng yêu cầu</Text>
+            <Title level={3} style={{ margin: 0 }}>{totalRequests}</Title>
           </Card>
-        </Content>
-      </Layout>
-    </Layout>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Chờ xử lý</Text>
+            <Title level={3} style={{ margin: 0 }}>{pending}</Title>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Đang xử lý</Text>
+            <Title level={3} style={{ margin: 0 }}>{processing}</Title>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Sẵn sàng</Text>
+            <Title level={3} style={{ margin: 0 }}>{ready}</Title>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Bảng dữ liệu - Đã chỉnh Search nằm dưới tiêu đề */}
+      <Card style={{ borderRadius: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, flexDirection: "column" }}>
+          <div>
+            <Title level={5} style={{ margin: 0 }}>Danh sách yêu cầu chứng nhận</Title>
+            <Text type="secondary">Quản lý và xử lý yêu cầu chứng nhận của sinh viên</Text>
+          </div>
+
+          <div style={{ minWidth: 320, marginTop: 12 }}>
+            <Search
+              placeholder="Tìm kiếm theo Mã SV"
+              allowClear
+              onSearch={(val) => {
+                setSearch(val);
+                setPage(1);
+              }}
+              onChange={(e) => setSearch(e.target.value)}
+              value={search}
+              enterButton={<SearchOutlined />}
+            />
+          </div>
+        </div>
+
+        <Table
+          columns={columns}
+          dataSource={paged}
+          pagination={false}
+          rowKey="key"
+          bordered={false}
+          style={{ background: "transparent" }}
+          scroll={{ x: 1000 }}
+        />
+
+        {/* Phân trang */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16 }}>
+          <Text type="secondary">Hiển thị {filtered.length} kết quả</Text>
+          <Pagination
+            current={page}
+            pageSize={pageSize}
+            total={filtered.length}
+            showSizeChanger
+            pageSizeOptions={["5", "10", "20", "50"]}
+            onChange={(p, ps) => {
+              setPage(p);
+              setPageSize(ps);
+            }}
+          />
+        </div>
+      </Card>
+    </div>
   );
 }

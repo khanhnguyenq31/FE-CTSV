@@ -1,7 +1,6 @@
 
-import  { useState } from "react";
+import { useState } from "react";
 import {
-  Layout,
   Button,
   Card,
   Row,
@@ -24,35 +23,33 @@ import {
 } from "@ant-design/icons";
 
 
-import CustomHeader from "../../components/CustomHeader";
 import adminImg from "../../assets/logo2.png";
 
-const { Content } = Layout;
 const { Title, Text } = Typography;
 
 
 function CustomCalendar() {
-  const [current, setCurrent] = useState<Date>(new Date(2021, 8, 1)); 
-  const [selected, setSelected] = useState<Date | null>(new Date(2021, 8, 19)); 
+  const [current, setCurrent] = useState<Date>(new Date(2021, 8, 1));
+  const [selected, setSelected] = useState<Date | null>(new Date(2021, 8, 19));
 
   const year = current.getFullYear();
-  const month = current.getMonth(); 
+  const month = current.getMonth();
 
   const firstOfMonth = new Date(year, month, 1);
-  const startWeekDay = firstOfMonth.getDay(); 
+  const startWeekDay = firstOfMonth.getDay();
   const totalDays = new Date(year, month + 1, 0).getDate();
 
- 
+
   const cells: (number | null)[] = [];
   for (let i = 0; i < startWeekDay; i++) cells.push(null);
   for (let d = 1; d <= totalDays; d++) cells.push(d);
 
- 
+
   while (cells.length % 7 !== 0) cells.push(null);
 
   const monthNames = [
-    "January","February","March","April","May","June",
-    "July","August","September","October","November","December"
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
   ];
 
   const weekdays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -156,9 +153,9 @@ function CustomCalendar() {
   );
 }
 
-export default function HomePage({  }: { messageApi: any }) {
-  
-  
+export default function HomePage({ }: { messageApi: any }) {
+
+
   const stats = [
     { title: "Tổng số sinh viên", value: "2,450", diff: "+12% so với năm trước", icon: <TeamOutlined />, color: "#000" },
     { title: "Sinh viên đang học", value: "2,380", diff: "97% tổng số", icon: <UserOutlined />, color: "#000" },
@@ -202,209 +199,202 @@ export default function HomePage({  }: { messageApi: any }) {
     </div>
   );
 
- return (
-    <Layout style={{ minHeight: "100vh" }}>
-    
+  return (
+    <div style={{ padding: 0 }}>
+      {/* Khối đầu: Chào + Lịch */}
+      <Row gutter={16}>
 
-      <Layout>
-        <CustomHeader />
-        <Content style={{ padding: 24, background: "#f5f5f5" }}>
-          {/* Khối đầu: Chào + Lịch */}
-          <Row gutter={16}>
-            
-            <Col xs={24} lg={16} style={{ display: "flex", height: "100%" }}>
-              <Card
+        <Col xs={24} lg={16} style={{ display: "flex", height: "100%" }}>
+          <Card
+            style={{
+              borderRadius: 16,
+              flex: 1,
+            }}
+
+            bodyStyle={{
+              padding: 24,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              height: 429,
+            }}
+          >
+            {/* 1. Phần Văn bản (Nằm bên trái) */}
+            <div>
+              <Title level={2} style={{ marginBottom: 4 }}>
+                Hey Technician.
+              </Title>
+              <Text type="secondary">
+                Chào mừng bạn đến với hệ thống quản lý công tác sinh viên.
+              </Text>
+            </div>
+
+            {/* 2. Phần Ảnh (Nằm bên phải) */}
+            <div>
+              <img
+                src={adminImg}
+                alt="admin"
                 style={{
-                  borderRadius: 16,
-                  flex: 1, 
+                  height: 180,
+                  width: 'auto',
+                  borderRadius: "8px",
+                  objectFit: "cover",
                 }}
-                
-                bodyStyle={{
-                  padding: 24, 
-                  display: "flex", 
-                  justifyContent: "space-between", 
-                  alignItems: "center", 
-                  height: 429, 
-                }}
-              >
-                {/* 1. Phần Văn bản (Nằm bên trái) */}
+              />
+            </div>
+          </Card>
+        </Col>
+
+        <Col xs={24} lg={8}>
+          <div style={{ transform: "scale(0.9)", transformOrigin: "top center" }}>
+            <CustomCalendar />
+          </div>
+        </Col>
+      </Row>
+
+      {/* Các thẻ thống kê */}
+      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
+        {stats.map((item, idx) => (
+          <Col xs={12} md={8} lg={6} key={idx}>
+            <Card
+              style={{ borderRadius: 16, height: 110 }}
+              bodyStyle={{ padding: 16 }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <div>
-                  <Title level={2} style={{ marginBottom: 4 }}>
-                    Hey Technician.
+                  <Text type="secondary">{item.title}</Text>
+                  <Title level={4} style={{ margin: 0 }}>
+                    {item.value}
                   </Title>
-                  <Text type="secondary">
-                    Chào mừng bạn đến với hệ thống quản lý công tác sinh viên.
-                  </Text>
+                  {item.diff && (
+                    <Text style={{ color: "green", fontSize: 12 }}>
+                      {item.diff}
+                    </Text>
+                  )}
                 </div>
-
-                {/* 2. Phần Ảnh (Nằm bên phải) */}
-                <div>
-                  <img
-                    src={adminImg}
-                    alt="admin"
-                    style={{
-                      height: 180, 
-                      width: 'auto',
-                      borderRadius: "8px",
-                      objectFit: "cover",
-                    }}
-                  />
-                </div>
-              </Card>
-            </Col>
-
-            <Col xs={24} lg={8}>
-              <div style={{ transform: "scale(0.9)", transformOrigin: "top center" }}>
-                <CustomCalendar />
-              </div>
-            </Col>
-          </Row>
-
-          {/* Các thẻ thống kê */}
-          <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-            {stats.map((item, idx) => (
-              <Col xs={12} md={8} lg={6} key={idx}>
-                <Card
-                  style={{ borderRadius: 16, height: 110 }}
-                  bodyStyle={{ padding: 16 }}
+                <div
+                  style={{
+                    fontSize: 24,
+                    background: "#f5f5f5",
+                    borderRadius: 12,
+                    padding: 10,
+                  }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <div>
-                      <Text type="secondary">{item.title}</Text>
-                      <Title level={4} style={{ margin: 0 }}>
-                        {item.value}
-                      </Title>
-                      {item.diff && (
-                        <Text style={{ color: "green", fontSize: 12 }}>
-                          {item.diff}
-                        </Text>
-                      )}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 24,
-                        background: "#f5f5f5",
-                        borderRadius: 12,
-                        padding: 10,
-                      }}
-                    >
-                      {item.icon}
-                    </div>
-                  </div>
-                </Card>
-              </Col>
-            ))}
-          </Row>
+                  {item.icon}
+                </div>
+              </div>
+            </Card>
+          </Col>
+        ))}
+      </Row>
 
-          {/* Dòng 2: Hồ sơ nhập học + Sự kiện */}
-          <Row gutter={16} style={{ marginTop: 24 }}>
-            <Col xs={24} lg={12}>
-              <Card
-                title={renderCardTitle("Hồ sơ nhập học mới nhất", "Danh sách hồ sơ nhập học cần xử lí")}
-                extra={<a>Xem tất cả</a>}
-                style={{ borderRadius: 16, minHeight: 295 }}
-              >
-                <List
-                  dataSource={newStudents}
-                  renderItem={(item) => (
-                    <List.Item>
-                      <List.Item.Meta
-                        title={<b>{item.name}</b>}
-                        description={item.major}
-                      />
-                      <Tag color={item.status === "Đã duyệt" ? "green" : "orange"}>
-                        {item.status}
-                      </Tag>
-                    </List.Item>
-                  )}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} lg={12}>
-              <Card
-                title={renderCardTitle("Sự kiện sắp diễn ra", "Các hoạt động và sự kiện trong tháng")}
-                extra={<a>Xem tất cả</a>}
-                style={{ borderRadius: 16 }}
-              >
-                <List
-                  dataSource={events}
-                  renderItem={(item) => (
-                    <List.Item>
-                      <List.Item.Meta
-                        title={<b>{item.title}</b>}
-                        description={
-                          <>
-                            <Text type="secondary">{item.date}</Text>
-                            <br />
-                            <Text style={{ color: "green", fontWeight: 500 }}>{item.reward}</Text>
-                          </>
-                        }
-                      />
-                      
-                    </List.Item>
-                  )}
-                />
-              </Card>
-            </Col>
-          </Row>
+      {/* Dòng 2: Hồ sơ nhập học + Sự kiện */}
+      <Row gutter={16} style={{ marginTop: 24 }}>
+        <Col xs={24} lg={12}>
+          <Card
+            title={renderCardTitle("Hồ sơ nhập học mới nhất", "Danh sách hồ sơ nhập học cần xử lí")}
+            extra={<a>Xem tất cả</a>}
+            style={{ borderRadius: 16, minHeight: 295 }}
+          >
+            <List
+              dataSource={newStudents}
+              renderItem={(item) => (
+                <List.Item>
+                  <List.Item.Meta
+                    title={<b>{item.name}</b>}
+                    description={item.major}
+                  />
+                  <Tag color={item.status === "Đã duyệt" ? "green" : "orange"}>
+                    {item.status}
+                  </Tag>
+                </List.Item>
+              )}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card
+            title={renderCardTitle("Sự kiện sắp diễn ra", "Các hoạt động và sự kiện trong tháng")}
+            extra={<a>Xem tất cả</a>}
+            style={{ borderRadius: 16 }}
+          >
+            <List
+              dataSource={events}
+              renderItem={(item) => (
+                <List.Item>
+                  <List.Item.Meta
+                    title={<b>{item.title}</b>}
+                    description={
+                      <>
+                        <Text type="secondary">{item.date}</Text>
+                        <br />
+                        <Text style={{ color: "green", fontWeight: 500 }}>{item.reward}</Text>
+                      </>
+                    }
+                  />
 
-          {/* Dòng 3: Khen thưởng + Thao tác nhanh */}
-          <Row gutter={16} style={{ marginTop: 24 }}>
-            <Col xs={24} lg={12}>
-              <Card
-                title={renderCardTitle("Khen thưởng gần đây", "Danh sách khen thưởng mới nhất")}
-                extra={<a>Xem tất cả</a>}
-                style={{ borderRadius: 16, maxHeight: 285 }}
-              >
-                <List
-                  dataSource={rewards}
-                  renderItem={(item) => (
-                    <List.Item>
-                      <List.Item.Meta
-                        avatar={<TrophyOutlined style={{ fontSize: 20 }} />}
-                        title={<b>{item.title}</b>}
-                        description={
-                          <>
-                            {item.student}
-                            <br />
-                            <Text type="secondary">{item.desc}</Text>
-                          </>
-                        }
-                      />
-                    </List.Item>
-                  )}
-                />
-              </Card>
-            </Col>
-            <Col xs={24} lg={12}>
-              <Card
-                title={renderCardTitle("Thao tác nhanh", "Các chức năng thường dùng")}
-                style={{ borderRadius: 16 }}
-                bodyStyle={{ padding: 12 }}
-              >
-                <Row gutter={[8, 8]}>
-                  {quickActions.map((act, i) => (
-                    <Col xs={24} key={i}>
-                      <Button
-                        block
-                        icon={act.icon}
-                        style={{
-                          textAlign: "left",
-                          borderRadius: 12,
-                          height: 45,
-                          fontWeight: 500,
-                        }}
-                      >
-                        {act.label}
-                      </Button>
-                    </Col>
-                  ))}
-                </Row>
-              </Card>
-            </Col>
-          </Row>
-        </Content>
-      </Layout>
-    </Layout>
+                </List.Item>
+              )}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Dòng 3: Khen thưởng + Thao tác nhanh */}
+      <Row gutter={16} style={{ marginTop: 24 }}>
+        <Col xs={24} lg={12}>
+          <Card
+            title={renderCardTitle("Khen thưởng gần đây", "Danh sách khen thưởng mới nhất")}
+            extra={<a>Xem tất cả</a>}
+            style={{ borderRadius: 16, maxHeight: 285 }}
+          >
+            <List
+              dataSource={rewards}
+              renderItem={(item) => (
+                <List.Item>
+                  <List.Item.Meta
+                    avatar={<TrophyOutlined style={{ fontSize: 20 }} />}
+                    title={<b>{item.title}</b>}
+                    description={
+                      <>
+                        {item.student}
+                        <br />
+                        <Text type="secondary">{item.desc}</Text>
+                      </>
+                    }
+                  />
+                </List.Item>
+              )}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card
+            title={renderCardTitle("Thao tác nhanh", "Các chức năng thường dùng")}
+            style={{ borderRadius: 16 }}
+            bodyStyle={{ padding: 12 }}
+          >
+            <Row gutter={[8, 8]}>
+              {quickActions.map((act, i) => (
+                <Col xs={24} key={i}>
+                  <Button
+                    block
+                    icon={act.icon}
+                    style={{
+                      textAlign: "left",
+                      borderRadius: 12,
+                      height: 45,
+                      fontWeight: 500,
+                    }}
+                  >
+                    {act.label}
+                  </Button>
+                </Col>
+              ))}
+            </Row>
+          </Card>
+        </Col>
+      </Row>
+    </div>
   );
 }

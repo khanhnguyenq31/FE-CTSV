@@ -1,7 +1,6 @@
-import { Button, Table, Modal, Form, Input, Select, Tag, Space, Card, Tooltip, message } from 'antd';
+import { Button, Table, Modal, Form, Input, Select, Tag, Space, Card, Tooltip } from 'antd';
 import { PlusOutlined, EditOutlined, LockOutlined, DeleteOutlined, SearchOutlined, UserOutlined, ToolOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
-import CustomHeader from '../../components/CustomHeader';
 import { createStudentApi } from '../../api/auth';
 
 interface UserData {
@@ -62,11 +61,11 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
       width: 180,
       render: (text: string) => <span className="font-medium">{text || 'Chưa cập nhật'}</span>
     },
-    { 
-      title: 'Email', 
-      dataIndex: 'email', 
+    {
+      title: 'Email',
+      dataIndex: 'email',
       key: 'email',
-      width: 250, 
+      width: 250,
     },
     {
       title: 'Vai trò',
@@ -80,9 +79,9 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
         return <Tag icon={<ToolOutlined />} color="purple">Chuyên viên</Tag>;
       }
     },
-    { 
-      title: 'Trạng thái', 
-      dataIndex: 'status', 
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
       key: 'status',
       width: 150,
       render: (status: string) => {
@@ -91,9 +90,9 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
         return <Tag color="warning">Chưa kích hoạt</Tag>;
       }
     },
-    { 
-      title: 'Ngày tạo', 
-      dataIndex: 'createdAt', 
+    {
+      title: 'Ngày tạo',
+      dataIndex: 'createdAt',
       key: 'createdAt',
       width: 150,
       responsive: ['md'] as any // Ẩn trên mobile nhỏ
@@ -105,15 +104,15 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
       width: 120,
       render: (_: any, record: UserData) => (
         <Space size="small">
-            <Tooltip title="Chỉnh sửa">
-                <Button type="text" icon={<EditOutlined className="text-blue-500" />} />
-            </Tooltip>
-            <Tooltip title={record.status === 'locked' ? "Mở khóa" : "Khóa tài khoản"}>
-                <Button type="text" icon={<LockOutlined className="text-orange-500" />} />
-            </Tooltip>
-            <Tooltip title="Xóa">
-                <Button type="text" danger icon={<DeleteOutlined />} />
-            </Tooltip>
+          <Tooltip title="Chỉnh sửa">
+            <Button type="text" icon={<EditOutlined className="text-blue-500" />} />
+          </Tooltip>
+          <Tooltip title={record.status === 'locked' ? "Mở khóa" : "Khóa tài khoản"}>
+            <Button type="text" icon={<LockOutlined className="text-orange-500" />} />
+          </Tooltip>
+          <Tooltip title="Xóa">
+            <Button type="text" danger icon={<DeleteOutlined />} />
+          </Tooltip>
         </Space>
       )
     }
@@ -165,54 +164,52 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <CustomHeader title="" />
-      
+    <>
       <div className="p-4 md:p-6 mx-auto max-w-7xl">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-            <div>
-                <h2 className="font-bold text-2xl text-gray-800">Quản lý tài khoản</h2>
-                <p className="text-gray-500 text-sm mt-1">Quản lý danh sách sinh viên và chuyên viên hệ thống</p>
-            </div>
-            <Button 
-                type="primary" 
-                size="large"
-                icon={<PlusOutlined />} 
-                onClick={() => setOpen(true)}
-                className="shadow-md"
-            >
-                Thêm tài khoản mới
-            </Button>
+          <div>
+            <h2 className="font-bold text-2xl text-gray-800">Quản lý tài khoản</h2>
+            <p className="text-gray-500 text-sm mt-1">Quản lý danh sách sinh viên và chuyên viên hệ thống</p>
+          </div>
+          <Button
+            type="primary"
+            size="large"
+            icon={<PlusOutlined />}
+            onClick={() => setOpen(true)}
+            className="shadow-md"
+          >
+            Thêm tài khoản mới
+          </Button>
         </div>
 
         {/* Main Content Card */}
         <Card bordered={false} className="shadow-sm rounded-xl overflow-hidden">
-            {/* Toolbar */}
-            <div className="mb-6 flex justify-between items-center">
-                <Input
-                    placeholder="Tìm kiếm theo email..."
-                    prefix={<SearchOutlined className="text-gray-400" />}
-                    allowClear
-                    size="large"
-                    className="max-w-md"
-                    onChange={(e) => setSearchText(e.target.value)}
-                />
-            </div>
-
-            {/* Table */}
-            <Table 
-                dataSource={filteredData} 
-                columns={columns as any} 
-                pagination={{ 
-                    pageSize: 10,
-                    showSizeChanger: true,
-                    showTotal: (total) => `Tổng ${total} tài khoản`
-                }}
-                rowKey="key"
-                scroll={{ x: 1000 }} // Đảm bảo responsive trên mobile
-                loading={loading}
+          {/* Toolbar */}
+          <div className="mb-6 flex justify-between items-center">
+            <Input
+              placeholder="Tìm kiếm theo email..."
+              prefix={<SearchOutlined className="text-gray-400" />}
+              allowClear
+              size="large"
+              className="max-w-md"
+              onChange={(e) => setSearchText(e.target.value)}
             />
+          </div>
+
+          {/* Table */}
+          <Table
+            dataSource={filteredData}
+            columns={columns as any}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showTotal: (total) => `Tổng ${total} tài khoản`
+            }}
+            rowKey="key"
+            scroll={{ x: 1000 }} // Đảm bảo responsive trên mobile
+            loading={loading}
+          />
         </Card>
       </div>
 
@@ -232,12 +229,12 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
             rules={[{ required: true, message: 'Vui lòng chọn vai trò!' }]}
           >
             <Select size="large">
-                <Select.Option value="student">
-                    <Space><UserOutlined /> Sinh viên</Space>
-                </Select.Option>
-                <Select.Option value="technician">
-                    <Space><ToolOutlined /> Chuyên viên (Technician)</Space>
-                </Select.Option>
+              <Select.Option value="student">
+                <Space><UserOutlined /> Sinh viên</Space>
+              </Select.Option>
+              <Select.Option value="technician">
+                <Space><ToolOutlined /> Chuyên viên (Technician)</Space>
+              </Select.Option>
             </Select>
           </Form.Item>
 
@@ -261,13 +258,13 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
           </Form.Item>
 
           <div className="flex justify-end gap-2 mt-6">
-             <Button size="large" onClick={() => setOpen(false)}>Hủy</Button>
-             <Button type="primary" htmlType="submit" size="large" loading={loading} block>
-                Tạo tài khoản
-             </Button>
+            <Button size="large" onClick={() => setOpen(false)}>Hủy</Button>
+            <Button type="primary" htmlType="submit" size="large" loading={loading} block>
+              Tạo tài khoản
+            </Button>
           </div>
         </Form>
       </Modal>
-    </div>
+    </>
   );
 }

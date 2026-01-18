@@ -24,10 +24,6 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
-import CustomHeader from "../../components/CustomHeader"; // Giả định component này tồn tại
-import { Layout } from "antd";
-const { Content } = Layout;
-
 const { Title, Text } = Typography;
 const { Search } = Input;
 
@@ -45,7 +41,7 @@ type RowData = {
   faculty?: string; // Thêm trường faculty cho đúng dữ liệu API
 };
 
-export default function ProfilePage({}: { messageApi: any }) {
+export default function ProfilePage({ }: { messageApi: any }) {
   const navigate = useNavigate();
   const [data, setData] = useState<RowData[]>([]);
   const [search, setSearch] = useState("");
@@ -120,8 +116,8 @@ export default function ProfilePage({}: { messageApi: any }) {
     : "0.00";
   const avgTraining = data.length
     ? (data.reduce((sum, s) => sum + s.trainingScore, 0) / data.length).toFixed(
-        1
-      )
+      1
+    )
     : "0.0";
 
   const columns: ColumnsType<RowData> = [
@@ -248,188 +244,183 @@ export default function ProfilePage({}: { messageApi: any }) {
   };
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
-      <Layout>
-        <CustomHeader showBackButton={false} />
-        <Content style={{ padding: 24, background: "#f5f5f5" }}>
-          {/* Header */}
-          <Row
-            align="middle"
-            justify="space-between"
-            style={{ marginBottom: 18 }}
-          >
-            <Col>
-              <Space align="center">
-                <Button
-                  type="text"
-                  icon={<ArrowLeftOutlined />}
-                  onClick={() => navigate(-1)}
-                />
-                <div>
-                  <Title level={4} style={{ margin: 0 }}>
-                    Danh sách sinh viên
-                  </Title>
-                  <Text type="secondary">
-                    Quản lý thông tin và danh sách của sinh viên
-                  </Text>
-                </div>
-              </Space>
-            </Col>
-
-            <Col>
-              <Space>
-                {/* Nút Thêm sinh viên */}
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  style={{ borderRadius: 8, fontWeight: 600 }}
-                  onClick={() => alert("Chức năng thêm sinh viên")}
-                >
-                  Thêm sinh viên
-                </Button>
-              </Space>
-            </Col>
-          </Row>
-
-          {/* 5. Các card thống kê theo thiết kế ảnh */}
-          <Row gutter={16} style={{ marginBottom: 18 }}>
-            <Col xs={24} sm={12} lg={6}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Tổng sinh viên</Text>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Title level={3} style={{ margin: 0 }}>
-                    {totalStudents}
-                  </Title>
-                  {/* Không có so sánh năm trước */}
-                </div>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Đang học</Text>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Title level={3} style={{ margin: 0 }}>
-                    {totalStudying}
-                  </Title>
-                </div>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">GPA trung bình</Text>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Title level={3} style={{ margin: 0 }}>
-                    {avgGPA}
-                  </Title>
-                </div>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Điểm rèn luyện TB</Text>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <Title level={3} style={{ margin: 0 }}>
-                    {avgTraining}
-                  </Title>
-                </div>
-              </Card>
-            </Col>
-          </Row>
-
-          {/* Bảng dữ liệu */}
-          <Card style={{ borderRadius: 12 }}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 12,
-                flexDirection: "column",
-              }}
-            >
-              <div>
-                <Title level={5} style={{ margin: 0 }}>
-                  Danh sách sinh viên
-                </Title>
-                <Text type="secondary">
-                  Quản lý thông tin và danh sách của tất cả sinh viên
-                </Text>
-              </div>
-
-              <div style={{ minWidth: 320, marginTop: 12 }}>
-                <Search
-                  placeholder="Tìm kiếm theo tên hoặc Mã SV"
-                  allowClear
-                  onSearch={(val) => {
-                    setSearch(val);
-                    setPage(1);
-                  }}
-                  onChange={(e) => setSearch(e.target.value)}
-                  value={search}
-                  enterButton={<SearchOutlined />}
-                />
-              </div>
-            </div>
-
-            <Table
-              columns={columns}
-              dataSource={paged}
-              pagination={false}
-              rowKey="key"
-              bordered={false}
-              style={{ background: "transparent" }}
-              scroll={{ x: 1000 }}
-              loading={loading}
+    <div>
+      {/* Header */}
+      <Row
+        align="middle"
+        justify="space-between"
+        style={{ marginBottom: 18 }}
+      >
+        <Col>
+          <Space align="center">
+            <Button
+              type="text"
+              icon={<ArrowLeftOutlined />}
+              onClick={() => navigate(-1)}
             />
+            <div>
+              <Title level={4} style={{ margin: 0 }}>
+                Danh sách sinh viên
+              </Title>
+              <Text type="secondary">
+                Quản lý thông tin và danh sách của sinh viên
+              </Text>
+            </div>
+          </Space>
+        </Col>
 
-            {/* Phân trang */}
+        <Col>
+          <Space>
+            {/* Nút Thêm sinh viên */}
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              style={{ borderRadius: 8, fontWeight: 600 }}
+              onClick={() => alert("Chức năng thêm sinh viên")}
+            >
+              Thêm sinh viên
+            </Button>
+          </Space>
+        </Col>
+      </Row>
+
+      {/* 5. Các card thống kê theo thiết kế ảnh */}
+      <Row gutter={16} style={{ marginBottom: 18 }}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Tổng sinh viên</Text>
             <div
               style={{
                 display: "flex",
-                justifyContent: "space-between",
                 alignItems: "center",
-                marginTop: 16,
+                justifyContent: "space-between",
               }}
             >
-              <Text type="secondary">Hiển thị {filtered.length} kết quả</Text>
-              <Pagination
-                current={page}
-                pageSize={pageSize}
-                total={filtered.length}
-                showSizeChanger
-                pageSizeOptions={["5", "10", "20", "50"]}
-                onChange={(p, ps) => {
-                  setPage(p);
-                  setPageSize(ps);
-                }}
-              />
+              <Title level={3} style={{ margin: 0 }}>
+                {totalStudents}
+              </Title>
+              {/* Không có so sánh năm trước */}
             </div>
           </Card>
-        </Content>
-      </Layout>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Đang học</Text>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Title level={3} style={{ margin: 0 }}>
+                {totalStudying}
+              </Title>
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">GPA trung bình</Text>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Title level={3} style={{ margin: 0 }}>
+                {avgGPA}
+              </Title>
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Điểm rèn luyện TB</Text>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Title level={3} style={{ margin: 0 }}>
+                {avgTraining}
+              </Title>
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Bảng dữ liệu */}
+      <Card style={{ borderRadius: 12 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            marginBottom: 12,
+            flexDirection: "column",
+          }}
+        >
+          <div>
+            <Title level={5} style={{ margin: 0 }}>
+              Danh sách sinh viên
+            </Title>
+            <Text type="secondary">
+              Quản lý thông tin và danh sách của tất cả sinh viên
+            </Text>
+          </div>
+
+          <div style={{ minWidth: 320, marginTop: 12 }}>
+            <Search
+              placeholder="Tìm kiếm theo tên hoặc Mã SV"
+              allowClear
+              onSearch={(val) => {
+                setSearch(val);
+                setPage(1);
+              }}
+              onChange={(e) => setSearch(e.target.value)}
+              value={search}
+              enterButton={<SearchOutlined />}
+            />
+          </div>
+        </div>
+
+        <Table
+          columns={columns}
+          dataSource={paged}
+          pagination={false}
+          rowKey="key"
+          bordered={false}
+          style={{ background: "transparent" }}
+          scroll={{ x: 1000 }}
+          loading={loading}
+        />
+
+        {/* Phân trang */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginTop: 16,
+          }}
+        >
+          <Text type="secondary">Hiển thị {filtered.length} kết quả</Text>
+          <Pagination
+            current={page}
+            pageSize={pageSize}
+            total={filtered.length}
+            showSizeChanger
+            pageSizeOptions={["5", "10", "20", "50"]}
+            onChange={(p, ps) => {
+              setPage(p);
+              setPageSize(ps);
+            }}
+          />
+        </div>
+      </Card>
 
       {/* PHẦN MODAL CHI TIẾT SINH VIÊN */}
       <Modal
@@ -513,8 +504,8 @@ export default function ProfilePage({}: { messageApi: any }) {
                           selectedStudent.status === "Đang học"
                             ? "success"
                             : selectedStudent.status === "Bảo lưu"
-                            ? "orange"
-                            : "default"
+                              ? "orange"
+                              : "default"
                         }
                         style={{ fontWeight: 600, fontSize: 13 }}
                       >
@@ -566,6 +557,6 @@ export default function ProfilePage({}: { messageApi: any }) {
           </Space>
         )}
       </Modal>
-    </Layout>
+    </div>
   );
 }

@@ -11,7 +11,6 @@ import {
   CalendarOutlined,
   GiftOutlined,
   LogoutOutlined,
-  AppstoreOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
@@ -20,7 +19,13 @@ import { useAuthStore } from "../store/auth";
 
 const { Sider } = Layout;
 
-export default function Sidebar({ messageApi }: { messageApi: any }) {
+interface SidebarProps {
+  messageApi: any;
+  isMobile?: boolean; // Prop để xác định chế độ mobile
+  onClose?: () => void; // Prop để đóng menu khi click item trên mobile
+}
+
+export default function Sidebar({ messageApi, isMobile = false, onClose }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation(); 
   const logout = useAuthStore((s) => s.logout);
@@ -59,8 +64,15 @@ export default function Sidebar({ messageApi }: { messageApi: any }) {
 
   const handleLogout = () => mutation.mutate();
 
-  return (
-    <Sider width={250} theme="dark">
+  const handleMenuClick = (path: string) => {
+    navigate(path);
+    if (isMobile && onClose) {
+        onClose();
+    }
+  };
+
+  const content = (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#001529' }}>
       <div
         style={{
           color: "#fff",
@@ -72,47 +84,50 @@ export default function Sidebar({ messageApi }: { messageApi: any }) {
           display: "flex",  // Thêm để làm flex container
           alignItems: "center",  // Căn giữa theo chiều dọc
           justifyContent: "center",  // Căn giữa theo chiều ngang 
+          flexShrink: 0,
         }}
       >
         <img src="/src/assets/logo.svg" alt="Logo" style={{ width: 24, height: 24, marginRight: 8, backgroundColor: 'white', borderRadius: '4px', padding: '2px' }} />
-        SMS BK - TECHNICIAN
+        SMS BK
       </div>
 
-      <Menu
-        theme="dark"
-        mode="inline"
-        selectedKeys={[selectedKey]} 
-      >
-        <Menu.Item key="1" icon={<HomeOutlined />} onClick={() => navigate("/technician/home")}>
-          Tổng quan
-        </Menu.Item>
-        <Menu.Item key="2" icon={<UserOutlined />} onClick={() => navigate("/technician/manage")}>
-          Quản lý nhập học
-        </Menu.Item>
-        <Menu.Item key="3" icon={<FileTextOutlined />} onClick={() => navigate("/technician/profile")}>
-        Danh sách sinh viên
-        </Menu.Item>
-        <Menu.Item key="4" icon={<SolutionOutlined />} onClick={() => navigate("/technician/decision")}>
-        Quyết định học vụ
-        </Menu.Item>
-        <Menu.Item key="5" icon={<TrophyOutlined />} onClick={() => navigate("/technician/praise")}>
-        Khen thưởng & Kỷ luật
-        </Menu.Item>
-        <Menu.Item key="6" icon={<BookOutlined />} onClick={() => navigate("/technician/certificate")}>
-        Chứng nhận
-        </Menu.Item>
-        <Menu.Item key="7" icon={<ScheduleOutlined />} onClick={() => navigate("/technician/score")}>
-        Điểm rèn luyện
-        </Menu.Item>
-        <Menu.Item key="8" icon={<CalendarOutlined />} onClick={() => navigate("/technician/event")}>
-        Sự kiện & hoạt động
-        </Menu.Item>
-        <Menu.Item key="9" icon={<GiftOutlined />} onClick={() => navigate("/technician/scholarship")}>
-        Học bổng
-        </Menu.Item>
-      </Menu>
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        <Menu
+            theme="dark"
+            mode="inline"
+            selectedKeys={[selectedKey]} 
+        >
+            <Menu.Item key="1" icon={<HomeOutlined />} onClick={() => handleMenuClick("/technician/home")}>
+            Tổng quan
+            </Menu.Item>
+            <Menu.Item key="2" icon={<UserOutlined />} onClick={() => handleMenuClick("/technician/manage")}>
+            Quản lý nhập học
+            </Menu.Item>
+            <Menu.Item key="3" icon={<FileTextOutlined />} onClick={() => handleMenuClick("/technician/profile")}>
+            Danh sách sinh viên
+            </Menu.Item>
+            <Menu.Item key="4" icon={<SolutionOutlined />} onClick={() => handleMenuClick("/technician/decision")}>
+            Quyết định học vụ
+            </Menu.Item>
+            <Menu.Item key="5" icon={<TrophyOutlined />} onClick={() => handleMenuClick("/technician/praise")}>
+            Khen thưởng & Kỷ luật
+            </Menu.Item>
+            <Menu.Item key="6" icon={<BookOutlined />} onClick={() => handleMenuClick("/technician/certificate")}>
+            Chứng nhận
+            </Menu.Item>
+            <Menu.Item key="7" icon={<ScheduleOutlined />} onClick={() => handleMenuClick("/technician/score")}>
+            Điểm rèn luyện
+            </Menu.Item>
+            <Menu.Item key="8" icon={<CalendarOutlined />} onClick={() => handleMenuClick("/technician/event")}>
+            Sự kiện & hoạt động
+            </Menu.Item>
+            <Menu.Item key="9" icon={<GiftOutlined />} onClick={() => handleMenuClick("/technician/scholarship")}>
+            Học bổng
+            </Menu.Item>
+        </Menu>
+      </div>
 
-      <div style={{ position: "absolute", bottom: 20, width: "100%", padding: "0 24px" }}>
+      <div style={{ padding: "20px 24px", flexShrink: 0 }}>
         <Button
           type="primary"
           danger
@@ -124,6 +139,16 @@ export default function Sidebar({ messageApi }: { messageApi: any }) {
           Đăng xuất
         </Button>
       </div>
+    </div>
+  );
+
+  if (isMobile) {
+    return content;
+  }
+
+  return (
+    <Sider width={250} theme="dark">
+      {content}
     </Sider>
   );
 }

@@ -1,5 +1,5 @@
 
-import  { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { ColumnsType } from "antd/es/table";
 import {
   Row,
@@ -22,10 +22,6 @@ import {
   SearchOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-
-import CustomHeader from "../../components/CustomHeader";
-import { Layout } from "antd";
-const { Content } = Layout;
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -131,7 +127,7 @@ export default function ManagePage({ }: { messageApi: any }) {
       title: "Ngành",
       dataIndex: "major",
       key: "major",
-      
+
       responsive: ["lg"] as any,
       render: (v: string) => <Text type="secondary">{v}</Text>,
     },
@@ -182,117 +178,108 @@ export default function ManagePage({ }: { messageApi: any }) {
   ];
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
-      {/* Sidebar dùng chung */}
-      
+    <div>
+      <Row align="middle" justify="space-between" style={{ marginBottom: 18 }}>
+        <Col>
+          <Space align="center">
+            <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} />
+            <div>
+              <Title level={4} style={{ margin: 0 }}>
+                Quản lý nhập học
+              </Title>
+              <Text type="secondary">Quản lý hồ sơ nhập học và xét tuyển sinh viên mới</Text>
+            </div>
+          </Space>
+        </Col>
 
-      {/* Nội dung chính */}
-      <Layout>
-        <CustomHeader showBackButton={false} />
-        <Content style={{ padding: 24, background: "#f5f5f5" }}>
-          <Row align="middle" justify="space-between" style={{ marginBottom: 18 }}>
-            <Col>
-              <Space align="center">
-                <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} />
-                <div>
-                  <Title level={4} style={{ margin: 0 }}>
-                    Quản lý nhập học
-                  </Title>
-                  <Text type="secondary">Quản lý hồ sơ nhập học và xét tuyển sinh viên mới</Text>
-                </div>
-              </Space>
-            </Col>
+        <Col>
+          <Space>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              style={{ borderRadius: 8 }}
+              onClick={() => alert("Chức năng thêm hồ sơ (tạo modal)")}
+            >
+              Thêm hồ sơ
+            </Button>
+          </Space>
+        </Col>
+      </Row>
 
-            <Col>
-              <Space>
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  style={{ borderRadius: 8 }}
-                  onClick={() => alert("Chức năng thêm hồ sơ (tạo modal)")}
-                >
-                  Thêm hồ sơ
-                </Button>
-              </Space>
-            </Col>
-          </Row>
+      {/* Các card thống kê */}
+      <Row gutter={16} style={{ marginBottom: 18 }}>
+        <Col xs={24} sm={8}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Tổng hồ sơ</Text>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <Title level={3} style={{ margin: 0 }}>322</Title>
+              <Text style={{ color: "#39b54a" }}>+12% so với năm trước</Text>
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Chờ duyệt</Text>
+            <Title level={3} style={{ margin: 0 }}>122</Title>
+          </Card>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Đã duyệt</Text>
+            <Title level={3} style={{ margin: 0 }}>200</Title>
+          </Card>
+        </Col>
+      </Row>
 
-          {/* Các card thống kê */}
-          <Row gutter={16} style={{ marginBottom: 18 }}>
-            <Col xs={24} sm={8}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Tổng hồ sơ</Text>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                  <Title level={3} style={{ margin: 0 }}>322</Title>
-                  <Text style={{ color: "#39b54a" }}>+12% so với năm trước</Text>
-                </div>
-              </Card>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Chờ duyệt</Text>
-                <Title level={3} style={{ margin: 0 }}>122</Title>
-              </Card>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Đã duyệt</Text>
-                <Title level={3} style={{ margin: 0 }}>200</Title>
-              </Card>
-            </Col>
-          </Row>
 
-         
-            <Card style={{ borderRadius: 12 }}>
-              {/* Đã chỉnh sửa để sử dụng flexDirection: column và di chuyển Search xuống dưới */}
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, flexDirection: "column" }}>
-                <div>
-                  <Title level={5} style={{ margin: 0 }}>Danh sách hồ sơ nhập học</Title>
-                  <Text type="secondary">Quản lý hồ sơ nhập học và xét tuyển sinh viên mới</Text>
-                </div>
+      <Card style={{ borderRadius: 12 }}>
+        {/* Đã chỉnh sửa để sử dụng flexDirection: column và di chuyển Search xuống dưới */}
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, flexDirection: "column" }}>
+          <div>
+            <Title level={5} style={{ margin: 0 }}>Danh sách hồ sơ nhập học</Title>
+            <Text type="secondary">Quản lý hồ sơ nhập học và xét tuyển sinh viên mới</Text>
+          </div>
 
-                {/* Thanh Search được đặt trong div mới với marginTop */}
-                <div style={{ minWidth: 320, marginTop: 12 }}> 
-                  <Search
-                    placeholder="Tìm kiếm theo tên hoặc Mã SV"
-                    allowClear
-                    onSearch={(val) => {
-                      setSearch(val);
-                      setPage(1);
-                    }}
-                    onChange={(e) => setSearch(e.target.value)}
-                    value={search}
-                    enterButton={<SearchOutlined />}
-                  />
-                </div>
-              </div>
+          {/* Thanh Search được đặt trong div mới với marginTop */}
+          <div style={{ minWidth: 320, marginTop: 12 }}>
+            <Search
+              placeholder="Tìm kiếm theo tên hoặc Mã SV"
+              allowClear
+              onSearch={(val) => {
+                setSearch(val);
+                setPage(1);
+              }}
+              onChange={(e) => setSearch(e.target.value)}
+              value={search}
+              enterButton={<SearchOutlined />}
+            />
+          </div>
+        </div>
 
-              <Table
-                columns={columns}
-                dataSource={paged}
-                pagination={false}
-                rowKey="key"
-                bordered={false}
-                style={{ background: "transparent" }}
-              />
+        <Table
+          columns={columns}
+          dataSource={paged}
+          pagination={false}
+          rowKey="key"
+          bordered={false}
+          style={{ background: "transparent" }}
+        />
 
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16 }}>
-                <Text type="secondary">Hiển thị {filtered.length} kết quả</Text>
-                <Pagination
-                  current={page}
-                  pageSize={pageSize}
-                  total={filtered.length}
-                  showSizeChanger
-                  pageSizeOptions={["5", "10", "20", "50"]}
-                  onChange={(p, ps) => {
-                    setPage(p);
-                    setPageSize(ps);
-                  }}
-                />
-              </div>
-            </Card>
-        </Content>
-      </Layout>
-    </Layout>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16 }}>
+          <Text type="secondary">Hiển thị {filtered.length} kết quả</Text>
+          <Pagination
+            current={page}
+            pageSize={pageSize}
+            total={filtered.length}
+            showSizeChanger
+            pageSizeOptions={["5", "10", "20", "50"]}
+            onChange={(p, ps) => {
+              setPage(p);
+              setPageSize(ps);
+            }}
+          />
+        </div>
+      </Card>
+    </div>
   );
 }

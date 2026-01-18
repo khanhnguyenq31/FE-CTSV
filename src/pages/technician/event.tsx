@@ -10,23 +10,18 @@ import {
   Space,
   Tag,
   Table,
-  
+
   Pagination,
   Tooltip,
 } from "antd";
 import {
   ArrowLeftOutlined,
   PlusOutlined,
-  
+
   SearchOutlined,
   PlusCircleOutlined, // Icon cho nút Ghi điểm
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
-// Giả định các components Sidebar và Layout/Content được import đúng cách
-
-import CustomHeader from "../../components/CustomHeader";
-import { Layout } from "antd";
-const { Content } = Layout;
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -92,7 +87,7 @@ const StatusTag: React.FC<{ status: EventStatus }> = ({ status }) => {
   return <Tag color={color} style={{ fontWeight: 600 }}>{status}</Tag>;
 };
 
-export default function EventPage({  }: { messageApi: any }) {
+export default function EventPage({ }: { messageApi: any }) {
   const navigate = useNavigate();
   const [data] = useState<RowData[]>(() => generateMock(60));
   const [search, setSearch] = useState("");
@@ -208,131 +203,122 @@ export default function EventPage({  }: { messageApi: any }) {
   const ongoing = data.filter(r => r.status === "Đang diễn ra").length;
   const finished = data.filter(r => r.status === "Đã kết thúc").length;
   // Giả định tổng người tham gia
-  const totalParticipants = 479 * 2; 
+  const totalParticipants = 479 * 2;
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
-      {/* Sidebar dùng chung */}
-      
+    <div>
+      {/* Header */}
+      <Row align="middle" justify="space-between" style={{ marginBottom: 18 }}>
+        <Col>
+          <Space align="center">
+            <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} />
+            <div>
+              <Title level={4} style={{ margin: 0 }}>
+                Sự kiện & Hoạt động
+              </Title>
+              <Text type="secondary">Quản lý các sự kiện và hoạt động sinh viên</Text>
+            </div>
+          </Space>
+        </Col>
 
-      {/* Nội dung chính */}
-      <Layout>
-        <CustomHeader showBackButton={false} />
-        <Content style={{ padding: 24, background: "#f5f5f5" }}>
-          {/* Header */}
-          <Row align="middle" justify="space-between" style={{ marginBottom: 18 }}>
-            <Col>
-              <Space align="center">
-                <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} />
-                <div>
-                  <Title level={4} style={{ margin: 0 }}>
-                    Sự kiện & Hoạt động
-                  </Title>
-                  <Text type="secondary">Quản lý các sự kiện và hoạt động sinh viên</Text>
-                </div>
-              </Space>
-            </Col>
+        <Col>
+          <Space>
+            {/* Nút Tạo sự kiện */}
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              style={{ borderRadius: 8, fontWeight: 600 }}
+              onClick={() => alert("Chức năng tạo sự kiện")}
+            >
+              Tạo sự kiện
+            </Button>
+          </Space>
+        </Col>
+      </Row>
 
-            <Col>
-              <Space>
-                {/* Nút Tạo sự kiện */}
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  style={{ borderRadius: 8, fontWeight: 600 }}
-                  onClick={() => alert("Chức năng tạo sự kiện")}
-                >
-                  Tạo sự kiện
-                </Button>
-              </Space>
-            </Col>
-          </Row>
-
-          {/* Các card thống kê */}
-          <Row gutter={16} style={{ marginBottom: 18 }}>
-            <Col xs={24} sm={12} lg={4}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Tổng sự kiện</Text>
-                <Title level={3} style={{ margin: 0 }}>{totalEvents}</Title>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={4}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Sắp diễn ra</Text>
-                <Title level={3} style={{ margin: 0 }}>{upcoming}</Title>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={4}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Đang diễn ra</Text>
-                <Title level={3} style={{ margin: 0 }}>{ongoing}</Title>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={4}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Đã kết thúc</Text>
-                <Title level={3} style={{ margin: 0 }}>{finished}</Title>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={8}>
-              <Card style={{ borderRadius: 12 }}>
-                <Text type="secondary">Tổng người tham gia</Text>
-                <Title level={3} style={{ margin: 0 }}>{totalParticipants}</Title>
-              </Card>
-            </Col>
-          </Row>
-
-          {/* Bảng dữ liệu - Đã chỉnh Search nằm dưới tiêu đề */}
+      {/* Các card thống kê */}
+      <Row gutter={16} style={{ marginBottom: 18 }}>
+        <Col xs={24} sm={12} lg={4}>
           <Card style={{ borderRadius: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, flexDirection: "column" }}>
-              <div>
-                <Title level={5} style={{ margin: 0 }}>Danh sách sự kiện</Title>
-                <Text type="secondary">Quản lý các sự kiện và hoạt động sinh viên</Text>
-              </div>
-
-              <div style={{ minWidth: 320, marginTop: 12 }}>
-                <Search
-                  placeholder="Tìm kiếm theo Tên SK"
-                  allowClear
-                  onSearch={(val) => {
-                    setSearch(val);
-                    setPage(1);
-                  }}
-                  onChange={(e) => setSearch(e.target.value)}
-                  value={search}
-                  enterButton={<SearchOutlined />}
-                />
-              </div>
-            </div>
-
-            <Table
-              columns={columns}
-              dataSource={paged}
-              pagination={false}
-              rowKey="key"
-              bordered={false}
-              style={{ background: "transparent" }}
-              scroll={{ x: 1100 }} 
-            />
-
-            {/* Phân trang */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16 }}>
-              <Text type="secondary">Hiển thị {filtered.length} kết quả</Text>
-              <Pagination
-                current={page}
-                pageSize={pageSize}
-                total={filtered.length}
-                showSizeChanger
-                pageSizeOptions={["5", "10", "20", "50"]}
-                onChange={(p, ps) => {
-                  setPage(p);
-                  setPageSize(ps);
-                }}
-              />
-            </div>
+            <Text type="secondary">Tổng sự kiện</Text>
+            <Title level={3} style={{ margin: 0 }}>{totalEvents}</Title>
           </Card>
-        </Content>
-      </Layout>
-    </Layout>
+        </Col>
+        <Col xs={24} sm={12} lg={4}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Sắp diễn ra</Text>
+            <Title level={3} style={{ margin: 0 }}>{upcoming}</Title>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={4}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Đang diễn ra</Text>
+            <Title level={3} style={{ margin: 0 }}>{ongoing}</Title>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={4}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Đã kết thúc</Text>
+            <Title level={3} style={{ margin: 0 }}>{finished}</Title>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={8}>
+          <Card style={{ borderRadius: 12 }}>
+            <Text type="secondary">Tổng người tham gia</Text>
+            <Title level={3} style={{ margin: 0 }}>{totalParticipants}</Title>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Bảng dữ liệu - Đã chỉnh Search nằm dưới tiêu đề */}
+      <Card style={{ borderRadius: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, flexDirection: "column" }}>
+          <div>
+            <Title level={5} style={{ margin: 0 }}>Danh sách sự kiện</Title>
+            <Text type="secondary">Quản lý các sự kiện và hoạt động sinh viên</Text>
+          </div>
+
+          <div style={{ minWidth: 320, marginTop: 12 }}>
+            <Search
+              placeholder="Tìm kiếm theo Tên SK"
+              allowClear
+              onSearch={(val) => {
+                setSearch(val);
+                setPage(1);
+              }}
+              onChange={(e) => setSearch(e.target.value)}
+              value={search}
+              enterButton={<SearchOutlined />}
+            />
+          </div>
+        </div>
+
+        <Table
+          columns={columns}
+          dataSource={paged}
+          pagination={false}
+          rowKey="key"
+          bordered={false}
+          style={{ background: "transparent" }}
+          scroll={{ x: 1100 }}
+        />
+
+        {/* Phân trang */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16 }}>
+          <Text type="secondary">Hiển thị {filtered.length} kết quả</Text>
+          <Pagination
+            current={page}
+            pageSize={pageSize}
+            total={filtered.length}
+            showSizeChanger
+            pageSizeOptions={["5", "10", "20", "50"]}
+            onChange={(p, ps) => {
+              setPage(p);
+              setPageSize(ps);
+            }}
+          />
+        </div>
+      </Card>
+    </div>
   );
 }
