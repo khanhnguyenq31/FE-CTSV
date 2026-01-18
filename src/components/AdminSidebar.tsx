@@ -17,9 +17,12 @@ export default function AdminSidebar() {
           fontSize: 20,
           fontWeight: 600,
           borderBottom: "1px solid rgba(255,255,255,0.1)",
+          display: "flex",  // Thêm để làm flex container
+          alignItems: "center",  // Căn giữa theo chiều dọc
+          justifyContent: "center",  // Căn giữa theo chiều ngang 
         }}
       >
-        <AppstoreOutlined style={{ marginRight: 8 }} />
+        <img src="/src/assets/logo.svg" alt="Logo" style={{ width: 24, height: 24, marginRight: 8, backgroundColor: 'white', borderRadius: '4px', padding: '2px' }} />
         SMS BK - ADMIN
       </div>
       <Menu

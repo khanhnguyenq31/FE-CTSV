@@ -55,7 +55,7 @@ export default function ForgotPassword({ messageApi }: { messageApi: any }) {
 
   return (
     <>
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundImage: 'url(/src/assets/umt.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
         <div className="w-full max-w-5xl bg-transparent rounded-xl shadow-sm flex overflow-hidden">
          
           <Card
@@ -67,7 +67,7 @@ export default function ForgotPassword({ messageApi }: { messageApi: any }) {
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 rounded overflow-hidden flex items-center justify-center bg-white">
                 <img
-                  src="/src/assets/logo.png"
+                  src="/src/assets/logo.svg"
                   alt="Logo"
                   className="w-full h-full object-contain"
                 />
