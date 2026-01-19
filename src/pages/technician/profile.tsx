@@ -15,14 +15,25 @@ import {
   Tooltip,
   Modal,
   Descriptions,
+  DatePicker,
+  Form,
+  Popconfirm,
+  Switch,
 } from "antd";
 import {
   ArrowLeftOutlined,
   PlusOutlined,
   EyeOutlined,
   SearchOutlined,
+  CalendarOutlined,
+  EditOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+
+import StudentProfileForm from "../../components/StudentProfileForm";
+import dayjs from "dayjs";
+import { message } from "antd";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -41,6 +52,14 @@ type RowData = {
   faculty?: string; // Thêm trường faculty cho đúng dữ liệu API
 };
 
+interface Period {
+  id: number;
+  name: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+}
+
 export default function ProfilePage({ }: { messageApi: any }) {
   const navigate = useNavigate();
   const [data, setData] = useState<RowData[]>([]);
@@ -49,9 +68,14 @@ export default function ProfilePage({ }: { messageApi: any }) {
   const [pageSize, setPageSize] = useState(10);
   const [loading, setLoading] = useState(false);
 
-  // State cho Modal
+  // State cho Modal Xem chi tiết
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<RowData | null>(null);
+
+  // State cho Modal Chỉnh sửa
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<any>(null);
+  const [editLoading, setEditLoading] = useState(false);
 
   // Fetch danh sách sinh viên từ API
   useEffect(() => {
@@ -67,14 +91,16 @@ export default function ProfilePage({ }: { messageApi: any }) {
         if (!res.ok) throw new Error("Không thể lấy danh sách sinh viên");
         const json = await res.json();
         // Map dữ liệu API sang RowData
-        const students: RowData[] = (json.students || []).map(
+        const rawStudents = Array.isArray(json) ? json : (json.students || []);
+        const students: RowData[] = rawStudents.map(
           (s: any, idx: number) => ({
-            key: s.studentId || idx,
+            // Ensure key is unique by combining studentId and index
+            key: s.studentId ? `${s.studentId}_${idx}` : `student_${idx}`,
             stt: idx + 1 < 10 ? `0${idx + 1}` : `${idx + 1}`,
-            name: s.fullName,
-            studentId: s.studentId,
-            classId: s.className,
-            major: s.major,
+            name: s.fullName || "",
+            studentId: s.studentId || "",
+            classId: s.className || "",
+            major: s.major || "",
             course: s.studentCode || "", // Khóa
             gpa: Number(s.gpaTotal) || 0,
             trainingScore: 100, // Mặc định 100
@@ -99,8 +125,8 @@ export default function ProfilePage({ }: { messageApi: any }) {
     if (!q) return data;
     return data.filter(
       (r) =>
-        r.name.toLowerCase().includes(q) ||
-        r.studentId.toLowerCase().includes(q)
+        (r.name && r.name.toLowerCase().includes(q)) ||
+        (r.studentId && String(r.studentId).toLowerCase().includes(q))
     );
   }, [data, search]);
 
@@ -242,6 +268,234 @@ export default function ProfilePage({ }: { messageApi: any }) {
     setIsModalOpen(false);
     setSelectedStudent(null);
   };
+
+  // Mở modal chỉnh sửa và load dữ liệu chi tiết
+  const handleEditClick = async () => {
+    if (!selectedStudent) return;
+    setEditLoading(true);
+    setIsEditModalOpen(true);
+    // Ẩn modal xem chi tiết
+    setIsModalOpen(false);
+
+    try {
+      const token = localStorage.getItem("accessToken");
+      // API lấy chi tiết sinh viên cho Technician
+      const res = await fetch(`http://localhost:3000/student/profile/${selectedStudent.studentId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      let profileData;
+      if (res.ok) {
+        const json = await res.json();
+        profileData = json.student || json.profile; // Tuỳ response
+      } else {
+        // Fallback nếu API chưa sẵn sàng hoặc lỗi, dùng dữ liệu đang có
+        profileData = { ...selectedStudent, fullName: selectedStudent.name };
+      }
+
+      // Convert dates to dayjs
+      const dateFields = ['dateOfBirth', 'idCardIssueDate', 'enrollmentDate', 'activityDate'];
+      dateFields.forEach(field => {
+        if (profileData[field]) profileData[field] = dayjs(profileData[field]);
+      });
+
+      setEditingStudent(profileData);
+    } catch (error) {
+      console.error(error);
+      message.warning("Không thể tải đầy đủ thông tin, hiển thị thông tin cơ bản.");
+      setEditingStudent({ ...selectedStudent, fullName: selectedStudent?.name });
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleUpdateStudent = async (values: any, avatarFile: File | null) => {
+    if (!editingStudent) return;
+    setEditLoading(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      const commonData = {
+        ...values,
+        dateOfBirth: values.dateOfBirth ? values.dateOfBirth.format('YYYY-MM-DD') : null,
+        idCardIssueDate: values.idCardIssueDate ? values.idCardIssueDate.format('YYYY-MM-DD') : null,
+        enrollmentDate: values.enrollmentDate ? values.enrollmentDate.format('YYYY-MM-DD') : null,
+        activityDate: values.activityDate ? values.activityDate.format('YYYY-MM-DD') : null,
+      };
+
+      let body: any;
+      let headers: any = { 'Authorization': `Bearer ${token}` };
+
+      if (avatarFile) {
+        const formData = new FormData();
+        Object.keys(commonData).forEach(key => {
+          if (commonData[key] !== null && commonData[key] !== undefined) {
+            formData.append(key, commonData[key]);
+          }
+        });
+        formData.append('avatar', avatarFile);
+        body = formData;
+      } else {
+        body = JSON.stringify(commonData);
+        headers['Content-Type'] = 'application/json';
+      }
+
+      const res = await fetch(`http://localhost:3000/student/profile/${editingStudent.studentId}`, {
+        method: 'PUT',
+        headers: headers,
+        body: body,
+      });
+
+      if (!res.ok) throw new Error('Cập nhật thất bại');
+
+      message.success('Cập nhật hồ sơ thành công');
+      setIsEditModalOpen(false);
+      setEditingStudent(null);
+
+      // Refresh list
+      // fetchStudents(); // Ta có thể tách fetchStudents ra khỏi useEffect để gọi lại ở đây
+
+    } catch (e: any) {
+      message.error(e.message || 'Có lỗi xảy ra khi cập nhật');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  // --- PERIOD MANAGEMENT LOGIC ---
+  const [periods, setPeriods] = useState<Period[]>([]);
+  const [periodLoading, setPeriodLoading] = useState(false);
+  const [isPeriodModalOpen, setIsPeriodModalOpen] = useState(false);
+  const [editingPeriod, setEditingPeriod] = useState<Period | null>(null);
+  const [periodForm] = Form.useForm();
+
+  const fetchPeriods = async () => {
+    setPeriodLoading(true);
+    try {
+      const token = localStorage.getItem("accessToken");
+      const res = await fetch('http://localhost:3000/periods', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPeriods(Array.isArray(data) ? data : (data.periods || []));
+      }
+    } catch (e) {
+      console.error("Failed to fetch periods", e);
+    } finally {
+      setPeriodLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPeriods();
+  }, []);
+
+  const handleOpenPeriodModal = (period: Period | null) => {
+    setEditingPeriod(period);
+    if (period) {
+      periodForm.setFieldsValue({
+        ...period,
+        dates: [dayjs(period.startDate), dayjs(period.endDate)],
+      });
+    } else {
+      periodForm.resetFields();
+    }
+    setIsPeriodModalOpen(true);
+  };
+
+  const handleSavePeriod = async (values: any) => {
+    setPeriodLoading(true);
+    try {
+      const token = localStorage.getItem("accessToken");
+      const [start, end] = values.dates;
+      const payload = {
+        name: values.name,
+        startDate: start.toISOString(),
+        endDate: end.toISOString(),
+        isActive: values.isActive !== undefined ? values.isActive : true,
+      };
+
+      let url = 'http://localhost:3000/periods';
+      let method = 'POST';
+
+      if (editingPeriod) {
+        url = `http://localhost:3000/periods/${editingPeriod.id}`;
+        method = 'PUT';
+      }
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) throw new Error("Failed to save period");
+
+      message.success(editingPeriod ? "Cập nhật đợt thành công" : "Tạo đợt mới thành công");
+      setIsPeriodModalOpen(false);
+      fetchPeriods();
+
+    } catch (e) {
+      message.error("Có lỗi xảy ra");
+    } finally {
+      setPeriodLoading(false);
+    }
+  };
+
+  const handleDeletePeriod = async (id: number) => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      await fetch(`http://localhost:3000/periods/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      message.success("Đã xóa đợt");
+      fetchPeriods();
+    } catch (e) {
+      message.error("Lỗi khi xóa");
+    }
+  };
+
+  const periodColumns = [
+    {
+      title: 'Tên đợt',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text: string) => <Text strong>{text}</Text>
+    },
+    {
+      title: 'Thời gian',
+      key: 'time',
+      render: (_: any, r: Period) => (
+        <span>
+          {dayjs(r.startDate).format("DD/MM/YYYY")} - {dayjs(r.endDate).format("DD/MM/YYYY")}
+        </span>
+      )
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'isActive',
+      key: 'isActive',
+      render: (active: boolean) => (
+        <Tag color={active ? "green" : "red"}>{active ? "Đang mở" : "Đã đóng"}</Tag>
+      )
+    },
+    {
+      title: 'Hành động',
+      key: 'action',
+      render: (_: any, r: Period) => (
+        <Space>
+          <Button icon={<EditOutlined />} size="small" onClick={() => handleOpenPeriodModal(r)} />
+          <Popconfirm title="Bạn chắc chắn muốn xóa?" onConfirm={() => handleDeletePeriod(r.id)}>
+            <Button icon={<DeleteOutlined />} size="small" danger />
+          </Popconfirm>
+        </Space>
+      )
+    }
+  ];
 
   return (
     <div>
@@ -435,7 +689,7 @@ export default function ProfilePage({ }: { messageApi: any }) {
           <Button key="back" onClick={handleCancel}>
             Đóng
           </Button>,
-          <Button key="edit" type="primary" icon={<PlusOutlined />}>
+          <Button key="edit" type="primary" icon={<PlusOutlined />} onClick={handleEditClick}>
             Chỉnh sửa hồ sơ
           </Button>,
         ]}
@@ -557,6 +811,74 @@ export default function ProfilePage({ }: { messageApi: any }) {
           </Space>
         )}
       </Modal>
+
+      {/* MODAL CHỈNH SỬA */}
+      <Modal
+        title={
+          <Title level={4} style={{ margin: 0 }}>
+            Chỉnh sửa hồ sơ sinh viên
+          </Title>
+        }
+        open={isEditModalOpen}
+        onCancel={() => setIsEditModalOpen(false)}
+        footer={null} // Form tự có nút submit
+        width={1000}
+        style={{ top: 20 }}
+      >
+        <StudentProfileForm
+          initialValues={editingStudent}
+          loading={editLoading}
+          onFinish={handleUpdateStudent}
+          submitText="Lưu thay đổi"
+        />
+      </Modal>
+      {/* SECTION QUẢN LÝ ĐỢT CHỈNH SỬA */}
+      <Card style={{ borderRadius: 12, marginTop: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div>
+            <Title level={5} style={{ margin: 0 }}>Quản lý Đợt chỉnh sửa</Title>
+            <Text type="secondary">Cài đặt các đợt cho phép sinh viên chỉnh sửa hồ sơ</Text>
+          </div>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenPeriodModal(null)}>
+            Tạo đợt mới
+          </Button>
+        </div>
+
+        <Table
+          columns={periodColumns}
+          dataSource={periods}
+          rowKey="id"
+          pagination={false}
+          loading={periodLoading}
+        />
+      </Card>
+
+      {/* MODAL TẠO/SỬA ĐỢT */}
+      <Modal
+        title={editingPeriod ? "Cập nhật đợt chỉnh sửa" : "Tạo đợt chỉnh sửa mới"}
+        open={isPeriodModalOpen}
+        onCancel={() => setIsPeriodModalOpen(false)}
+        footer={null}
+      >
+        <Form form={periodForm} layout="vertical" onFinish={handleSavePeriod}>
+          <Form.Item label="Tên đợt" name="name" rules={[{ required: true, message: 'Vui lòng nhập tên đợt' }]}>
+            <Input placeholder="Ví dụ: Đợt bổ sung hồ sơ K22" />
+          </Form.Item>
+          <Form.Item label="Thời gian" name="dates" rules={[{ required: true, message: 'Vui lòng chọn thời gian' }]}>
+            <DatePicker.RangePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+          </Form.Item>
+          <Form.Item label="Kích hoạt ngay" name="isActive" valuePropName="checked" initialValue={true}>
+            <Switch />
+          </Form.Item>
+          <Form.Item style={{ textAlign: 'right' }}>
+            <Button onClick={() => setIsPeriodModalOpen(false)} style={{ marginRight: 8 }}>Hủy</Button>
+            <Button type="primary" htmlType="submit" loading={periodLoading}>
+              {editingPeriod ? "Lưu thay đổi" : "Tạo mới"}
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
+
     </div>
   );
 }
