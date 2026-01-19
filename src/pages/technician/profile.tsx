@@ -693,7 +693,7 @@ export default function ProfilePage({ }: { messageApi: any }) {
             Chỉnh sửa hồ sơ
           </Button>,
         ]}
-        width={900}
+        width={1000}
         style={{ top: 20 }}
       >
         {selectedStudent && (
@@ -702,9 +702,10 @@ export default function ProfilePage({ }: { messageApi: any }) {
             <Card
               bordered={false}
               style={{ borderRadius: 8, background: "#f8f8ff" }}
+              bodyStyle={{ padding: '16px 24px' }}
             >
-              <Row gutter={16} align="middle">
-                <Col span={3} style={{ textAlign: "center" }}>
+              <Row gutter={[16, 16]} align="middle">
+                <Col xs={24} sm={4} md={3} style={{ textAlign: "center" }}>
                   <Avatar
                     size={64}
                     style={{
@@ -717,8 +718,8 @@ export default function ProfilePage({ }: { messageApi: any }) {
                     {selectedStudent.name.split(" ").slice(-1)[0]?.[0]}
                   </Avatar>
                 </Col>
-                <Col span={21}>
-                  <Space direction="vertical" size={2}>
+                <Col xs={24} sm={20} md={21}>
+                  <Space direction="vertical" size={2} style={{ width: '100%', textAlign: 'left' }}>
                     <Title level={3} style={{ margin: 0 }}>
                       {selectedStudent.name}
                     </Title>
@@ -734,15 +735,19 @@ export default function ProfilePage({ }: { messageApi: any }) {
             </Card>
 
             {/* 2. Thông tin học thuật (2 cột chính) */}
-            <Row gutter={16}>
+            <Row gutter={[16, 16]}>
               {/* Cột Trái: Thông tin cơ bản học tập */}
-              <Col span={15}>
+              <Col xs={24} lg={15}>
                 <Card
                   title="Thông tin Học tập Cơ bản"
                   bordered={false}
                   style={{ borderRadius: 8, height: "100%" }}
                 >
-                  <Descriptions column={2} bordered size="small">
+                  <Descriptions
+                    column={{ xs: 1, sm: 2, md: 2, lg: 2, xl: 2, xxl: 2 }}
+                    bordered
+                    size="small"
+                  >
                     <Descriptions.Item label="Ngành học" span={2}>
                       <Text strong>{selectedStudent.major}</Text>
                     </Descriptions.Item>
@@ -774,38 +779,41 @@ export default function ProfilePage({ }: { messageApi: any }) {
               </Col>
 
               {/* Cột Phải: Các chỉ số nổi bật */}
-              <Col span={9}>
-                <Space direction="vertical" size={16} style={{ width: "100%" }}>
-                  {/* Card GPA */}
-                  <Card
-                    title="GPA Tích lũy"
-                    bordered={false}
-                    style={{ borderRadius: 8 }}
-                    headStyle={{ borderBottom: "none" }}
-                    size="small"
-                  >
-                    <Title level={2} style={{ margin: 0, color: "#1677ff" }}>
-                      {selectedStudent.gpa.toFixed(2)}
-                    </Title>
-                    <Text type="secondary">
-                      Xếp loại: Tốt (Cần thêm logic xếp loại)
-                    </Text>
-                  </Card>
-
-                  {/* Card Điểm Rèn luyện */}
-                  <Card
-                    title="Điểm Rèn luyện"
-                    bordered={false}
-                    style={{ borderRadius: 8 }}
-                    headStyle={{ borderBottom: "none" }}
-                    size="small"
-                  >
-                    <Title level={2} style={{ margin: 0, color: "#52c41a" }}>
-                      {selectedStudent.trainingScore}
-                    </Title>
-                    <Text type="secondary">Kỳ gần nhất</Text>
-                  </Card>
-                </Space>
+              <Col xs={24} lg={9}>
+                <Row gutter={[16, 16]}>
+                  <Col xs={24} sm={12} lg={24}>
+                    {/* Card GPA */}
+                    <Card
+                      title="GPA Tích lũy"
+                      bordered={false}
+                      style={{ borderRadius: 8 }}
+                      headStyle={{ borderBottom: "none" }}
+                      size="small"
+                    >
+                      <Title level={2} style={{ margin: 0, color: "#1677ff" }}>
+                        {selectedStudent.gpa.toFixed(2)}
+                      </Title>
+                      <Text type="secondary">
+                        Xếp loại: Tốt (Cần thêm logic xếp loại)
+                      </Text>
+                    </Card>
+                  </Col>
+                  <Col xs={24} sm={12} lg={24}>
+                    {/* Card Điểm Rèn luyện */}
+                    <Card
+                      title="Điểm Rèn luyện"
+                      bordered={false}
+                      style={{ borderRadius: 8 }}
+                      headStyle={{ borderBottom: "none" }}
+                      size="small"
+                    >
+                      <Title level={2} style={{ margin: 0, color: "#52c41a" }}>
+                        {selectedStudent.trainingScore}
+                      </Title>
+                      <Text type="secondary">Kỳ gần nhất</Text>
+                    </Card>
+                  </Col>
+                </Row>
               </Col>
             </Row>
           </Space>
@@ -834,15 +842,17 @@ export default function ProfilePage({ }: { messageApi: any }) {
       </Modal>
       {/* SECTION QUẢN LÝ ĐỢT CHỈNH SỬA */}
       <Card style={{ borderRadius: 12, marginTop: 24 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div>
+        <Row align="middle" justify="space-between" style={{ marginBottom: 16 }} gutter={[16, 16]}>
+          <Col xs={24} sm={16}>
             <Title level={5} style={{ margin: 0 }}>Quản lý Đợt chỉnh sửa</Title>
             <Text type="secondary">Cài đặt các đợt cho phép sinh viên chỉnh sửa hồ sơ</Text>
-          </div>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenPeriodModal(null)}>
-            Tạo đợt mới
-          </Button>
-        </div>
+          </Col>
+          <Col xs={24} sm={8} style={{ textAlign: 'right' }}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenPeriodModal(null)} block style={{ maxWidth: 200, float: 'right' }}>
+              Tạo đợt mới
+            </Button>
+          </Col>
+        </Row>
 
         <Table
           columns={periodColumns}
@@ -850,6 +860,7 @@ export default function ProfilePage({ }: { messageApi: any }) {
           rowKey="id"
           pagination={false}
           loading={periodLoading}
+          scroll={{ x: 600 }}
         />
       </Card>
 
