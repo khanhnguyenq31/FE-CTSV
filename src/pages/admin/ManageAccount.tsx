@@ -1,5 +1,5 @@
-import { Button, Table, Modal, Form, Input, Select, Tag, Space, Card, Tooltip } from 'antd';
-import { PlusOutlined, EditOutlined, LockOutlined, DeleteOutlined, SearchOutlined, UserOutlined, ToolOutlined } from '@ant-design/icons';
+import { Button, Table, Modal, Form, Input, Select, Tag, Space, Card, Tooltip, Popconfirm } from 'antd';
+import { PlusOutlined, EditOutlined, LockOutlined, DeleteOutlined, SearchOutlined, UserOutlined, ToolOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
 import { createStudentApi } from '../../api/auth';
 
@@ -19,34 +19,63 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
   const [form] = Form.useForm();
   const [dataSource, setDataSource] = useState<UserData[]>([]);
 
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch('http://localhost:3000/auth/user-list', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) throw new Error('Không thể lấy danh sách tài khoản');
+      const json = await res.json();
+      const today = new Date().toISOString().split('T')[0];
+      const users: UserData[] = (json.users || []).map((u: any, idx: number) => ({
+        key: u.email || idx,
+        email: u.email,
+        name: u.fullName || '',
+        role: u.role,
+        status: 'active', // Mặc định đang hoạt động
+        createdAt: today,
+      }));
+      setDataSource(users);
+    } catch (e) {
+      setDataSource([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Fetch user list from API
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const token = localStorage.getItem('accessToken');
-        const res = await fetch('http://localhost:3000/auth/user-list', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-        if (!res.ok) throw new Error('Không thể lấy danh sách tài khoản');
-        const json = await res.json();
-        const today = new Date().toISOString().split('T')[0];
-        const users: UserData[] = (json.users || []).map((u: any, idx: number) => ({
-          key: u.email || idx,
-          email: u.email,
-          name: u.fullName || '',
-          role: u.role,
-          status: 'active', // Mặc định đang hoạt động
-          createdAt: today,
-        }));
-        setDataSource(users);
-      } catch (e) {
-        setDataSource([]);
-      }
-    };
     fetchUsers();
   }, []);
+
+  const handleDeleteUser = async (email: string) => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`http://localhost:3000/auth/user/${email}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Xóa tài khoản thất bại');
+      }
+
+      messageApi.success('Xóa tài khoản thành công');
+      fetchUsers();
+    } catch (err: any) {
+      messageApi.error(err.message || 'Có lỗi xảy ra khi xóa tài khoản');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Xử lý Search
   const filteredData = dataSource.filter((item) =>
@@ -110,8 +139,18 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
           <Tooltip title={record.status === 'locked' ? "Mở khóa" : "Khóa tài khoản"}>
             <Button type="text" icon={<LockOutlined className="text-orange-500" />} />
           </Tooltip>
-          <Tooltip title="Xóa">
-            <Button type="text" danger icon={<DeleteOutlined />} />
+          <Tooltip title="Xóa tài khoản">
+            <Popconfirm
+              title="Xóa tài khoản"
+              description={`Bạn có chắc chắn muốn xóa tài khoản ${record.email}? Nếu là sinh viên, hồ sơ cũng sẽ bị xóa.`}
+              onConfirm={() => handleDeleteUser(record.email)}
+              okText="Xóa"
+              cancelText="Hủy"
+              okButtonProps={{ danger: true, loading: loading }}
+              icon={<QuestionCircleOutlined style={{ color: 'red' }} />}
+            >
+              <Button type="text" danger icon={<DeleteOutlined />} loading={loading} />
+            </Popconfirm>
           </Tooltip>
         </Space>
       )
@@ -139,22 +178,7 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
       }
       setOpen(false);
       form.resetFields();
-      // Reload lại danh sách từ API
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch('http://localhost:3000/auth/user-list', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      const json = await res.json();
-      const today = new Date().toISOString().split('T')[0];
-      const users: UserData[] = (json.users || []).map((u: any, idx: number) => ({
-        key: u.email || idx,
-        email: u.email,
-        name: u.fullName || '',
-        role: u.role,
-        status: 'active',
-        createdAt: today,
-      }));
-      setDataSource(users);
+      fetchUsers();
       messageApi.success(`Tạo tài khoản ${values.role === 'student' ? 'sinh viên' : 'chuyên viên'} thành công! Mật khẩu đã gửi tới email.`);
     } catch (err: any) {
       messageApi.error(err?.message || 'Tạo tài khoản thất bại!');

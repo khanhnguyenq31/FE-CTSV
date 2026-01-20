@@ -33,6 +33,7 @@ import StudentProfile from './pages/student/StudentProfile'
 import StudentCourse from './pages/student/StudentCourse'
 import StudentScholarship from './pages/student/StudentScholarship'
 import StudentEvent from './pages/student/StudentEvent'
+import EnrollmentRecords from './pages/student/EnrollmentRecords'
 
 // Imports cho các trang ADMIN
 import AdminOverview from './pages/admin/Overview';
@@ -227,6 +228,7 @@ function App() {
               <Route path="course" element={<StudentCourse />} />
               <Route path="scholarship" element={<StudentScholarship />} />
               <Route path="event" element={<StudentEvent />} />
+              <Route path="enrollment-records" element={<EnrollmentRecords />} />
             </Route>
           </Route>
 

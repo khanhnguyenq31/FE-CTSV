@@ -7,6 +7,7 @@ import {
   GiftOutlined,
   CalendarOutlined,
   LogoutOutlined,
+  FilePdfOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
@@ -33,7 +34,7 @@ export default function StudentSidebar({ messageApi, isMobile = false, onClose }
     "/student/course": "3",
     "/student/scholarship": "4",
     "/student/event": "5",
-
+    "/student/enrollment-records": "6",
   };
 
   const [selectedKey, setSelectedKey] = useState(pathToKey[location.pathname] || "1");
@@ -104,6 +105,9 @@ export default function StudentSidebar({ messageApi, isMobile = false, onClose }
           </Menu.Item>
           <Menu.Item key="5" icon={<CalendarOutlined />} onClick={() => handleMenuClick("/student/event")}>
             Sự kiện & hoạt động
+          </Menu.Item>
+          <Menu.Item key="6" icon={<FilePdfOutlined />} onClick={() => handleMenuClick("/student/enrollment-records")}>
+            Hồ sơ nhập học
           </Menu.Item>
 
         </Menu>
