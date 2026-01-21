@@ -4,7 +4,7 @@ import axios from "axios";
 const API_BASE_URL = "http://localhost:3000/"; // 🔁 Đổi sang URL thật 
 
 //  Tạo instance axios dùng chung
-const api = axios.create({ baseURL: API_BASE_URL });
+export const api = axios.create({ baseURL: API_BASE_URL });
 
 //  Thêm interceptor để tự refresh token khi access token hết hạn
 api.interceptors.response.use(
