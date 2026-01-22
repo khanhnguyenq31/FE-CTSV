@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Layout, Menu, Button } from "antd";
+import { Layout, Menu, Button, Skeleton } from "antd";
 import {
   HomeOutlined,
   UserOutlined,
@@ -10,9 +10,10 @@ import {
   FilePdfOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { logoutApi } from "../api/auth";
 import { useAuthStore } from "../store/auth";
+import { getStudentProfileApi } from "../api/student";
 
 const { Sider } = Layout;
 
@@ -58,11 +59,67 @@ export default function StudentSidebar({ messageApi, isMobile = false, onClose }
 
   const handleLogout = () => mutation.mutate();
 
+  // Use useQuery for caching and loading state management
+  const { data, isLoading } = useQuery({
+    queryKey: ["studentProfile"],
+    queryFn: getStudentProfileApi,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
+
+  const graduationType = data?.profile?.graduationType || "";
+
   const handleMenuClick = (path: string) => {
     navigate(path);
     if (isMobile && onClose) {
       onClose();
     }
+  };
+
+  const isEnrollmentMode = graduationType === "Đang nhập học";
+
+  const menuItems = [
+    { key: "1", icon: <HomeOutlined />, label: "Tổng quan sinh viên", path: "/student/home" },
+    { key: "2", icon: <UserOutlined />, label: "Hồ sơ cá nhân", path: "/student/profile" },
+    { key: "3", icon: <BookOutlined />, label: "Kết quả học tập", path: "/student/course" },
+    { key: "4", icon: <GiftOutlined />, label: "Thông tin học bổng", path: "/student/scholarship" },
+    { key: "5", icon: <CalendarOutlined />, label: "Sự kiện & hoạt động", path: "/student/event" },
+    { key: "6", icon: <FilePdfOutlined />, label: "Hồ sơ nhập học", path: "/student/enrollment-records", onlyInEnrollment: true },
+  ];
+
+  const visibleItems = menuItems.filter(item => {
+    if (isEnrollmentMode) {
+      return item.onlyInEnrollment;
+    } else {
+      return !item.onlyInEnrollment;
+    }
+  });
+
+  const renderMenuItems = () => {
+    if (isLoading) {
+      return (
+        <div style={{ padding: '0 16px' }}>
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} style={{ marginBottom: 16 }}>
+              <Skeleton active paragraph={{ rows: 0 }} title={{ width: '80%' }} />
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <Menu
+        theme="dark"
+        mode="inline"
+        selectedKeys={[selectedKey]}
+      >
+        {visibleItems.map(item => (
+          <Menu.Item key={item.key} icon={item.icon} onClick={() => handleMenuClick(item.path)}>
+            {item.label}
+          </Menu.Item>
+        ))}
+      </Menu>
+    );
   };
 
   const content = (
@@ -85,32 +142,8 @@ export default function StudentSidebar({ messageApi, isMobile = false, onClose }
         SMS BK - STUDENT
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto' }}>
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={[selectedKey]}
-        >
-          <Menu.Item key="1" icon={<HomeOutlined />} onClick={() => handleMenuClick("/student/home")}>
-            Tổng quan sinh viên
-          </Menu.Item>
-          <Menu.Item key="2" icon={<UserOutlined />} onClick={() => handleMenuClick("/student/profile")}>
-            Hồ sơ cá nhân
-          </Menu.Item>
-          <Menu.Item key="3" icon={<BookOutlined />} onClick={() => handleMenuClick("/student/course")}>
-            Kết quả học tập
-          </Menu.Item>
-          <Menu.Item key="4" icon={<GiftOutlined />} onClick={() => handleMenuClick("/student/scholarship")}>
-            Thông tin học bổng
-          </Menu.Item>
-          <Menu.Item key="5" icon={<CalendarOutlined />} onClick={() => handleMenuClick("/student/event")}>
-            Sự kiện & hoạt động
-          </Menu.Item>
-          <Menu.Item key="6" icon={<FilePdfOutlined />} onClick={() => handleMenuClick("/student/enrollment-records")}>
-            Hồ sơ nhập học
-          </Menu.Item>
-
-        </Menu>
+      <div style={{ flex: 1, overflowY: 'auto', paddingTop: 16 }}>
+        {renderMenuItems()}
       </div>
 
       <div style={{ padding: "20px 24px", flexShrink: 0 }}>

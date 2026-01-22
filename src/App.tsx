@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom'
-import { Layout, message as antdMessage, Drawer, Grid } from 'antd'
-import { Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet, useNavigate, useLocation, Navigate } from "react-router-dom";
 import ProtectedRoute from './components/ProtectedRoute';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { getStudentProfileApi } from './api/student';
+import { Layout, message as antdMessage, Drawer, Grid, Skeleton } from 'antd'
 // Imports cho các trang Đăng nhập / Đăng ký
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -81,6 +82,32 @@ const StudentLayout = ({ messageApi }: { messageApi: any }) => {
   const screens = useBreakpoint();
   const [mobileOpen, setMobileOpen] = useState(false);
   const isMobile = !screens.lg;
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["studentProfile"],
+    queryFn: getStudentProfileApi,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const graduationType = data?.profile?.graduationType || "";
+
+  useEffect(() => {
+    if (!isLoading && graduationType === "Đang nhập học") {
+      if (location.pathname !== "/student/enrollment-records") {
+        navigate("/student/enrollment-records", { replace: true });
+      }
+    }
+  }, [graduationType, isLoading, location.pathname, navigate]);
+
+  if (isLoading) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 50 }}>
+        <Skeleton active />
+      </div>
+    );
+  }
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
