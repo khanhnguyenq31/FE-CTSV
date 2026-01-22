@@ -210,9 +210,9 @@ export default function EnrollmentRecords() {
                                 <Col xs={24} md={8}>{renderFormItem("Xếp loại tốt nghiệp", "gradRank")}</Col>
                             </Row>
                             <Row gutter={16}>
-                                <Col xs={24} md={8}>{renderFormItem("Mã số sinh viên", "studentId")}</Col>
-                                <Col xs={24} md={8}>{renderFormItem("Ngành học", "major")}</Col>
-                                <Col xs={24} md={8}>{renderFormItem("Lớp", "classId")}</Col>
+                                <Col xs={24} md={8}>{renderFormItem("Mã số sinh viên", "studentId", false, true)}</Col>
+                                <Col xs={24} md={8}>{renderFormItem("Ngành học", "major", false, true)}</Col>
+                                <Col xs={24} md={8}>{renderFormItem("Khóa", "classId", false, true)}</Col>
                             </Row>
                             <Row gutter={16}>
                                 <Col xs={24} md={24}>{renderFormItem("Khi cần báo tin cho ai? Ở đâu?", "emergencyContact")}</Col>
@@ -248,11 +248,11 @@ export default function EnrollmentRecords() {
                             <Row gutter={16}>
                                 <Col xs={24} md={8}>{renderFormItem("Họ và tên", "fullName")}</Col>
                                 <Col xs={24} md={8}>{renderDatePicker("Ngày sinh", "dob")}</Col>
-                                <Col xs={24} md={8}>{renderFormItem("Mã số sinh viên", "studentId")}</Col>
+                                <Col xs={24} md={8}>{renderFormItem("Mã số sinh viên", "studentId", false, true)}</Col>
                             </Row>
                             <Row gutter={16}>
                                 <Col xs={24} md={12}>{renderFormItem("Số báo danh", "examId")}</Col>
-                                <Col xs={24} md={12}>{renderFormItem("Chuyên ngành trúng tuyển", "major")}</Col>
+                                <Col xs={24} md={12}>{renderFormItem("Chuyên ngành trúng tuyển", "major", false, true)}</Col>
                             </Row>
 
                             <Title level={5} style={{ marginTop: 16 }}>Danh mục giấy tờ nộp:</Title>
@@ -437,10 +437,10 @@ export default function EnrollmentRecords() {
 }
 
 // --- Helper Components ---
-function renderFormItem(label: string, name: string, required = false) {
+function renderFormItem(label: string, name: string, required = false, disabled = false) {
     return (
         <Form.Item label={label} name={name} rules={[{ required, message: `Vui lòng nhập ${label.toLowerCase()}` }]}>
-            <Input placeholder={label} />
+            <Input placeholder={label} disabled={disabled} />
         </Form.Item>
     );
 }
