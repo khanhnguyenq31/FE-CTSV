@@ -14,12 +14,17 @@ import {
     Divider,
     message,
     Spin,
+    Upload,
 } from "antd";
 import {
     FilePdfOutlined,
     ContainerOutlined,
     TeamOutlined,
+    UserOutlined,
+    UploadOutlined,
+    CameraOutlined,
 } from "@ant-design/icons";
+import { updateExportStatus, uploadStudentAvatar } from "../../api/admission";
 import dayjs from "dayjs";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -41,9 +46,11 @@ const documentChecklist = [
 
 export default function EnrollmentRecords() {
     const [form] = Form.useForm();
-    const [receiptForm] = Form.useForm();
+    const receiptForm = Form.useForm()[0];
     const [loading, setLoading] = useState(false);
     const [exporting, setExporting] = useState(false);
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
     const cvRef = useRef<HTMLDivElement>(null);
     const receiptRef = useRef<HTMLDivElement>(null);
 
@@ -83,6 +90,9 @@ export default function EnrollmentRecords() {
                             studentId: profile.studentId,
                             major: profile.major,
                         });
+                        if (profile.avatar) {
+                            setAvatarUrl(profile.avatar);
+                        }
                     }
                 }
             } catch (e) {
@@ -120,6 +130,7 @@ export default function EnrollmentRecords() {
 
             pdf.save("So_yeu_ly_lich.pdf");
             message.success("Xuất Sơ yếu lý lịch thành công!");
+            await updateExportStatus();
         } catch (error) {
             console.error(error);
             message.error("Có lỗi khi xuất PDF");
@@ -147,12 +158,28 @@ export default function EnrollmentRecords() {
             pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
             pdf.save("Bien_nhan_nhap_hoc.pdf");
             message.success("Xuất Biên nhận thành công!");
+            await updateExportStatus();
         } catch (error) {
             console.error(error);
             message.error("Có lỗi khi xuất PDF");
         } finally {
             setExporting(false);
         }
+    };
+
+    const handleAvatarUpload = async (file: File) => {
+        setUploading(true);
+        try {
+            const data = await uploadStudentAvatar(file);
+            setAvatarUrl(data.avatarUrl);
+            message.success("Tải ảnh đại diện thành công!");
+        } catch (error) {
+            console.error(error);
+            message.error("Tải ảnh thất bại. Vui lòng thử lại sau.");
+        } finally {
+            setUploading(false);
+        }
+        return false; // Prevent auto upload by antd
     };
 
     if (loading) return <div style={{ textAlign: "center", padding: 50 }}><Spin size="large" /></div>;
@@ -274,6 +301,68 @@ export default function EnrollmentRecords() {
                                 </Button>
                             </div>
                         </Form>
+                    </Card>
+                </TabPane>
+                {/* --- TAB 3: ẢNH ĐẠI DIỆN --- */}
+                <TabPane tab={<span><UserOutlined /> Ảnh đại diện</span>} key="3">
+                    <Card bordered={false} className="shadow-sm">
+                        <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                            <div style={{
+                                width: 200,
+                                height: 260,
+                                margin: '0 auto 24px',
+                                border: '2px dashed #d9d9d9',
+                                borderRadius: '8px',
+                                overflow: 'hidden',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backgroundColor: '#fafafa',
+                                position: 'relative'
+                            }}>
+                                {avatarUrl ? (
+                                    <img src={avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    <div style={{ color: '#8c8c8c' }}>
+                                        <CameraOutlined style={{ fontSize: 40, marginBottom: 8 }} />
+                                        <div>Chưa có ảnh</div>
+                                    </div>
+                                )}
+                                {uploading && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: 0, left: 0, right: 0, bottom: 0,
+                                        background: 'rgba(255,255,255,0.7)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        <Spin />
+                                    </div>
+                                )}
+                            </div>
+
+                            <div style={{ maxWidth: 400, margin: '0 auto' }}>
+                                <Typography.Title level={4}>Tải lên ảnh chân dung</Typography.Title>
+                                <Typography.Paragraph type="secondary">
+                                    Ảnh chân dung (4x6) sẽ được sử dụng cho thẻ sinh viên và hồ sơ.
+                                    Vui lòng chọn ảnh rõ nét, nền xanh hoặc trắng.
+                                </Typography.Paragraph>
+
+                                <Upload
+                                    showUploadList={false}
+                                    beforeUpload={handleAvatarUpload}
+                                    accept="image/*"
+                                >
+                                    <Button type="primary" size="large" icon={<UploadOutlined />} loading={uploading}>
+                                        {avatarUrl ? "Thay đổi ảnh" : "Chọn ảnh từ máy tính"}
+                                    </Button>
+                                </Upload>
+                                <div style={{ marginTop: 16 }}>
+
+                                </div>
+                            </div>
+                        </div>
                     </Card>
                 </TabPane>
             </Tabs>

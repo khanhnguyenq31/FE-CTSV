@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnsType } from "antd/es/table";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Row,
   Col,
@@ -13,11 +14,15 @@ import {
   Modal,
   Form,
   DatePicker,
-  Tabs,
   Upload,
   Tooltip,
   Popconfirm,
   Badge,
+  Statistic,
+  Descriptions,
+  Divider,
+  Steps,
+  Tabs,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -27,10 +32,27 @@ import {
   MailOutlined,
   LockOutlined,
   UnlockOutlined,
-  InfoCircleOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  FileDoneOutlined,
+  AuditOutlined,
+  TeamOutlined,
+  UserOutlined,
+  FileTextOutlined,
+  SolutionOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
 import {
   getAdmissionPeriods,
   createAdmissionPeriod,
@@ -38,16 +60,23 @@ import {
   uploadAdmissionExcel,
   getAdmissionStudents,
   notifyAdmissionStudents,
+  getAdmissionStats,
+  updateDocStatus,
+  finalizeAdmission,
+  searchAdmissionStudent,
+  cancelFinalizeAdmission,
 } from "../../api/admission";
-import type { AdmissionPeriod, AdmissionStudent } from "../../api/admission";
+import type { AdmissionPeriod, AdmissionStudent, AdmissionStats } from "../../api/admission";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
-const { TabPane } = Tabs;
 
 export default function ManagePage({ messageApi }: { messageApi: any }) {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("1");
+  const queryClient = useQueryClient();
+
+  // Navigation states
+  const [viewMode, setViewMode] = useState<"list" | "detail">("list");
 
   // State cho Đợt nhập học
   const [periods, setPeriods] = useState<AdmissionPeriod[]>([]);
@@ -57,10 +86,55 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
 
   // State cho Sinh viên trong đợt
   const [selectedPeriod, setSelectedPeriod] = useState<AdmissionPeriod | null>(null);
-  const [students, setStudents] = useState<AdmissionStudent[]>([]);
-  const [studentLoading, setStudentLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [isNotifyLoading, setIsNotifyLoading] = useState(false);
+
+  // State cho Tab Công tác nhập học
+  const [searchId, setSearchId] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchedStudent, setSearchedStudent] = useState<AdmissionStudent | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  // React Query cho danh sách sinh viên
+  const { data: studentsData, isLoading: studentLoading } = useQuery({
+    queryKey: ["admissionStudents", selectedPeriod?.id],
+    queryFn: () => getAdmissionStudents(selectedPeriod!.id),
+    enabled: !!selectedPeriod?.id && viewMode === "detail",
+    refetchInterval: 3000, // 3s auto refresh
+  });
+
+  const students = useMemo(() => {
+    if (!studentsData) return [];
+    return Array.isArray(studentsData) ? studentsData : (studentsData.students || []);
+  }, [studentsData]);
+
+  // React Query cho thống kê
+  const { data: statsData } = useQuery({
+    queryKey: ["admissionStats", selectedPeriod?.id],
+    queryFn: () => getAdmissionStats(selectedPeriod!.id),
+    enabled: !!selectedPeriod?.id && viewMode === "detail",
+    refetchInterval: 3000,
+  });
+
+  const stats: AdmissionStats | null = statsData?.stats || null;
+
+  // Student Detail Modal
+  const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
+  const [currentStudentId, setCurrentStudentId] = useState<string | null>(null);
+
+  const currentStudent = useMemo(() => {
+    if (!currentStudentId) return null;
+    return students.find((s: AdmissionStudent) => s.studentId === currentStudentId) || null;
+  }, [students, currentStudentId]);
+
+  const displaySearchedStudent = useMemo(() => {
+    if (!searchedStudent) return null;
+    const inList = students.find((s: AdmissionStudent) => s.studentId === searchedStudent.studentId);
+    if (inList) {
+      return { ...searchedStudent, ...inList };
+    }
+    return searchedStudent;
+  }, [searchedStudent, students]);
 
   useEffect(() => {
     fetchPeriods();
@@ -76,19 +150,6 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
       if (messageApi) messageApi.error("Không thể lấy danh sách đợt nhập học");
     } finally {
       setPeriodLoading(false);
-    }
-  };
-
-  const fetchStudents = async (periodId: string) => {
-    setStudentLoading(true);
-    try {
-      const data = await getAdmissionStudents(periodId);
-      setStudents(Array.isArray(data) ? data : (data.students || []));
-    } catch (error) {
-      console.error(error);
-      if (messageApi) messageApi.error("Không thể lấy danh sách sinh viên");
-    } finally {
-      setStudentLoading(false);
     }
   };
 
@@ -140,18 +201,84 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
     try {
       await uploadAdmissionExcel(selectedPeriod.id, file);
       if (messageApi) messageApi.success("Upload danh sách sinh viên thành công");
-      fetchStudents(selectedPeriod.id);
+      queryClient.invalidateQueries({ queryKey: ["admissionStudents", selectedPeriod.id] });
+      queryClient.invalidateQueries({ queryKey: ["admissionStats", selectedPeriod.id] });
     } catch (error) {
       if (messageApi) messageApi.error("Upload thất bại. Vui lòng kiểm tra định dạng file Excel");
     }
-    return false; // Ngăn upload mặc định của antd
+    return false;
+  };
+
+  const handleToggleDocStatus = async (studentId: string) => {
+    try {
+      await updateDocStatus(studentId);
+      if (messageApi) messageApi.success("Cập nhật trạng thái hồ sơ giấy thành công");
+      // Refresh searched student if matches
+      if (searchedStudent?.studentId === studentId) {
+        handleSearchStudent();
+      }
+      queryClient.invalidateQueries({ queryKey: ["admissionStudents", selectedPeriod?.id] });
+      queryClient.invalidateQueries({ queryKey: ["admissionStats", selectedPeriod?.id] });
+    } catch (error) {
+      if (messageApi) messageApi.error("Cập nhật thất bại");
+    }
+  };
+
+  const handleFinalize = async (studentId: string) => {
+    try {
+      await finalizeAdmission(studentId);
+      if (messageApi) messageApi.success("Hoàn tất nhập học thành công. Sinh viên đã chuyển sang trạng thái Đang học.");
+      setIsStudentModalOpen(false);
+      // Refresh searched student if matches
+      if (searchedStudent?.studentId === studentId) {
+        handleSearchStudent();
+      }
+      queryClient.invalidateQueries({ queryKey: ["admissionStudents", selectedPeriod?.id] });
+      queryClient.invalidateQueries({ queryKey: ["admissionStats", selectedPeriod?.id] });
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || "Hoàn tất thất bại. Vui lòng kiểm tra điều kiện (Login, Export file, Hồ sơ giấy).";
+      if (messageApi) messageApi.error(msg);
+    }
+  };
+
+  const handleSearchStudent = async () => {
+    if (!searchId) return;
+    setSearching(true);
+    try {
+      const data = await searchAdmissionStudent(searchId);
+      setSearchedStudent(data.student);
+    } catch (error) {
+      if (messageApi) messageApi.error("Không tìm thấy sinh viên hoặc có lỗi xảy ra");
+      setSearchedStudent(null);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleCancelFinalize = async (studentId: string) => {
+    setIsCancelling(true);
+    try {
+      await cancelFinalizeAdmission(studentId);
+      if (messageApi) messageApi.success("Đã hủy xác nhận nhập học thành công");
+      // Refresh state if it's the searched student
+      if (searchedStudent?.studentId === studentId) {
+        handleSearchStudent();
+      }
+      // Refresh current table if in detail view
+      queryClient.invalidateQueries({ queryKey: ["admissionStudents", selectedPeriod?.id] });
+      queryClient.invalidateQueries({ queryKey: ["admissionStats", selectedPeriod?.id] });
+    } catch (error) {
+      if (messageApi) messageApi.error("Hủy xác nhận thất bại");
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   const filteredStudents = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return students;
     return students.filter(
-      (s) =>
+      (s: AdmissionStudent) =>
         s.fullName.toLowerCase().includes(q) ||
         s.studentId.toLowerCase().includes(q) ||
         s.emailPersonal.toLowerCase().includes(q)
@@ -194,8 +321,7 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
             icon={<EyeOutlined />}
             onClick={() => {
               setSelectedPeriod(record);
-              fetchStudents(record.id);
-              setActiveTab("2");
+              setViewMode("detail");
             }}
           >
             Chi tiết
@@ -218,130 +344,406 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
   ];
 
   const studentColumns: ColumnsType<AdmissionStudent> = [
-    { title: "MSSV", dataIndex: "studentId", key: "studentId", width: 120 },
-    { title: "Họ và tên", dataIndex: "fullName", key: "fullName" },
-    { title: "Email", dataIndex: "emailPersonal", key: "emailPersonal" },
-    { title: "Ngành", dataIndex: "major", key: "major" },
+    { title: "MSSV", dataIndex: "studentId", key: "studentId", width: 100 },
+    { title: "Họ và tên", dataIndex: "fullName", key: "fullName", width: 180 },
     { title: "Khóa", dataIndex: "className", key: "className", width: 100 },
+    { title: "Ngành", dataIndex: "major", key: "major", width: 180 },
+    {
+      title: "Người duyệt",
+      key: "admissionApprovedBy",
+      width: 150,
+      render: (_, s) => s.graduationType === "Đang học" ? s.admissionApprovedBy || "N/A" : "N/A"
+    },
+    {
+      title: "Thời gian duyệt",
+      key: "admissionApprovedAt",
+      width: 180,
+      render: (_, s) => s.graduationType === "Đang học" && s.admissionApprovedAt
+        ? dayjs(s.admissionApprovedAt).format("HH:mm DD/MM/YYYY")
+        : "N/A"
+    },
+    {
+      title: "Trạng thái",
+      key: "status",
+      width: 150,
+      render: (_, s) => (
+        <Space>
+          {s.graduationType === "Đang học" ? (
+            <Tag color="success" icon={<CheckCircleOutlined />}>Hoàn tất</Tag>
+          ) : (
+            <Tag color="warning" icon={<ClockCircleOutlined />}>Đang nhập học</Tag>
+          )}
+          {s.isPhysicalDocSubmitted && <Tooltip title="Đã nộp hồ sơ giấy"><FileDoneOutlined style={{ color: '#52c41a' }} /></Tooltip>}
+        </Space>
+      )
+    },
   ];
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+
+  const renderStats = () => {
+    if (!stats) return null;
+    return (
+      <Space direction="vertical" style={{ width: '100%', marginBottom: 24 }} size="large">
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={8}>
+            <Card bordered={false} className="shadow-sm" style={{ height: '100%' }}>
+              <Statistic title="Tổng sinh viên" value={stats.totalStudents} prefix={<TeamOutlined style={{ color: '#1890ff' }} />} />
+            </Card>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Card bordered={false} className="shadow-sm" style={{ height: '100%' }}>
+              <Statistic title="Đã hoàn tất" value={stats.completedAdmissions} valueStyle={{ color: '#52c41a' }} prefix={<CheckCircleOutlined />} />
+            </Card>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Card bordered={false} className="shadow-sm" style={{ height: '100%' }}>
+              <Statistic title="Đang chờ" value={stats.pendingAdmissions} valueStyle={{ color: '#faad14' }} prefix={<ClockCircleOutlined />} />
+            </Card>
+          </Col>
+        </Row>
+
+        <Card title="Thống kê sinh viên theo ngành" bordered={false} className="shadow-sm">
+          <div style={{ width: '100%', height: 350 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={stats.byMajor}
+                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="major"
+                  angle={-45}
+                  textAnchor="end"
+                  interval={0}
+                  height={80}
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis allowDecimals={false} />
+                <RechartsTooltip
+                  cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
+                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                />
+                <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={40}>
+                  {stats.byMajor.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      </Space>
+    );
+  };
 
   return (
     <div style={{ padding: "0 8px" }}>
-      <Row align="middle" justify="space-between" style={{ marginBottom: 24 }}>
-        <Col>
-          <Space align="center" size="large">
-            <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} style={{ fontSize: 18 }} />
-            <div>
-              <Title level={3} style={{ margin: 0 }}>Quản lý nhập học</Title>
-              <Text type="secondary">Quản lý các đợt nhập học và danh sách sinh viên trúng tuyển</Text>
-            </div>
-          </Space>
-        </Col>
-        <Col>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            size="large"
-            onClick={() => setIsModalOpen(true)}
-            style={{ borderRadius: 8, height: 45, fontWeight: 500 }}
-          >
-            Tạo đợt mới
-          </Button>
-        </Col>
-      </Row>
+      {viewMode === "list" ? (
+        <div animate-fade-in>
+          <Row align="middle" justify="space-between" style={{ marginBottom: 24 }}>
+            <Col>
+              <Space align="center" size="large">
+                <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} style={{ fontSize: 18 }} />
+                <div>
+                  <Title level={3} style={{ margin: 0 }}>Quản lý nhập học</Title>
+                  <Text type="secondary">Danh sách các đợt nhập học của nhà trường</Text>
+                </div>
+              </Space>
+            </Col>
+            <Col>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                size="large"
+                onClick={() => setIsModalOpen(true)}
+                style={{ borderRadius: 8 }}
+              >
+                Tạo đợt mới
+              </Button>
+            </Col>
+          </Row>
 
-      <Tabs
-        activeKey={activeTab}
-        onChange={setActiveTab}
-        type="card"
-        style={{ marginBottom: 24 }}
-      >
-        <TabPane tab="Tổng quan các đợt" key="1">
           <Card bordered={false} style={{ borderRadius: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
             <Table
               columns={periodColumns}
               dataSource={periods}
               rowKey="id"
               loading={periodLoading}
-              pagination={{ pageSize: 5 }}
+              pagination={{ pageSize: 10 }}
             />
           </Card>
-        </TabPane>
-
-        <TabPane tab="Danh sách trúng tuyển" key="2">
-          {selectedPeriod ? (
-            <div animate-fade-in>
-              <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-                <Col xs={24} lg={12}>
-                  <Card style={{ borderRadius: 12, background: "#f8f9ff", border: "1px solid #e6e8ff" }}>
-                    <Space direction="vertical">
-                      <Title level={5} style={{ margin: 0 }}>Đang xem: {selectedPeriod.name}</Title>
-                      <Text type="secondary">
-                        <InfoCircleOutlined /> Trạng thái: {selectedPeriod.status === "active" ? "Đang mở" : "Đã khóa"}
-                      </Text>
-                    </Space>
-                  </Card>
-                </Col>
-                <Col xs={24} lg={12}>
-                  <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-                    <Tooltip title="Cấu trúc Excel yêu cầu: Họ và Tên, Ngày sinh, Giới tính, Dân tộc, Tôn giáo, Khu vực ưu tiên, Số CCCD, Ngày cấp CCCD, MSSV, Khóa, Ngành học, Số điện thoại, Email liên lạc.">
-                      <Button type="text" icon={<InfoCircleOutlined />} />
-                    </Tooltip>
-                    <Upload
-                      beforeUpload={handleUpload}
-                      showUploadList={false}
-                      accept=".xlsx,.xls"
-                    >
-                      <Button icon={<UploadOutlined />} style={{ borderRadius: 8 }}>Upload Excel</Button>
-                    </Upload>
-                    <Popconfirm
-                      title="Gửi email thông báo cho toàn bộ sinh viên trong danh sách?"
-                      description="Email sẽ bao gồm lời chúc mừng và thông tin tài khoản."
-                      onConfirm={handleNotify}
-                      okText="Gửi ngay"
-                      cancelText="Hủy"
-                    >
-                      <Button
-                        type="primary"
-                        icon={<MailOutlined />}
-                        style={{ borderRadius: 8, background: "#52c41a", borderColor: "#52c41a" }}
-                        loading={isNotifyLoading}
-                        disabled={selectedPeriod.status === "locked"}
-                      >
-                        Thông báo tất cả
-                      </Button>
-                    </Popconfirm>
-                  </Space>
-                </Col>
-              </Row>
-
-              <Card style={{ borderRadius: 12 }}>
-                <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <Title level={5} style={{ margin: 0 }}>Sinh viên trúng tuyển ({filteredStudents.length})</Title>
-                  <Search
-                    placeholder="Tìm theo tên/MSSV"
-                    style={{ width: 300 }}
-                    onChange={(e) => setSearch(e.target.value)}
-                    allowClear
-                  />
+        </div>
+      ) : (
+        <div animate-fade-in>
+          <Row align="middle" justify="space-between" style={{ marginBottom: 24 }}>
+            <Col>
+              <Space align="center" size="large">
+                <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => setViewMode("list")} style={{ fontSize: 18 }} />
+                <div>
+                  <Title level={3} style={{ margin: 0 }}>{selectedPeriod?.name}</Title>
+                  <Text type="secondary">Chi tiết tiến độ và quản lý sinh viên trong đợt</Text>
                 </div>
-                <Table
-                  columns={studentColumns}
-                  dataSource={filteredStudents}
-                  rowKey="id"
-                  loading={studentLoading}
-                  pagination={{ pageSize: 10 }}
-                  scroll={{ x: 800 }}
-                />
-              </Card>
-            </div>
-          ) : (
-            <Card style={{ textAlign: "center", padding: "40px 0", borderRadius: 12 }}>
-              <Text type="secondary">Vui lòng chọn một đợt nhập học từ Tab "Tổng quan" để xem danh sách</Text>
-            </Card>
-          )}
-        </TabPane>
-      </Tabs>
+              </Space>
+            </Col>
+            <Col>
+              <Space>
+                <Upload beforeUpload={handleUpload} showUploadList={false} accept=".xlsx,.xls">
+                  <Button icon={<UploadOutlined />}>Bổ sung sinh viên (Excel)</Button>
+                </Upload>
+                <Popconfirm
+                  title="Gửi thông báo?"
+                  onConfirm={handleNotify}
+                >
+                  <Button type="primary" icon={<MailOutlined />} loading={isNotifyLoading} disabled={selectedPeriod?.status === "locked"}>
+                    Thông báo tất cả
+                  </Button>
+                </Popconfirm>
+              </Space>
+            </Col>
+          </Row>
+
+          <Tabs
+            defaultActiveKey="1"
+            items={[
+              {
+                key: "1",
+                label: (
+                  <span>
+                    <TeamOutlined /> Danh sách sinh viên
+                  </span>
+                ),
+                children: (
+                  <>
+                    {renderStats()}
+                    <Card bordered={false} style={{ borderRadius: 12 }}>
+                      <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <Title level={5} style={{ margin: 0 }}>Danh sách sinh viên ({filteredStudents.length})</Title>
+                        <Search
+                          placeholder="MSSV / Tên / Email"
+                          style={{ width: 300 }}
+                          onChange={(e) => setSearch(e.target.value)}
+                          allowClear
+                        />
+                      </div>
+                      <Table
+                        onRow={(record) => ({
+                          onClick: () => {
+                            setCurrentStudentId(record.studentId);
+                            setIsStudentModalOpen(true);
+                          },
+                          style: { cursor: 'pointer' }
+                        })}
+                        columns={studentColumns}
+                        dataSource={filteredStudents}
+                        rowKey="studentId"
+                        loading={studentLoading}
+                        pagination={{ pageSize: 10, showSizeChanger: true }}
+                        scroll={{ x: 1000 }}
+                      />
+                    </Card>
+                  </>
+                )
+              },
+              {
+                key: "2",
+                label: (
+                  <span>
+                    <SolutionOutlined /> Công tác nhập học
+                  </span>
+                ),
+                children: (
+                  <div style={{ padding: '8px 0' }}>
+                    <Row gutter={[24, 24]}>
+                      <Col xs={24} md={searchedStudent ? 8 : 24}>
+                        <Card bordered={false} className="shadow-sm">
+                          <Title level={4}>Tra cứu sinh viên</Title>
+                          <Text type="secondary">Nhập mã số sinh viên để kiểm tra tiến độ và thực hiện thao tác nhanh</Text>
+                          <div style={{ marginTop: 24 }}>
+                            <Search
+                              placeholder="Nhập MSSV (VD: 20110...)"
+                              enterButton="Tìm kiếm"
+                              size="large"
+                              value={searchId}
+                              onChange={(e) => setSearchId(e.target.value)}
+                              onSearch={handleSearchStudent}
+                              loading={searching}
+                            />
+                          </div>
+                        </Card>
+
+                        {searchedStudent && (
+                          <Card bordered={false} className="shadow-sm" style={{ marginTop: 24 }}>
+                            <div style={{ textAlign: 'center' }}>
+                              <div style={{
+                                width: 120,
+                                height: 160,
+                                margin: '0 auto 16px',
+                                border: '1px solid #f0f0f0',
+                                borderRadius: 8,
+                                overflow: 'hidden',
+                                backgroundColor: '#fafafa'
+                              }}>
+                                {searchedStudent.avatar ? (
+                                  <img src={searchedStudent.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                  <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bfbfbf' }}>
+                                    <UserOutlined style={{ fontSize: 48 }} />
+                                  </div>
+                                )}
+                              </div>
+                              <Title level={4} style={{ marginBottom: 4 }}>{searchedStudent.fullName}</Title>
+                              <Tag color="blue">{searchedStudent.studentId}</Tag>
+                            </div>
+                            <Divider />
+                            <Descriptions column={1} size="small" bordered>
+                              <Descriptions.Item label="Khóa">{searchedStudent.className}</Descriptions.Item>
+                              <Descriptions.Item label="Ngành">{searchedStudent.major}</Descriptions.Item>
+                              <Descriptions.Item label="Ngày sinh">{searchedStudent.dateOfBirth ? dayjs(searchedStudent.dateOfBirth).format("DD/MM/YYYY") : "N/A"}</Descriptions.Item>
+                              <Descriptions.Item label="CCCD">{searchedStudent.idCard || searchedStudent.idCardNumber || "N/A"}</Descriptions.Item>
+                              <Descriptions.Item label="SĐT">{searchedStudent.phone || searchedStudent.phoneNumber || "N/A"}</Descriptions.Item>
+                              <Descriptions.Item label="Email">{searchedStudent.emailPersonal || "N/A"}</Descriptions.Item>
+                            </Descriptions>
+                            {!students.find((s: AdmissionStudent) => s.studentId === searchedStudent.studentId) && (
+                              <div style={{ marginTop: 12 }}>
+                                <Tag color="error">Sinh viên không thuộc đợt này</Tag>
+                              </div>
+                            )}
+                          </Card>
+                        )}
+                      </Col>
+
+                      {displaySearchedStudent && (
+                        <Col xs={24} md={16}>
+                          <Card title="Tiến độ & Thao tác nhanh" bordered={false} className="shadow-sm">
+                            <div style={{ padding: '20px', background: '#f8f9fa', borderRadius: '12px', border: '1px solid #f0f0f0', marginBottom: 24 }}>
+                              <Steps
+                                direction="vertical"
+                                size="small"
+                                current={
+                                  displaySearchedStudent.graduationType === "Đang học"
+                                    ? 3
+                                    : displaySearchedStudent.isPhysicalDocSubmitted
+                                      ? 2
+                                      : displaySearchedStudent.hasExportedFiles
+                                        ? 1
+                                        : displaySearchedStudent.user?.isFirstLogin === false
+                                          ? 1
+                                          : 0
+                                }
+                                items={[
+                                  {
+                                    title: '1. Kích hoạt tài khoản',
+                                    description: (
+                                      <div style={{ marginTop: 4 }}>
+                                        {displaySearchedStudent.user?.isFirstLogin === false ? (
+                                          <Tag color="success">Đã hoàn thành: Sinh viên đã đăng nhập thành công.</Tag>
+                                        ) : (
+                                          <Tag color="default">Chưa hoàn thành: Chờ sinh viên đăng nhập.</Tag>
+                                        )}
+                                      </div>
+                                    ),
+                                    icon: <UserOutlined />,
+                                  },
+                                  {
+                                    title: '2. Hồ sơ online',
+                                    description: (
+                                      <div style={{ marginTop: 4 }}>
+                                        {displaySearchedStudent.hasExportedFiles ? (
+                                          <Tag color="success">Đã hoàn thành: Đã điền thông tin và xuất PDF.</Tag>
+                                        ) : (
+                                          <Tag color="default">Chưa hoàn thành: Chờ hoàn thiện hồ sơ online.</Tag>
+                                        )}
+                                      </div>
+                                    ),
+                                    icon: <FileTextOutlined />,
+                                  },
+                                  {
+                                    title: '3. Hồ sơ giấy',
+                                    description: (
+                                      <div style={{ marginTop: 4 }}>
+                                        {displaySearchedStudent.isPhysicalDocSubmitted ? (
+                                          <Tag color="success">Đã hoàn thành: Đã tiếp nhận hồ sơ bản cứng.</Tag>
+                                        ) : (
+                                          <Tag color="default">Chưa hoàn thành: Đang chờ tiếp nhận hồ sơ giấy.</Tag>
+                                        )}
+                                      </div>
+                                    ),
+                                    icon: <SolutionOutlined />,
+                                  },
+                                ]}
+                              />
+                            </div>
+
+                            <Row gutter={[16, 16]}>
+                              <Col span={12}>
+                                <Button
+                                  block
+                                  size="large"
+                                  icon={displaySearchedStudent.isPhysicalDocSubmitted ? <ClockCircleOutlined /> : <FileDoneOutlined />}
+                                  onClick={() => handleToggleDocStatus(displaySearchedStudent.studentId)}
+                                  type={displaySearchedStudent.isPhysicalDocSubmitted ? "default" : "primary"}
+                                  disabled={displaySearchedStudent.graduationType === "Đang học"}
+                                >
+                                  {displaySearchedStudent.isPhysicalDocSubmitted ? "Hủy nhận hồ sơ giấy" : "Xác nhận hồ sơ giấy"}
+                                </Button>
+                              </Col>
+                              <Col span={12}>
+                                {displaySearchedStudent.graduationType !== "Đang học" ? (
+                                  <Popconfirm
+                                    title="Xác nhận hoàn tất nhập học?"
+                                    onConfirm={() => handleFinalize(displaySearchedStudent.studentId)}
+                                    disabled={!displaySearchedStudent.isPhysicalDocSubmitted}
+                                  >
+                                    <Button
+                                      block
+                                      size="large"
+                                      type="primary"
+                                      icon={<AuditOutlined />}
+                                      style={{ background: '#52c41a', borderColor: '#52c41a' }}
+                                      disabled={!displaySearchedStudent.isPhysicalDocSubmitted}
+                                    >
+                                      Hoàn tất nhập học
+                                    </Button>
+                                  </Popconfirm>
+                                ) : (
+                                  <Popconfirm
+                                    title="Hủy xác nhận nhập học?"
+                                    description="Sinh viên sẽ chuyển lại trạng thái Đang nhập học."
+                                    onConfirm={() => handleCancelFinalize(displaySearchedStudent.studentId)}
+                                    okButtonProps={{ danger: true }}
+                                  >
+                                    <Button block size="large" danger icon={<LockOutlined />} loading={isCancelling}>
+                                      Hủy nhập học (🔴)
+                                    </Button>
+                                  </Popconfirm>
+                                )}
+                              </Col>
+                            </Row>
+
+                            {displaySearchedStudent.graduationType === "Đang học" && (
+                              <div style={{ marginTop: 24, padding: 16, background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 8 }}>
+                                <Text strong><CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8 }} /> Trạng thái: Đã hoàn tất nhập học</Text>
+                                <div style={{ marginTop: 8, fontSize: 13 }}>
+                                  <Text type="secondary">Cán bộ duyệt: </Text>
+                                  <Text strong>{displaySearchedStudent.admissionApprovedBy}</Text>
+                                  <br />
+                                  <Text type="secondary">Thời điểm duyệt: </Text>
+                                  <Text strong>{displaySearchedStudent.admissionApprovedAt ? dayjs(displaySearchedStudent.admissionApprovedAt).format("HH:mm DD/MM/YYYY") : "N/A"}</Text>
+                                </div>
+                              </div>
+                            )}
+                          </Card>
+                        </Col>
+                      )}
+                    </Row>
+                  </div>
+                )
+              }
+            ]}
+          />
+        </div>
+      )}
 
       {/* Modal Tạo đợt mới */}
       <Modal
@@ -349,7 +751,6 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
         open={isModalOpen}
         onCancel={() => setIsModalOpen(false)}
         footer={null}
-        style={{ top: 100 }}
       >
         <Form form={form} layout="vertical" onFinish={handleCreatePeriod} style={{ marginTop: 16 }}>
           <Form.Item name="name" label="Tên đợt nhập học" rules={[{ required: true, message: "Nhập tên đợt" }]}>
@@ -365,6 +766,165 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
             </Space>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Modal Quản lý Sinh viên */}
+      <Modal
+        title="Quản lý tiến độ sinh viên"
+        open={isStudentModalOpen}
+        onCancel={() => setIsStudentModalOpen(false)}
+        footer={null}
+        width={700}
+      >
+        {currentStudent && (
+          <Space direction="vertical" style={{ width: '100%' }} size="large">
+            <div style={{ display: 'flex', gap: '24px' }}>
+              <div style={{
+                width: 120,
+                height: 160,
+                border: '1px solid #f0f0f0',
+                borderRadius: 8,
+                overflow: 'hidden',
+                flexShrink: 0,
+                background: '#fafafa'
+              }}>
+                {currentStudent.avatar ? (
+                  <img src={currentStudent.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bfbfbf' }}>
+                    <UserOutlined style={{ fontSize: 32 }} />
+                  </div>
+                )}
+              </div>
+              <Descriptions bordered column={2} size="small" style={{ flex: 1 }}>
+                <Descriptions.Item label="Họ và tên" span={2}>{currentStudent.fullName}</Descriptions.Item>
+                <Descriptions.Item label="MSSV">{currentStudent.studentId}</Descriptions.Item>
+                <Descriptions.Item label="Khóa">{currentStudent.className}</Descriptions.Item>
+                <Descriptions.Item label="Ngành" span={2}>{currentStudent.major}</Descriptions.Item>
+                <Descriptions.Item label="Email" span={2}>{currentStudent.emailPersonal}</Descriptions.Item>
+              </Descriptions>
+            </div>
+
+            <div style={{ padding: '20px', background: '#f8f9fa', borderRadius: '12px', border: '1px solid #f0f0f0' }}>
+              <Title level={5} style={{ marginBottom: 20, fontSize: '14px', color: '#595959', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                Tiến độ & Thao tác
+              </Title>
+              <Steps
+                direction="vertical"
+                size="small"
+                current={
+                  currentStudent.graduationType === "Đang học"
+                    ? 3
+                    : currentStudent.isPhysicalDocSubmitted
+                      ? 2
+                      : currentStudent.hasExportedFiles
+                        ? 1
+                        : currentStudent.user?.isFirstLogin === false
+                          ? 1
+                          : 0
+                }
+                items={[
+                  {
+                    title: '1. Kích hoạt tài khoản',
+                    description: (
+                      <div style={{ marginTop: 4 }}>
+                        {currentStudent.user?.isFirstLogin === false ? (
+                          <Tag color="success">Đã hoàn thành: Sinh viên đã đăng nhập và đổi mật khẩu lần đầu.</Tag>
+                        ) : (
+                          <Tag color="default">Chưa hoàn thành: Chờ sinh viên đăng nhập hệ thống.</Tag>
+                        )}
+                      </div>
+                    ),
+                    icon: <UserOutlined />,
+                  },
+                  {
+                    title: '2. Nhập liệu hồ sơ online',
+                    description: (
+                      <div style={{ marginTop: 4 }}>
+                        {currentStudent.hasExportedFiles ? (
+                          <Tag color="success">Đã hoàn thành: Sinh viên đã điền đầy đủ thông tin và tải file PDF.</Tag>
+                        ) : (
+                          <Tag color="default">Chưa hoàn thành: Chờ sinh viên hoàn thiện thông tin và xuất hồ sơ.</Tag>
+                        )}
+                      </div>
+                    ),
+                    icon: <FileTextOutlined />,
+                  },
+                  {
+                    title: '3. Nộp hồ sơ giấy (Bản cứng)',
+                    description: (
+                      <div style={{ marginTop: 4 }}>
+                        {currentStudent.isPhysicalDocSubmitted ? (
+                          <Tag color="success">Đã hoàn thành: Nhà trường đã tiếp nhận và xác nhận bộ hồ sơ giấy.</Tag>
+                        ) : (
+                          <Tag color="default">Chưa hoàn thành: Đang chờ tiếp nhận hồ sơ trực tiếp tại văn phòng.</Tag>
+                        )}
+                        <div style={{ marginTop: 8 }}>
+                          <Button
+                            size="small"
+                            type={currentStudent.isPhysicalDocSubmitted ? "default" : "primary"}
+                            icon={currentStudent.isPhysicalDocSubmitted ? <ClockCircleOutlined /> : <FileDoneOutlined />}
+                            onClick={() => handleToggleDocStatus(currentStudent.studentId)}
+                            disabled={currentStudent.graduationType === "Đang học"}
+                          >
+                            {currentStudent.isPhysicalDocSubmitted ? "Hủy nhận hồ sơ giấy" : "Xác nhận nhận hồ sơ giấy"}
+                          </Button>
+                        </div>
+                      </div>
+                    ),
+                    icon: <SolutionOutlined />,
+                  },
+                ]}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              {currentStudent.graduationType !== "Đang học" ? (
+                <Popconfirm
+                  title="Duyệt hoàn tất nhập học?"
+                  description="Sinh viên sẽ chính thức chuyển sang trạng thái Đang học."
+                  onConfirm={() => handleFinalize(currentStudent.studentId)}
+                  disabled={!currentStudent.isPhysicalDocSubmitted}
+                >
+                  <Button
+                    type="primary"
+                    size="large"
+                    icon={<AuditOutlined />}
+                    style={{ background: '#52c41a', borderColor: '#52c41a' }}
+                    disabled={!currentStudent.isPhysicalDocSubmitted}
+                  >
+                    Xác nhận hoàn tất nhập học
+                  </Button>
+                </Popconfirm>
+              ) : (
+                <div style={{ width: '100%' }}>
+                  <div style={{ padding: 16, background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 8, marginBottom: 16 }}>
+                    <Text strong><CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8 }} /> Trạng thái: Đã hoàn tất nhập học</Text>
+                    <div style={{ marginTop: 8, fontSize: 13 }}>
+                      <Text type="secondary">Cán bộ duyệt: </Text>
+                      <Text strong>{currentStudent.admissionApprovedBy}</Text>
+                      <br />
+                      <Text type="secondary">Thời điểm duyệt: </Text>
+                      <Text strong>{currentStudent.admissionApprovedAt ? dayjs(currentStudent.admissionApprovedAt).format("HH:mm DD/MM/YYYY") : "N/A"}</Text>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <Popconfirm
+                      title="Bạn có chắc muốn hủy nhập học?"
+                      description="Hành động này sẽ đưa sinh viên quay lại trạng thái Đang nhập học."
+                      onConfirm={() => handleCancelFinalize(currentStudent.studentId)}
+                      okButtonProps={{ danger: true }}
+                    >
+                      <Button type="primary" danger icon={<LockOutlined />} loading={isCancelling}>
+                        Hủy nhập học (🔴)
+                      </Button>
+                    </Popconfirm>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Space>
+        )}
       </Modal>
     </div>
   );
