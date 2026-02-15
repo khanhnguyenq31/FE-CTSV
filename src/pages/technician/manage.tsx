@@ -23,6 +23,8 @@ import {
   Divider,
   Steps,
   Tabs,
+  Select,
+  Spin,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -40,7 +42,11 @@ import {
   UserOutlined,
   FileTextOutlined,
   SolutionOutlined,
+  ScanOutlined,
+  FilterOutlined,
 } from "@ant-design/icons";
+// import { Html5QrcodeScanner } from "html5-qrcode"; // Remove this
+import { Html5Qrcode } from "html5-qrcode";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import {
@@ -52,6 +58,9 @@ import {
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
   Cell,
+  PieChart,
+  Pie,
+  Legend,
 } from "recharts";
 import {
   getAdmissionPeriods,
@@ -67,9 +76,76 @@ import {
   cancelFinalizeAdmission,
 } from "../../api/admission";
 import type { AdmissionPeriod, AdmissionStudent, AdmissionStats } from "../../api/admission";
-
 const { Title, Text } = Typography;
 const { Search } = Input;
+
+// Component quét QR riêng để đảm bảo DOM element đã mount và có kiểm soát camera tốt hơn
+interface ScannerProps {
+  onScan: (text: string) => void;
+  messageApi?: any;
+}
+
+// Component quét QR riêng để đảm bảo DOM element đã mount và có kiểm soát camera tốt hơn
+const QRScanner: React.FC<ScannerProps> = ({ onScan, messageApi }) => {
+  useEffect(() => {
+    const html5QrCode = new Html5Qrcode("qr-reader");
+    let isMounted = true;
+
+    const startScanner = async () => {
+      try {
+        // Thêm một chút delay để Modal hoàn tất animation
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        if (!isMounted) return;
+
+        const config = {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0
+        };
+
+        // Ưu tiên camera trước (laptop)
+        await html5QrCode.start(
+          { facingMode: "user" },
+          config,
+          (decodedText: string) => {
+            if (isMounted) {
+              onScan(decodedText);
+            }
+          },
+          undefined
+        );
+      } catch (err: any) {
+        console.error("Error starting QR scanner:", err);
+        if (isMounted && messageApi) {
+          const errMsg = err?.message || "";
+          if (err?.name === "AbortError" || errMsg.includes("Timeout")) {
+            messageApi.error("Lỗi: Không thể khởi động Camera (Hết thời gian chờ). Vui lòng thử lại hoặc kiểm tra xem có ứng dụng khác đang dùng camera không.");
+          } else if (err?.name === "NotAllowedError") {
+            messageApi.error("Lỗi: Trình duyệt không có quyền truy cập Camera.");
+          } else {
+            messageApi.error("Lỗi khởi động Camera: " + (errMsg || "Không xác định"));
+          }
+        }
+      }
+    };
+
+    startScanner();
+
+    return () => {
+      isMounted = false;
+      if (html5QrCode.isScanning) {
+        html5QrCode.stop().catch(error => console.error("Failed to stop scanner", error));
+      }
+    };
+  }, [onScan, messageApi]);
+
+  return (
+    <div style={{ position: 'relative', width: '100%', minHeight: '300px', background: '#000', borderRadius: '8px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div id="qr-reader" style={{ width: "100%" }}></div>
+    </div>
+  );
+};
 
 export default function ManagePage({ messageApi }: { messageApi: any }) {
   const navigate = useNavigate();
@@ -118,6 +194,18 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
 
   const stats: AdmissionStats | null = statsData?.stats || null;
 
+  // State cho lọc thống kê (Mock)
+  const [statDateRange, setStatDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
+  const [educationType, setEducationType] = useState<string | null>(null);
+  const [isFiltering, setIsFiltering] = useState(false);
+
+  // Mock data cho hệ đào tạo
+  const mockEduStats = useMemo(() => [
+    { name: 'Chính quy', value: stats ? Math.floor(stats.totalStudents * 0.7) : 700 },
+    { name: 'Chất lượng cao', value: stats ? Math.floor(stats.totalStudents * 0.2) : 200 },
+    { name: 'Liên thông', value: stats ? Math.floor(stats.totalStudents * 0.1) : 100 },
+  ], [stats]);
+
   // Student Detail Modal
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
   const [currentStudentId, setCurrentStudentId] = useState<string | null>(null);
@@ -135,6 +223,9 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
     }
     return searchedStudent;
   }, [searchedStudent, students]);
+
+  // State cho Scanner
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   useEffect(() => {
     fetchPeriods();
@@ -241,11 +332,12 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
     }
   };
 
-  const handleSearchStudent = async () => {
-    if (!searchId) return;
+  const handleSearchStudent = async (pid?: string) => {
+    const idToSearch = pid || searchId;
+    if (!idToSearch) return;
     setSearching(true);
     try {
-      const data = await searchAdmissionStudent(searchId);
+      const data = await searchAdmissionStudent(idToSearch);
       setSearchedStudent(data.student);
     } catch (error) {
       if (messageApi) messageApi.error("Không tìm thấy sinh viên hoặc có lỗi xảy ra");
@@ -385,54 +477,135 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
     if (!stats) return null;
     return (
       <Space direction="vertical" style={{ width: '100%', marginBottom: 24 }} size="large">
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={8}>
-            <Card bordered={false} className="shadow-sm" style={{ height: '100%' }}>
-              <Statistic title="Tổng sinh viên" value={stats.totalStudents} prefix={<TeamOutlined style={{ color: '#1890ff' }} />} />
-            </Card>
-          </Col>
-          <Col xs={24} sm={8}>
-            <Card bordered={false} className="shadow-sm" style={{ height: '100%' }}>
-              <Statistic title="Đã hoàn tất" value={stats.completedAdmissions} valueStyle={{ color: '#52c41a' }} prefix={<CheckCircleOutlined />} />
-            </Card>
-          </Col>
-          <Col xs={24} sm={8}>
-            <Card bordered={false} className="shadow-sm" style={{ height: '100%' }}>
-              <Statistic title="Đang chờ" value={stats.pendingAdmissions} valueStyle={{ color: '#faad14' }} prefix={<ClockCircleOutlined />} />
-            </Card>
-          </Col>
-        </Row>
-
-        <Card title="Thống kê sinh viên theo ngành" bordered={false} className="shadow-sm">
-          <div style={{ width: '100%', height: 350 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={stats.byMajor}
-                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis
-                  dataKey="major"
-                  angle={-45}
-                  textAnchor="end"
-                  interval={0}
-                  height={80}
-                  tick={{ fontSize: 12 }}
+        <Card bordered={false} className="shadow-sm">
+          <Row gutter={[16, 16]} align="middle">
+            <Col xs={24} md={12}>
+              <Title level={4} style={{ margin: 0 }}>Thống kê nhập học</Title>
+              <Text type="secondary">Phân tích dữ liệu sinh viên trong đợt</Text>
+            </Col>
+            <Col xs={24} md={12} style={{ textAlign: 'right' }}>
+              <Space wrap>
+                <DatePicker.RangePicker
+                  value={statDateRange}
+                  onChange={(val) => {
+                    setStatDateRange(val as any);
+                    setIsFiltering(true);
+                    setTimeout(() => setIsFiltering(false), 500);
+                  }}
+                  format="DD/MM/YYYY"
                 />
-                <YAxis allowDecimals={false} />
-                <RechartsTooltip
-                  cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={40}>
-                  {stats.byMajor.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+                <Select
+                  placeholder="Hệ đào tạo"
+                  style={{ width: 160 }}
+                  allowClear
+                  value={educationType}
+                  onChange={(val) => {
+                    setEducationType(val);
+                    setIsFiltering(true);
+                    setTimeout(() => setIsFiltering(false), 500);
+                  }}
+                >
+                  <Select.Option value="CQ">Chính quy</Select.Option>
+                  <Select.Option value="CLC">Chất lượng cao</Select.Option>
+                  <Select.Option value="LT">Liên thông</Select.Option>
+                </Select>
+                <Button icon={<FilterOutlined />} onClick={() => {
+                  setStatDateRange(null);
+                  setEducationType(null);
+                }}>Làm mới</Button>
+              </Space>
+            </Col>
+          </Row>
         </Card>
+
+        {isFiltering ? (
+          <Card bordered={false} style={{ textAlign: 'center', padding: '50px 0' }}><Spin tip="Đang lọc dữ liệu..." /></Card>
+        ) : (
+          <>
+            <Row gutter={[16, 16]}>
+              <Col xs={24} sm={8}>
+                <Card bordered={false} className="shadow-sm" style={{ height: '100%' }}>
+                  <Statistic
+                    title="Tổng sinh viên"
+                    value={educationType ? (educationType === 'CQ' ? 700 : educationType === 'CLC' ? 200 : 100) : stats.totalStudents}
+                    prefix={<TeamOutlined style={{ color: '#1890ff' }} />}
+                  />
+                  <div style={{ marginTop: 8 }}><Text type="secondary">Theo tiêu chí lọc</Text></div>
+                </Card>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Card bordered={false} className="shadow-sm" style={{ height: '100%' }}>
+                  <Statistic title="Đã hoàn tất" value={educationType ? Math.floor((educationType === 'CQ' ? 700 : 200) * 0.8) : stats.completedAdmissions} valueStyle={{ color: '#52c41a' }} prefix={<CheckCircleOutlined />} />
+                  <div style={{ marginTop: 8 }}><Text type="secondary">Tỉ lệ: {educationType ? '80%' : Math.round((stats.completedAdmissions / stats.totalStudents) * 100) + '%'}</Text></div>
+                </Card>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Card bordered={false} className="shadow-sm" style={{ height: '100%' }}>
+                  <Statistic title="Đang chờ" value={educationType ? Math.floor((educationType === 'CQ' ? 700 : 200) * 0.2) : stats.pendingAdmissions} valueStyle={{ color: '#faad14' }} prefix={<ClockCircleOutlined />} />
+                  <div style={{ marginTop: 8 }}><Text type="secondary">Cần xử lý gấp</Text></div>
+                </Card>
+              </Col>
+            </Row>
+
+            <Row gutter={[16, 16]}>
+              <Col xs={24} lg={16}>
+                <Card title="Thống kê sinh viên theo ngành" bordered={false} className="shadow-sm">
+                  <div style={{ width: '100%', height: 350 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={stats.byMajor}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis
+                          dataKey="major"
+                          angle={-45}
+                          textAnchor="end"
+                          interval={0}
+                          height={80}
+                          tick={{ fontSize: 12 }}
+                        />
+                        <YAxis allowDecimals={false} />
+                        <RechartsTooltip
+                          cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
+                          contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                        />
+                        <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={40}>
+                          {stats.byMajor.map((_, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+              </Col>
+              <Col xs={24} lg={8}>
+                <Card title="Tỉ lệ theo hệ đào tạo" bordered={false} className="shadow-sm">
+                  <div style={{ width: '100%', height: 350 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={mockEduStats}
+                          innerRadius={60}
+                          outerRadius={80}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {mockEduStats.map((_, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+              </Col>
+            </Row>
+          </>
+        )}
       </Space>
     );
   };
@@ -559,7 +732,7 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
                         <Card bordered={false} className="shadow-sm">
                           <Title level={4}>Tra cứu sinh viên</Title>
                           <Text type="secondary">Nhập mã số sinh viên để kiểm tra tiến độ và thực hiện thao tác nhanh</Text>
-                          <div style={{ marginTop: 24 }}>
+                          <div style={{ marginTop: 24, display: 'flex', gap: '8px' }}>
                             <Search
                               placeholder="Nhập MSSV (VD: 20110...)"
                               enterButton="Tìm kiếm"
@@ -569,8 +742,35 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
                               onSearch={handleSearchStudent}
                               loading={searching}
                             />
+                            <Button
+                              icon={<ScanOutlined />}
+                              size="large"
+                              onClick={() => setIsScannerOpen(true)}
+                              title="Quét mã QR"
+                            />
                           </div>
                         </Card>
+
+                        <Modal
+                          title="Quét mã QR từ camera"
+                          open={isScannerOpen}
+                          onCancel={() => setIsScannerOpen(false)}
+                          footer={null}
+                          destroyOnClose
+                          width={400}
+                        >
+                          <QRScanner
+                            messageApi={messageApi}
+                            onScan={(text) => {
+                              setSearchId(text);
+                              setIsScannerOpen(false);
+                              handleSearchStudent(text);
+                            }}
+                          />
+                          <div style={{ marginTop: 16, textAlign: 'center' }}>
+                            <Text type="secondary">Vui lòng đưa mã QR vào khung hình để quét</Text>
+                          </div>
+                        </Modal>
 
                         {searchedStudent && (
                           <Card bordered={false} className="shadow-sm" style={{ marginTop: 24 }}>

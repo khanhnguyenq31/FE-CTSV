@@ -28,6 +28,7 @@ import { updateExportStatus, uploadStudentAvatar } from "../../api/admission";
 import dayjs from "dayjs";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { QRCodeCanvas } from "qrcode.react";
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
@@ -457,7 +458,7 @@ export default function EnrollmentRecords() {
                 </div>
 
                 {/* Template Receipt */}
-                <div ref={receiptRef} style={{ width: "210mm", background: "#fff", color: "#000", padding: "20mm", fontFamily: "'Times New Roman', Times, serif" }}>
+                <div ref={receiptRef} style={{ width: "210mm", background: "#fff", color: "#000", padding: "20mm", fontFamily: "'Times New Roman', Times, serif", position: "relative" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10mm" }}>
                         <div style={{ textAlign: "center" }}>
                             <div style={{ fontSize: "12px" }}>TRƯỜNG ĐẠI HỌC QUẢN LÝ VÀ CÔNG NGHỆ</div>
@@ -518,6 +519,16 @@ export default function EnrollmentRecords() {
                         <div>Ghi chú:</div>
                         <div>- Sinh viên phải lấy đầy đủ chữ ký xác nhận của cán bộ thu nhận hồ sơ và phải bảo quản giấy biên nhận này cho đến khi ra trường.</div>
                         <div>- Nhà trường chỉ thu bản sao các loại giấy tờ trên, hồ sơ đã nộp không trả lại trong bất kỳ trường hợp nào và sẽ hủy sau khi khóa học kết thúc.</div>
+                    </div>
+
+                    <div style={{ marginTop: "10mm", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                        <QRCodeCanvas
+                            value={receiptForm.getFieldValue("studentId") || ""}
+                            size={80}
+                            level={"H"}
+                            includeMargin={false}
+                        />
+                        <div style={{ fontSize: "10px", textAlign: "center", marginTop: "4px" }}>MSSV: {receiptForm.getFieldValue("studentId")}</div>
                     </div>
                 </div>
             </div>
