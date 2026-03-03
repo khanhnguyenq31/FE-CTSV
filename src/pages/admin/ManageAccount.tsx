@@ -1,7 +1,7 @@
 import { Button, Table, Modal, Form, Input, Select, Tag, Space, Card, Tooltip, Popconfirm } from 'antd';
 import { PlusOutlined, EditOutlined, LockOutlined, DeleteOutlined, SearchOutlined, UserOutlined, ToolOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
-import { createStudentApi } from '../../api/auth';
+import { createStudentApi, createTechnicianApi } from '../../api/auth';
 
 interface UserData {
   key: string;
@@ -163,18 +163,12 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
       if (values.role === 'student') {
         await createStudentApi(values.email, values.name);
       } else {
-        // Gọi API tạo technician
-        const token = localStorage.getItem('accessToken');
-        const res = await fetch('http://localhost:3000/auth/create-technician', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ email: values.email, fullName: values.name }),
-        });
-        if (!res.ok) throw new Error('Tạo tài khoản chuyên viên thất bại!');
-        await res.json();
+        await createTechnicianApi(
+          values.email,
+          values.name,
+          values.technicianType,
+          values.technicianType === 'senior' ? [] : values.permissions
+        );
       }
       setOpen(false);
       form.resetFields();
@@ -279,6 +273,49 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
             ]}
           >
             <Input size="large" placeholder="Nhập email tài khoản" />
+          </Form.Item>
+
+          <Form.Item noStyle shouldUpdate={(prev, curr) => prev.role !== curr.role}>
+            {({ getFieldValue }) =>
+              getFieldValue('role') === 'technician' && (
+                <>
+                  <Form.Item
+                    label="Loại chuyên viên"
+                    name="technicianType"
+                    initialValue="normal"
+                    rules={[{ required: true, message: 'Vui lòng chọn loại chuyên viên!' }]}
+                  >
+                    <Select size="large">
+                      <Select.Option value="normal">Chuyên viên (Normal)</Select.Option>
+                      <Select.Option value="senior">Chuyên viên cấp cao (Senior)</Select.Option>
+                    </Select>
+                  </Form.Item>
+
+                  <Form.Item noStyle shouldUpdate={(prev, curr) => prev.technicianType !== curr.technicianType}>
+                    {({ getFieldValue }) =>
+                      getFieldValue('technicianType') === 'normal' && (
+                        <Form.Item
+                          label="Quyền hạn"
+                          name="permissions"
+                          rules={[{ required: true, message: 'Vui lòng chọn ít nhất một quyền!' }]}
+                        >
+                          <Select mode="multiple" size="large" placeholder="Chọn các quyền hạn">
+                            <Select.Option value="ADMISSION">Quản lý nhập học</Select.Option>
+                            <Select.Option value="STUDENT_LIST">Danh sách sinh viên</Select.Option>
+                            <Select.Option value="ACADEMIC_DECISION">Quyết định học vụ</Select.Option>
+                            <Select.Option value="REWARD_DISCIPLINE">Khen thưởng & Kỷ luật</Select.Option>
+                            <Select.Option value="CERTIFICATE">Chứng nhận</Select.Option>
+                            <Select.Option value="TRAINING_POINT">Điểm rèn luyện</Select.Option>
+                            <Select.Option value="EVENT_ACTIVITY">Sự kiện & hoạt động</Select.Option>
+                            <Select.Option value="SCHOLARSHIP">Học bổng</Select.Option>
+                          </Select>
+                        </Form.Item>
+                      )
+                    }
+                  </Form.Item>
+                </>
+              )
+            }
           </Form.Item>
 
           <div className="flex justify-end gap-2 mt-6">

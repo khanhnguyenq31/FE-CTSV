@@ -37,17 +37,20 @@ export async function loginApi(email: string, password: string) {
   try {
     const response = await api.post("/auth/login", { email, password });
 
-    const { accessToken, refreshToken, role } = response.data;
+    const { accessToken, refreshToken, role, technicianType, permissions } = response.data;
 
     // Lưu token vào localStorage
     localStorage.setItem("accessToken", accessToken);
     localStorage.setItem("refreshToken", refreshToken);
     localStorage.setItem("role", role);
+    localStorage.setItem("userEmail", email);
+    if (technicianType) localStorage.setItem("technicianType", technicianType);
+    if (permissions) localStorage.setItem("permissions", JSON.stringify(permissions));
 
     // Gắn token mặc định cho các request sau
     api.defaults.headers.Authorization = `Bearer ${accessToken}`;
 
-    return { accessToken, refreshToken, role };
+    return { accessToken, refreshToken, role, technicianType, permissions };
   } catch (error: any) {
     const message =
       error?.response?.data?.message || "Đăng nhập thất bại, vui lòng thử lại";
@@ -89,12 +92,21 @@ export async function logoutApi() {
   await api.post("/auth/logout", { refreshToken });
   localStorage.removeItem("accessToken");
   localStorage.removeItem("refreshToken");
+  localStorage.removeItem("role");
+  localStorage.removeItem("userEmail");
+  localStorage.removeItem("technicianType");
+  localStorage.removeItem("permissions");
 }
 
 // Tạo tài khoản chuyên viên
-export async function createTechnicianApi(email: string) {
+export async function createTechnicianApi(email: string, fullName: string, technicianType: string, permissions: string[]) {
   const accessToken = localStorage.getItem('accessToken');
-  const response = await api.post('/auth/create-technician', { email }, {
+  const response = await api.post('/auth/create-technician', {
+    email,
+    fullName,
+    technicianType,
+    permissions
+  }, {
     headers: { Authorization: `Bearer ${accessToken}` }
   });
   return response.data;

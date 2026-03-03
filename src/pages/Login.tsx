@@ -2,33 +2,10 @@ import { Input, Button, Form, Card, Typography } from "antd";
 import { useMutation } from "@tanstack/react-query";
 import { loginApi } from "../api/auth";
 import { useAuthStore } from "../store/auth";
-import { UserOutlined, LockOutlined } from "@ant-design/icons"; 
+import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
 const { Title, Text, Paragraph } = Typography;
-
-function Illustration() {
-  return (
-    <div className="w-full h-full flex items-center justify-center p-6">
-      <svg
-        width="320"
-        height="320"
-        viewBox="0 0 320 320"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="max-w-full"
-      >
-        <rect width="320" height="320" rx="12" fill="transparent" />
-        <g transform="translate(30,10)">
-          <rect x="120" y="130" width="100" height="60" rx="10" fill="#E6F0F6" />
-          <ellipse cx="110" cy="50" rx="36" ry="36" fill="#FFDAB3" />
-          <path d="M60 100 C80 90, 120 90, 140 100 L120 140 L70 140 Z" fill="#2D3B6F" />
-          <path d="M40 85 C60 75, 90 75, 110 85 L120 115 L62 115 Z" fill="#FF8A00" />
-        </g>
-      </svg>
-    </div>
-  );
-}
 
 export default function Login({ messageApi }: { messageApi: any }) {
   const login = useAuthStore((s) => s.login);
@@ -38,8 +15,13 @@ export default function Login({ messageApi }: { messageApi: any }) {
   const mutation = useMutation({
     mutationFn: ({ email, password }: { email: string; password: string }) =>
       loginApi(email, password),
-    onSuccess: (data) => {
-      login();
+    onSuccess: (data, variables) => {
+      login({
+        role: data.role,
+        userEmail: variables.email,
+        technicianType: data.technicianType,
+        permissions: data.permissions
+      });
       messageApi.success("Đăng nhập thành công!");
       if (data.role === "admin") navigate("/admin/overview");
       else if (data.role === "student") navigate("/student/home");
@@ -54,14 +36,14 @@ export default function Login({ messageApi }: { messageApi: any }) {
 
   const onFinish = (values: any) => {
     mutation.mutate({
-      email: values.email, 
+      email: values.email,
       password: values.password,
     });
   };
 
   return (
     <>
-      
+
       <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundImage: 'url(/src/assets/umt.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
         <div className="w-full max-w-5xl bg-transparent rounded-xl shadow-sm flex overflow-hidden">
           {/* Left: Card with form */}
@@ -75,7 +57,7 @@ export default function Login({ messageApi }: { messageApi: any }) {
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 rounded overflow-hidden flex items-center justify-center bg-white">
                 <img
-                  src="/src/assets/logo.svg" 
+                  src="/src/assets/logo.svg"
                   alt="Logo"
                   className="w-full h-full object-contain"
                 />
@@ -105,14 +87,14 @@ export default function Login({ messageApi }: { messageApi: any }) {
                 label="Email"
                 name="email"
                 rules={[
-                    { required: true, message: "Vui lòng nhập email!" },
-                    { type: "email", message: "Email không hợp lệ!" },
-                  ]}
-                >
+                  { required: true, message: "Vui lòng nhập email!" },
+                  { type: "email", message: "Email không hợp lệ!" },
+                ]}
+              >
                 <Input
                   size="large"
                   placeholder="Nhập email"
-                  prefix={<UserOutlined className="text-gray-400" />} 
+                  prefix={<UserOutlined className="text-gray-400" />}
                 />
               </Form.Item>
 
@@ -125,7 +107,7 @@ export default function Login({ messageApi }: { messageApi: any }) {
                 <Input.Password
                   size="large"
                   placeholder="Mật khẩu"
-                  prefix={<LockOutlined className="text-gray-400" />} 
+                  prefix={<LockOutlined className="text-gray-400" />}
                 />
               </Form.Item>
 

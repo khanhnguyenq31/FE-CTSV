@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { ColumnsType } from "antd/es/table";
 import {
   Row,
@@ -10,315 +10,684 @@ import {
   Space,
   Tag,
   Table,
-
   Pagination,
   Tooltip,
+  Modal,
+  Form,
+  DatePicker,
+  InputNumber,
+  Popconfirm,
+  Upload,
+  Descriptions,
+  Spin,
+  Divider,
+  Select,
 } from "antd";
+import type { UploadFile } from "antd";
 import {
   ArrowLeftOutlined,
   PlusOutlined,
-
-  SearchOutlined,
-  PlusCircleOutlined, // Icon cho nút Ghi điểm
+  EditOutlined,
+  DeleteOutlined,
+  CheckCircleOutlined,
+  PoweroffOutlined,
+  TeamOutlined,
+  SyncOutlined,
+  CalendarOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient, useQueries } from "@tanstack/react-query";
+import { InboxOutlined } from "@ant-design/icons";
+import {
+  getActivitiesApi,
+  createActivityApi,
+  updateActivityApi,
+  deleteActivityApi,
+  activateActivityApi,
+  approveActivityApi,
+  getRegistrationsApi,
+  addStudentToActivityApi
+} from "../../api/activity";
+import { getKhoasApi, getTagsApi, createTagApi } from "../../api/dm";
+import { useAuthStore } from "../../store/auth";
+import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 
-// 1. Cấu trúc dữ liệu cho Sự kiện & Hoạt động
-type EventStatus = "Sắp diễn ra" | "Đang diễn ra" | "Đã kết thúc";
-
-type RowData = {
-  key: string;
-  stt: string;
-  eventName: string; // Tên sự kiện
-  eventId: string; // Mã SK
-  eventType: string; // Loại (VD: Hội thảo, Tình nguyện)
-  startDate: string; // Ngày bắt đầu
-  location: string; // Địa điểm
-  participants: number; // Tổng người tham gia
-  maxParticipants: number; // Số lượng tối đa
-  trainingScore: number | string; // Điểm rèn luyện
-  status: EventStatus; // Trạng thái
-};
-
-// Hàm tạo dữ liệu mock
-function generateMock(n = 30): RowData[] {
-  const rows: RowData[] = [];
-  for (let i = 1; i <= n; i++) {
-    let status: EventStatus;
-    if (i % 3 === 0) {
-      status = "Sắp diễn ra";
-    } else if (i % 5 === 0) {
-      status = "Đang diễn ra";
-    } else {
-      status = "Đã kết thúc";
-    }
-
-    rows.push({
-      key: String(i),
-      stt: i < 10 ? `0${i}` : `${i}`,
-      eventName: i % 2 === 0 ? "Hội Thảo Trí Tuệ Nhân Tạo" : "Tình Nguyện Mùa Hè Xanh 2025",
-      eventId: `CNTT-A0${i < 10 ? `0${i}` : `${i}`}`,
-      eventType: i % 2 === 0 ? "Hội thảo" : "Tình nguyện",
-      startDate: `15/0${i % 9 + 1}/2025`,
-      location: i % 2 === 0 ? "Hội trường A5" : "Khu vực KTX",
-      participants: 479,
-      maxParticipants: 500,
-      trainingScore: i % 2 === 0 ? 5 : "N/A", // Điểm RL
-      status: status,
-    });
-  }
-  return rows;
-}
-
-// Hàm render Tag cho Trạng thái
-const StatusTag: React.FC<{ status: EventStatus }> = ({ status }) => {
-  let color = "default";
-  if (status === "Sắp diễn ra") {
-    color = "orange";
-  } else if (status === "Đang diễn ra") {
-    color = "green";
-  } else if (status === "Đã kết thúc") {
-    color = "blue";
-  }
-
-  return <Tag color={color} style={{ fontWeight: 600 }}>{status}</Tag>;
-};
-
-export default function EventPage({ }: { messageApi: any }) {
+export default function EventPage({ messageApi }: { messageApi: any }) {
   const navigate = useNavigate();
-  const [data] = useState<RowData[]>(() => generateMock(60));
+  const queryClient = useQueryClient();
+  const { technicianType, userEmail } = useAuthStore();
+
+  const canManage = (record: any) => {
+    const creatorEmail = (record.creatorEmail || record.creator?.email || (typeof record.createdBy === 'object' ? record.createdBy?.email : record.createdBy) || "") as string;
+    return creatorEmail.toLowerCase().trim() === userEmail?.toLowerCase().trim();
+  };
+
+  const canApprove = () => {
+    return technicianType === "senior";
+  };
+
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Logic lọc theo Tên Sự kiện
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [form] = Form.useForm();
+
+  const [isRegModalOpen, setIsRegModalOpen] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+
+  // Fetch activities
+  const { data: activities = [] as any[], isLoading } = useQuery({
+    queryKey: ["activities"],
+    queryFn: getActivitiesApi,
+  });
+
+  // Fetch registrations for a specific event
+  const { data: registrations = [], isLoading: isLoadingRegs } = useQuery({
+    queryKey: ["registrations", selectedEventId],
+    queryFn: () => getRegistrationsApi(selectedEventId!),
+    enabled: !!selectedEventId && isRegModalOpen,
+  });
+
+  // Fetch departments and tags
+  const { data: khoas = [] } = useQuery({
+    queryKey: ["khoas"],
+    queryFn: getKhoasApi,
+  });
+
+  const { data: allTags = [] } = useQuery({
+    queryKey: ["tags"],
+    queryFn: getTagsApi,
+  });
+
+  const [newTagName, setNewTagName] = useState("");
+  const createTagMutation = useMutation({
+    mutationFn: createTagApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tags"] });
+      setNewTagName("");
+      messageApi.success("Thêm tag mới thành công");
+    },
+  });
+
+  // Mutations
+  const createMutation = useMutation({
+    mutationFn: createActivityApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["activities"] });
+      messageApi.success("Tạo hoạt động thành công");
+      setIsModalOpen(false);
+      form.resetFields();
+    },
+    onError: (err: any) => messageApi.error(err.message || "Tạo thất bại"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: FormData }) => updateActivityApi(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["activities"] });
+      // Always show re-approval message on update since any edit triggers it
+      const successMsg = "Cập nhật thành công. Hoạt động đã được chuyển về trạng thái chờ duyệt lại.";
+      messageApi.success(successMsg);
+      setIsModalOpen(false);
+      setEditingEvent(null);
+      setFileList([]);
+      form.resetFields();
+    },
+    onError: (err: any) => messageApi.error(err.message || "Cập nhật thất bại"),
+  });
+
+  const [newStudentId, setNewStudentId] = useState("");
+  const addStudentMutation = useMutation({
+    mutationFn: (studentId: string) => addStudentToActivityApi(selectedEventId!, studentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["registrations", selectedEventId] });
+      queryClient.invalidateQueries({ queryKey: ["activities"] });
+      messageApi.success("Thêm sinh viên thành công");
+      setNewStudentId("");
+    },
+    onError: (err: any) => messageApi.error(err.response?.data?.message || err.message || "Thêm thất bại"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteActivityApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["activities"] });
+      messageApi.success("Xóa thành công");
+    },
+    onError: (err: any) => messageApi.error(err.message || "Xóa thất bại"),
+  });
+
+  const activateMutation = useMutation({
+    mutationFn: activateActivityApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["activities"] });
+      messageApi.success("Thay đổi trạng thái kích hoạt thành công");
+    },
+    onError: (err: any) => messageApi.error(err.message || "Thao tác thất bại"),
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: approveActivityApi,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["activities"] });
+      messageApi.success("Duyệt hoạt động thành công");
+    },
+    onError: (err: any) => messageApi.error(err.message || "Duyệt thất bại"),
+  });
+
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+
+  const onFinish = (values: any) => {
+    const formData = new FormData();
+
+    formData.append("title", values.title);
+    formData.append("description", values.description);
+    formData.append("content", values.content);
+    if (values.facultyId) formData.append("facultyId", values.facultyId);
+    if (values.faculty) formData.append("faculty", values.faculty); // Keep for compatibility
+
+    if (values.tagIds) {
+      values.tagIds.forEach((tagId: number) => {
+        formData.append("tagIds[]", tagId.toString());
+      });
+    }
+
+    if (values.SoLuongToiDa !== undefined) {
+      formData.append("SoLuongToiDa", values.SoLuongToiDa.toString());
+      formData.append("maxParticipants", values.SoLuongToiDa.toString());
+    }
+    if (values.eventTime) formData.append("eventTime", values.eventTime.toISOString());
+    if (values.registrationStartTime) formData.append("registrationStartTime", values.registrationStartTime.toISOString());
+    if (values.registrationEndTime) formData.append("registrationEndTime", values.registrationEndTime.toISOString());
+
+    if (fileList.length > 0 && fileList[0].originFileObj) {
+      formData.append("image", fileList[0].originFileObj);
+    }
+
+    if (editingEvent) {
+      formData.append("isApproved", "false"); // Force re-approval
+      updateMutation.mutate({ id: editingEvent.id, data: formData });
+    } else {
+      createMutation.mutate(formData as any);
+    }
+  };
+
+  const handleEdit = (record: any) => {
+    setEditingEvent(record);
+    form.setFieldsValue({
+      ...record,
+      eventTime: dayjs(record.eventTime),
+      registrationStartTime: dayjs(record.registrationStartTime),
+      registrationEndTime: dayjs(record.registrationEndTime),
+      tagIds: record.activityTags?.map((t: any) => t.id) || [],
+      facultyId: record.facultyId,
+      SoLuongToiDa: record.maxParticipants || record.SoLuongToiDa,
+    });
+    setFileList(record.image ? [{ uid: '-1', name: 'image.png', status: 'done', url: record.image }] : []);
+    setIsModalOpen(true);
+  };
+
+  // Filter and Paginate
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return data;
-    return data.filter(
-      (r) => r.eventName.toLowerCase().includes(q)
+    if (!q) return activities;
+    return activities.filter((r: any) =>
+      r.title.toLowerCase().includes(q) ||
+      r.faculty.toLowerCase().includes(q)
     );
-  }, [data, search]);
+  }, [activities, search]);
 
   const paged = useMemo(() => {
     const start = (page - 1) * pageSize;
     return filtered.slice(start, start + pageSize);
   }, [filtered, page, pageSize]);
 
-  // 2. Cột cho bảng Sự kiện & Hoạt động
-  const columns: ColumnsType<RowData> = [
+  // Manual fetch registration counts for items in the current page
+  const registrationQueries = useQueries({
+    queries: paged.map((activity: any) => ({
+      queryKey: ["registrations", activity.id],
+      queryFn: () => getRegistrationsApi(activity.id),
+      staleTime: 30000, // 30 seconds cache
+    })),
+  });
+
+  // Map activity ID to its registration count
+  const regCountsMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    paged.forEach((activity: any, index: number) => {
+      const query = registrationQueries[index];
+      if (query && query.data) {
+        map[activity.id] = (query.data as any[]).length;
+      }
+    });
+    return map;
+  }, [paged, registrationQueries]);
+
+  const columns: ColumnsType<any> = [
     {
-      title: "STT",
-      dataIndex: "stt",
-      key: "stt",
-      width: 60,
-      render: (v: string) => <Text type="secondary">{v}</Text>,
-    },
-    {
-      title: "Tên sự kiện",
-      dataIndex: "eventName",
-      key: "eventName",
+      title: "Tên hoạt động",
+      dataIndex: "title",
+      key: "title",
       width: 250,
-      render: (v: string) => <div style={{ fontWeight: 600 }}>{v}</div>,
-    },
-    {
-      title: "Mã SK",
-      dataIndex: "eventId",
-      key: "eventId",
-      width: 120,
-      render: (v: string) => <Text type="secondary">{v}</Text>,
-    },
-    {
-      title: "Loại",
-      dataIndex: "eventType",
-      key: "eventType",
-      width: 100,
-    },
-    {
-      title: "Ngày bắt đầu",
-      dataIndex: "startDate",
-      key: "startDate",
-      width: 120,
-      responsive: ["md"] as any,
-    },
-    {
-      title: "Địa điểm",
-      dataIndex: "location",
-      key: "location",
-      responsive: ["lg"] as any,
-      render: (v: string) => <Text type="secondary">{v}</Text>,
-    },
-    {
-      title: "Người tham gia",
-      dataIndex: "participants",
-      key: "participants",
-      width: 120,
-      align: "center",
-      render: (p: number, record: RowData) => <Text>{p}/{record.maxParticipants}</Text>,
-    },
-    {
-      title: "Điểm RL",
-      dataIndex: "trainingScore",
-      key: "trainingScore",
-      width: 80,
-      align: "center",
-      render: (v: number | string) => (
-        v !== "N/A" ? <Text type="success" style={{ fontWeight: 600 }}>+{v}</Text> : <Text type="secondary">{v}</Text>
+      render: (v: string, record: any) => (
+        <div
+          style={{ cursor: "pointer" }}
+          onClick={() => {
+            setSelectedEvent(record);
+            setIsDetailModalOpen(true);
+          }}
+        >
+          <div style={{ fontWeight: 600, color: "#1677ff" }}>{v}</div>
+          <Text type="secondary" style={{ fontSize: "12px" }}>{record.department?.khoaName || record.faculty}</Text>
+        </div>
       ),
     },
     {
-      title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
+      title: "Thời gian diễn ra",
+      dataIndex: "eventTime",
+      key: "eventTime",
+      width: 150,
+      render: (v: string) => dayjs(v).format("DD/MM/YYYY HH:mm"),
+    },
+    {
+      title: "Đã đăng ký",
+      key: "registrations",
       width: 120,
-      render: (s: EventStatus) => <StatusTag status={s} />,
+      align: "center",
+      render: (_, record: any) => {
+        const currentRegs = regCountsMap[record.id] ?? 0;
+        const max = record.maxParticipants || record.SoLuongToiDa;
+        return (
+          <Space direction="vertical" size={0}>
+            <Text>{currentRegs}/{max}</Text>
+            <Button
+              type="link"
+              size="small"
+              icon={<TeamOutlined />}
+              onClick={() => {
+                setSelectedEventId(record.id);
+                setIsRegModalOpen(true);
+              }}
+            >
+              Danh sách
+            </Button>
+          </Space>
+        );
+      },
+    },
+    {
+      title: "Trạng thái",
+      key: "status",
+      width: 200,
+      render: (_, record: any) => (
+        <Space direction="vertical" size={4}>
+          <Tag color={record.isApproved ? "green" : "orange"} icon={record.isApproved ? <CheckCircleOutlined /> : null}>
+            {record.isApproved ? "Đã duyệt" : "Chờ duyệt"}
+          </Tag>
+          <Tag color={record.isActive ? "blue" : "default"} icon={<PoweroffOutlined />}>
+            {record.isActive ? "Đang bật" : "Đang tắt"}
+          </Tag>
+        </Space>
+      ),
       align: "center",
     },
     {
-      title: "",
+      title: "Hành động",
       key: "action",
-      width: 60,
-      render: (_: any, record: RowData) => (
+      width: 200,
+      fixed: "right",
+      render: (_: any, record: any) => (
         <Space>
-          <Tooltip title="Ghi điểm rèn luyện">
+          <Tooltip title={canManage(record) ? "Chỉnh sửa" : "Bạn không có quyền chỉnh sửa (Chỉ người tạo mới có quyền)"}>
             <Button
               type="text"
-              icon={<PlusCircleOutlined />}
-              onClick={() => {
-                alert(`Ghi điểm RL cho sự kiện: ${record.eventName}`);
-              }}
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+              disabled={!canManage(record)}
             />
+          </Tooltip>
+
+          <Tooltip title={!canManage(record) ? "Bạn không có quyền (Chỉ người tạo mới có quyền)" : (record.isActive ? "Tắt kích hoạt" : "Bật kích hoạt")}>
+            <Button
+              type="text"
+              icon={<PoweroffOutlined className={record.isActive ? (canManage(record) ? "text-red-500" : "text-gray-400") : (canManage(record) ? "text-green-500" : "text-gray-400")} />}
+              onClick={() => activateMutation.mutate(record.id)}
+              disabled={!canManage(record)}
+            />
+          </Tooltip>
+
+          {canApprove() && !record.isApproved && (
+            <Tooltip title="Duyệt hoạt động">
+              <Button
+                type="text"
+                icon={<CheckCircleOutlined className="text-green-500" />}
+                onClick={() => approveMutation.mutate(record.id)}
+              />
+            </Tooltip>
+          )}
+
+          <Tooltip title={canManage(record) ? "Xóa" : "Bạn không có quyền xóa (Chỉ người tạo mới có quyền)"}>
+            <Popconfirm
+              title="Xóa hoạt động này?"
+              onConfirm={() => deleteMutation.mutate(record.id)}
+              okText="Xóa"
+              cancelText="Hủy"
+              okButtonProps={{ danger: true }}
+              disabled={!canManage(record)}
+            >
+              <Button type="text" danger icon={<DeleteOutlined />} disabled={!canManage(record)} />
+            </Popconfirm>
           </Tooltip>
         </Space>
       ),
     },
   ];
 
-  // Tính toán số liệu thống kê (Mock dựa trên dữ liệu giả)
-  const totalEvents = data.length;
-  const upcoming = data.filter(r => r.status === "Sắp diễn ra").length;
-  const ongoing = data.filter(r => r.status === "Đang diễn ra").length;
-  const finished = data.filter(r => r.status === "Đã kết thúc").length;
-  // Giả định tổng người tham gia
-  const totalParticipants = 479 * 2;
-
   return (
-    <div>
+    <div className="p-4 md:p-6">
       {/* Header */}
-      <Row align="middle" justify="space-between" style={{ marginBottom: 18 }}>
-        <Col>
-          <Space align="center">
-            <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} />
-            <div>
-              <Title level={4} style={{ margin: 0 }}>
-                Sự kiện & Hoạt động
-              </Title>
-              <Text type="secondary">Quản lý các sự kiện và hoạt động sinh viên</Text>
-            </div>
-          </Space>
-        </Col>
-
-        <Col>
-          <Space>
-            {/* Nút Tạo sự kiện */}
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              style={{ borderRadius: 8, fontWeight: 600 }}
-              onClick={() => alert("Chức năng tạo sự kiện")}
-            >
-              Tạo sự kiện
-            </Button>
-          </Space>
-        </Col>
-      </Row>
-
-      {/* Các card thống kê */}
-      <Row gutter={16} style={{ marginBottom: 18 }}>
-        <Col xs={24} sm={12} lg={4}>
-          <Card style={{ borderRadius: 12 }}>
-            <Text type="secondary">Tổng sự kiện</Text>
-            <Title level={3} style={{ margin: 0 }}>{totalEvents}</Title>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={4}>
-          <Card style={{ borderRadius: 12 }}>
-            <Text type="secondary">Sắp diễn ra</Text>
-            <Title level={3} style={{ margin: 0 }}>{upcoming}</Title>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={4}>
-          <Card style={{ borderRadius: 12 }}>
-            <Text type="secondary">Đang diễn ra</Text>
-            <Title level={3} style={{ margin: 0 }}>{ongoing}</Title>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={4}>
-          <Card style={{ borderRadius: 12 }}>
-            <Text type="secondary">Đã kết thúc</Text>
-            <Title level={3} style={{ margin: 0 }}>{finished}</Title>
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={8}>
-          <Card style={{ borderRadius: 12 }}>
-            <Text type="secondary">Tổng người tham gia</Text>
-            <Title level={3} style={{ margin: 0 }}>{totalParticipants}</Title>
-          </Card>
-        </Col>
-      </Row>
-
-      {/* Bảng dữ liệu - Đã chỉnh Search nằm dưới tiêu đề */}
-      <Card style={{ borderRadius: 12 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, flexDirection: "column" }}>
+      <div className="flex justify-between items-center mb-6">
+        <Space align="center">
+          <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} />
           <div>
-            <Title level={5} style={{ margin: 0 }}>Danh sách sự kiện</Title>
-            <Text type="secondary">Quản lý các sự kiện và hoạt động sinh viên</Text>
+            <Title level={3} className="!m-0">Quản lý Hoạt động</Title>
+            <Text type="secondary">Quản lý và phê duyệt các hoạt động sinh viên</Text>
           </div>
+        </Space>
 
-          <div style={{ minWidth: 320, marginTop: 12 }}>
-            <Search
-              placeholder="Tìm kiếm theo Tên SK"
-              allowClear
-              onSearch={(val) => {
-                setSearch(val);
-                setPage(1);
-              }}
-              onChange={(e) => setSearch(e.target.value)}
-              value={search}
-              enterButton={<SearchOutlined />}
-            />
-          </div>
+        <Space size="middle">
+          <Button
+            icon={<SyncOutlined />}
+            onClick={() => queryClient.invalidateQueries({ queryKey: ["activities"] })}
+          >
+            Làm mới
+          </Button>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            size="large"
+            onClick={() => {
+              setEditingEvent(null);
+              form.resetFields();
+              setIsModalOpen(true);
+            }}
+            className="rounded-lg shadow-md"
+          >
+            Tạo hoạt động mới
+          </Button>
+        </Space>
+      </div>
+
+      <Card bordered={false} className="shadow-sm rounded-xl">
+        <div className="mb-4">
+          <Search
+            placeholder="Tìm theo tên hoạt động hoặc khoa..."
+            allowClear
+            size="large"
+            onSearch={setSearch}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-md"
+          />
         </div>
 
         <Table
           columns={columns}
           dataSource={paged}
+          loading={isLoading}
           pagination={false}
-          rowKey="key"
-          bordered={false}
-          style={{ background: "transparent" }}
-          scroll={{ x: 1100 }}
+          rowKey="id"
+          scroll={{ x: 1000 }}
         />
 
-        {/* Phân trang */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16 }}>
-          <Text type="secondary">Hiển thị {filtered.length} kết quả</Text>
+        <div className="flex justify-between items-center mt-4">
+          <Text type="secondary">Tổng {filtered.length} hoạt động</Text>
           <Pagination
             current={page}
             pageSize={pageSize}
             total={filtered.length}
-            showSizeChanger
-            pageSizeOptions={["5", "10", "20", "50"]}
             onChange={(p, ps) => {
               setPage(p);
               setPageSize(ps);
             }}
+            showSizeChanger
           />
         </div>
       </Card>
+
+      {/* Modal Creating/Editing */}
+      <Modal
+        title={editingEvent ? "Chỉnh sửa hoạt động" : "Tạo hoạt động mới"}
+        open={isModalOpen}
+        onCancel={() => setIsModalOpen(false)}
+        footer={null}
+        width={700}
+        destroyOnClose
+      >
+        <Form form={form} layout="vertical" onFinish={onFinish} className="mt-4">
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item label="Tên hoạt động" name="title" rules={[{ required: true }]}>
+                <Input placeholder="Nhập tên hoạt động" />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item label="Mô tả ngắn" name="description" rules={[{ required: true }]}>
+                <Input placeholder="Ví dụ: Hoạt động tình nguyện cấp trường" />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item label="Nội dung chi tiết" name="content" rules={[{ required: true }]}>
+                <Input.TextArea rows={4} placeholder="Mô tả chi tiết về hoạt động" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Khoa/Phòng phụ trách" name="facultyId" rules={[{ required: true }]}>
+                <Select
+                  placeholder="Chọn khoa/phòng"
+                  options={khoas.map((k: any) => ({ label: k.khoaName, value: k.id }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Số lượng tham gia tối đa" name="SoLuongToiDa" rules={[{ required: true }]}>
+                <InputNumber min={1} className="w-full" />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item label="Tags" name="tagIds">
+                <Select
+                  mode="multiple"
+                  placeholder="Chọn hoặc thêm tag mới"
+                  options={allTags.map((t: any) => ({ label: t.tagName, value: t.id }))}
+                  dropdownRender={(menu) => (
+                    <>
+                      {menu}
+                      <Divider style={{ margin: '8px 0' }} />
+                      <Space style={{ padding: '0 8px 4px' }}>
+                        <Input
+                          placeholder="Tên tag mới"
+                          value={newTagName}
+                          onChange={(e) => setNewTagName(e.target.value)}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        />
+                        <Button
+                          type="text"
+                          icon={<PlusOutlined />}
+                          onClick={() => createTagMutation.mutate(newTagName)}
+                          disabled={!newTagName.trim()}
+                        >
+                          Thêm Tag
+                        </Button>
+                      </Space>
+                    </>
+                  )}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={24}>
+              <Form.Item label="Hình ảnh hoạt động" name="image">
+                <Upload.Dragger
+                  listType="picture"
+                  fileList={fileList}
+                  beforeUpload={() => false}
+                  onChange={({ fileList }) => setFileList(fileList)}
+                  maxCount={1}
+                  showUploadList={false}
+                  className="overflow-hidden"
+                  style={{ padding: 0, height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  {fileList.length > 0 ? (
+                    <div className="relative w-full h-full group">
+                      <img
+                        src={fileList[0].url || (fileList[0].originFileObj ? URL.createObjectURL(fileList[0].originFileObj) : '')}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                        style={{ height: '200px' }}
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="bg-white bg-opacity-80 px-4 py-2 rounded-full shadow-lg">
+                          <Text strong>Nhấp để thay đổi ảnh</Text>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-4">
+                      <p className="ant-upload-drag-icon">
+                        <InboxOutlined />
+                      </p>
+                      <p className="ant-upload-text">Nhấp hoặc kéo tệp vào khu vực này để tải lên</p>
+                      <p className="ant-upload-hint">Hỗ trợ tải lên một ảnh duy nhất.</p>
+                    </div>
+                  )}
+                </Upload.Dragger>
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="Thời gian diễn ra" name="eventTime" rules={[{ required: true }]}>
+                <DatePicker showTime className="w-full" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="Bắt đầu đăng ký" name="registrationStartTime" rules={[{ required: true }]}>
+                <DatePicker showTime className="w-full" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="Kết thúc đăng ký" name="registrationEndTime" rules={[{ required: true }]}>
+                <DatePicker showTime className="w-full" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <div className="flex justify-end gap-2 mt-6">
+            <Button onClick={() => setIsModalOpen(false)}>Hủy</Button>
+            <Button type="primary" htmlType="submit" loading={createMutation.isPending || updateMutation.isPending}>
+              {editingEvent ? "Cập nhật" : "Tạo mới"}
+            </Button>
+          </div>
+        </Form>
+      </Modal>
+
+      {/* Modal Registrations List */}
+      <Modal
+        title="Danh sách sinh viên đăng ký"
+        open={isRegModalOpen}
+        onCancel={() => {
+          setIsRegModalOpen(false);
+          queryClient.invalidateQueries({ queryKey: ["activities"] });
+          queryClient.invalidateQueries({ queryKey: ["registrations", selectedEventId] });
+        }}
+        footer={null}
+        width={800}
+      >
+        <div className="mb-4 flex gap-2">
+          <Input
+            placeholder="Nhập MSSV để thêm trực tiếp"
+            value={newStudentId}
+            onChange={(e) => setNewStudentId(e.target.value)}
+            onPressEnter={() => newStudentId.trim() && addStudentMutation.mutate(newStudentId.trim())}
+          />
+          <Button
+            type="primary"
+            onClick={() => newStudentId.trim() && addStudentMutation.mutate(newStudentId.trim())}
+            loading={addStudentMutation.isPending}
+          >
+            Thêm sinh viên
+          </Button>
+        </div>
+        <Table
+          dataSource={registrations}
+          loading={isLoadingRegs}
+          rowKey="email"
+          columns={[
+            { title: "MSSV", dataIndex: ["student", "profile", "studentId"], key: "studentId" },
+            { title: "Họ tên", dataIndex: ["student", "fullName"], key: "fullName" },
+            { title: "Lớp", dataIndex: ["student", "profile", "className"], key: "className" },
+            { title: "Ngày đăng ký", dataIndex: "registeredAt", key: "registeredAt", render: (v) => dayjs(v).format("DD/MM/YYYY HH:mm") },
+          ]}
+        />
+      </Modal>
+
+      {/* Modal Activity Details (For all technicians) */}
+      <Modal
+        title={<Title level={4} className="!m-0">{selectedEvent?.title}</Title>}
+        open={isDetailModalOpen}
+        onCancel={() => setIsDetailModalOpen(false)}
+        footer={[
+          <Button key="close" onClick={() => setIsDetailModalOpen(false)}>Đóng</Button>
+        ]}
+        width={700}
+        destroyOnClose
+      >
+        {selectedEvent && (
+          <div className="py-4">
+            {selectedEvent.image && (
+              <img
+                src={selectedEvent.image}
+                alt={selectedEvent.title}
+                className="w-full h-64 object-cover rounded-lg mb-4 shadow-sm"
+              />
+            )}
+            <Descriptions column={1} bordered size="middle">
+              <Descriptions.Item label="Mô tả ngắn">{selectedEvent.description}</Descriptions.Item>
+              <Descriptions.Item label="Nội dung chi tiết">
+                <div style={{ whiteSpace: 'pre-wrap' }}>{selectedEvent.content}</div>
+              </Descriptions.Item>
+              <Descriptions.Item label="Thời gian diễn ra">
+                <Space>
+                  <CalendarOutlined />
+                  {dayjs(selectedEvent.eventTime).format("DD/MM/YYYY HH:mm")}
+                </Space>
+              </Descriptions.Item>
+              <Descriptions.Item label="Thời gian đăng ký">
+                <Space direction="vertical" size={0}>
+                  <Text style={{ fontSize: '12px' }}>Bắt đầu: {dayjs(selectedEvent.registrationStartTime).format("DD/MM/YYYY HH:mm")}</Text>
+                  <Text style={{ fontSize: '12px' }}>Kết thúc: {dayjs(selectedEvent.registrationEndTime).format("DD/MM/YYYY HH:mm")}</Text>
+                </Space>
+              </Descriptions.Item>
+              <Descriptions.Item label="Khoa/Phòng phụ trách">{selectedEvent.department?.khoaName || selectedEvent.faculty}</Descriptions.Item>
+              <Descriptions.Item label="Số lượng">
+                {regCountsMap[selectedEvent.id] === undefined ? <Spin size="small" /> : `${regCountsMap[selectedEvent.id]} / ${selectedEvent.maxParticipants || selectedEvent.SoLuongToiDa}`}
+              </Descriptions.Item>
+              <Descriptions.Item label="Người tạo">{selectedEvent.creator?.email || selectedEvent.createdBy}</Descriptions.Item>
+              {selectedEvent.activityTags && selectedEvent.activityTags.length > 0 && (
+                <Descriptions.Item label="Tags">
+                  {selectedEvent.activityTags.map((tag: any) => (
+                    <Tag key={tag.id} className="mb-1">#{tag.tagName}</Tag>
+                  ))}
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
