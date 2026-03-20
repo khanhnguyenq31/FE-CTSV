@@ -1,14 +1,72 @@
-import { Typography, Calendar, Card, Badge, List, Button, Modal, Descriptions, Tag, Space, message, Table } from 'antd';
+import { Typography, Calendar, Card, Badge, List, Button, Modal, Descriptions, Tag, Space, Table, Input } from 'antd';
 import dayjs, { Dayjs } from 'dayjs';
 import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query';
-import { getActivitiesApi, registerActivityApi, getRegistrationsApi } from '../../api/activity';
+import { getActivitiesApi, registerActivityApi, getRegistrationsApi, scanAttendanceQRApi } from '../../api/activity';
 import { useAuthStore } from '../../store/auth';
-import { useMemo, useState } from 'react';
-import { SyncOutlined } from '@ant-design/icons';
+import { useMemo, useState, useEffect } from 'react';
+import { SyncOutlined, QrcodeOutlined, CameraOutlined } from '@ant-design/icons';
+import { Html5Qrcode } from "html5-qrcode";
 
 const { Title, Paragraph, Text } = Typography;
 
-export default function StudentEvent() {
+// Reusable QR Scanner component with delay to avoid black screen in modals
+interface ScannerProps {
+    onScan: (text: string) => void;
+    onError?: (err: any) => void;
+}
+
+const QRScanner: React.FC<ScannerProps> = ({ onScan, onError }) => {
+    useEffect(() => {
+        const html5QrCode = new Html5Qrcode("reader");
+        let isMounted = true;
+
+        const startScanner = async () => {
+            try {
+                // Wait for modal animation to settle
+                await new Promise(resolve => setTimeout(resolve, 800));
+
+                if (!isMounted) return;
+
+                const config = {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 },
+                    aspectRatio: 1.0
+                };
+
+                await html5QrCode.start(
+                    { facingMode: "environment" }, // Use back camera for students
+                    config,
+                    (decodedText: string) => {
+                        if (isMounted) {
+                            onScan(decodedText);
+                        }
+                    },
+                    undefined
+                );
+            } catch (err: any) {
+                console.error("Camera error:", err);
+                if (isMounted && onError) onError(err);
+            }
+        };
+
+        startScanner();
+
+        return () => {
+            isMounted = false;
+            if (html5QrCode.isScanning) {
+                html5QrCode.stop().catch(error => console.error("Failed to stop scanner", error));
+            }
+        };
+    }, [onScan, onError]);
+
+    return (
+        <div style={{ position: 'relative', width: '100%', minHeight: '300px', background: '#000', borderRadius: '12px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div id="reader" style={{ width: "100%" }}></div>
+        </div>
+    );
+};
+
+export default function StudentEvent({ messageApi }: { messageApi: any }) {
     const queryClient = useQueryClient();
     const { userEmail } = useAuthStore();
 
@@ -16,6 +74,9 @@ export default function StudentEvent() {
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [isRegModalOpen, setIsRegModalOpen] = useState(false);
     const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+
+    // Attendance state
+    const [attendanceCode, setAttendanceCode] = useState("");
 
     // Fetch activities
     const { data: allActivities = [], isLoading } = useQuery({
@@ -69,42 +130,41 @@ export default function StudentEvent() {
     const regDataMap = useMemo(() => {
         const counts: Record<string, number | undefined> = {};
         const isRegistered: Record<string, boolean> = {};
+        const userRegistration: Record<string, any> = {};
         const isLoading: Record<string, boolean> = {};
 
         activities.forEach((activity: any) => {
             const query = queryResultsMap[activity.id];
 
-            // It's loading if query exists and is in 'pending' status
             isLoading[activity.id] = query ? query.status === 'pending' : false;
 
             if (query?.data) {
                 const regs = Array.isArray(query.data) ? query.data : [];
                 counts[activity.id] = regs.length;
 
-                // Try every possible field that could contain the user's email or ID
-                isRegistered[activity.id] = regs.some((r: any) => {
+                const myReg = regs.find((r: any) => {
                     const sEmail = (r.student?.email || r.student?.user?.email || r.student?.profile?.email || r.email || r.userEmail || "").toString().toLowerCase().trim();
                     const sId = (r.student?.profile?.studentId || r.student?.studentId || r.studentId || "").toString().trim();
                     const current = (userEmail || "").toString().toLowerCase().trim();
 
-                    const match = (sEmail && sEmail === current) ||
+                    return (sEmail && sEmail === current) ||
                         (current && sId && sId === current) ||
                         (current.includes(sId) && sId.length > 5);
-
-                    if (match) console.log(`[REG_MATCH] Activity: ${activity.id}, User: ${current} matched!`);
-                    return match;
                 });
+
+                isRegistered[activity.id] = !!myReg;
+                userRegistration[activity.id] = myReg;
             } else {
                 counts[activity.id] = undefined;
                 isRegistered[activity.id] = false;
+                userRegistration[activity.id] = null;
 
-                // If it's not pending anymore but has no data, it's not loading
                 if (query && (query.status === 'error' || query.fetchStatus === 'idle')) {
                     isLoading[activity.id] = false;
                 }
             }
         });
-        return { counts, isRegistered, isLoading };
+        return { counts, isRegistered, isLoading, userRegistration };
     }, [activities, queryResultsMap, userEmail]);
 
     const registerMutation = useMutation({
@@ -112,13 +172,48 @@ export default function StudentEvent() {
         onSuccess: (_, activityId) => {
             queryClient.invalidateQueries({ queryKey: ["activities"] });
             queryClient.invalidateQueries({ queryKey: ["registrations", activityId] });
-            message.success("Đăng ký tham gia thành công!");
+            messageApi.success("Đăng ký tham gia thành công!");
             setIsDetailModalOpen(false);
         },
         onError: (err: any) => {
-            message.error(err.response?.data?.message || "Đăng ký thất bại");
+            messageApi.error(err.response?.data?.message || "Đăng ký thất bại");
         }
     });
+
+    const attendanceMutation = useMutation({
+        mutationFn: ({ code, lat, lon }: { code: string, lat?: number, lon?: number }) => scanAttendanceQRApi(selectedEventId!, code, lat, lon),
+        onSuccess: (data: any) => {
+            messageApi.success(data.message);
+            setAttendanceCode("");
+            queryClient.invalidateQueries({ queryKey: ["registrations", selectedEventId] });
+        },
+        onError: (err: any) => {
+            messageApi.error(err.response?.data?.message || err.message || "Điểm danh thất bại");
+        }
+    });
+
+    const handleAttendance = (code: string) => {
+        if (!code.trim()) return;
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    attendanceMutation.mutate({
+                        code: code.trim(),
+                        lat: position.coords.latitude,
+                        lon: position.coords.longitude
+                    });
+                },
+                (_error) => {
+                    // Let the backend decide if it's strictly required
+                    attendanceMutation.mutate({ code: code.trim() });
+                },
+                { timeout: 5000, maximumAge: 10000 }
+            );
+        } else {
+            attendanceMutation.mutate({ code: code.trim() });
+        }
+    };
+
 
     const dateCellRender = (value: Dayjs) => {
         const listData = activities.filter((item: any) => dayjs(item.eventTime).isSame(value, 'day'));
@@ -139,8 +234,11 @@ export default function StudentEvent() {
 
     const handleShowDetail = (event: any) => {
         setSelectedEvent(event);
+        setSelectedEventId(event.id);
         setIsDetailModalOpen(true);
     };
+
+    const [showScanner, setShowScanner] = useState(false);
 
     return (
         <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
@@ -222,6 +320,10 @@ export default function StudentEvent() {
                         <Button key="registered" type="primary" disabled>
                             Đã đăng ký
                         </Button>
+                    ) : selectedEvent?.isRegistrationLocked ? (
+                        <Button key="locked" type="primary" disabled danger>
+                            Đã khóa đăng ký
+                        </Button>
                     ) : (
                         <Button
                             key="register"
@@ -273,6 +375,67 @@ export default function StudentEvent() {
                                     </Button>
                                 </Space>
                             </Descriptions.Item>
+
+                            {regDataMap.isRegistered[selectedEvent.id] && (
+                                <Descriptions.Item label="Điểm danh">
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex gap-4 mb-2">
+                                            <div className="flex flex-col items-center p-2 bg-gray-50 rounded-lg min-w-[80px]">
+                                                <Text type="secondary" style={{ fontSize: '11px' }}>VÀO</Text>
+                                                <Text strong>{regDataMap.userRegistration[selectedEvent.id]?.checkInTime ? dayjs(regDataMap.userRegistration[selectedEvent.id].checkInTime).format("HH:mm") : "--:--"}</Text>
+                                            </div>
+                                            <div className="flex flex-col items-center p-2 bg-gray-50 rounded-lg min-w-[80px]">
+                                                <Text type="secondary" style={{ fontSize: '11px' }}>RA</Text>
+                                                <Text strong>{regDataMap.userRegistration[selectedEvent.id]?.checkOutTime ? dayjs(regDataMap.userRegistration[selectedEvent.id].checkOutTime).format("HH:mm") : "--:--"}</Text>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Input
+                                                placeholder="Nhập mã điểm danh"
+                                                value={attendanceCode}
+                                                onChange={(e) => setAttendanceCode(e.target.value)}
+                                                onPressEnter={() => handleAttendance(attendanceCode)}
+                                            />
+                                            <Button
+                                                icon={<CameraOutlined />}
+                                                onClick={() => setShowScanner(!showScanner)}
+                                                type={showScanner ? "primary" : "default"}
+                                                danger={showScanner}
+                                            >
+                                                {showScanner ? "Đóng Camera" : "Quét QR"}
+                                            </Button>
+                                            <Button
+                                                type="primary"
+                                                icon={<QrcodeOutlined />}
+                                                onClick={() => handleAttendance(attendanceCode)}
+                                                loading={attendanceMutation.isPending}
+                                            >
+                                                Xác nhận
+                                            </Button>
+                                        </div>
+
+                                        {showScanner && (
+                                            <div className="mt-4 shadow-lg border-2 border-dashed border-gray-200 rounded-2xl overflow-hidden">
+                                                <QRScanner
+                                                    onScan={(text) => {
+                                                        handleAttendance(text);
+                                                        setShowScanner(false);
+                                                    }}
+                                                    onError={(err) => {
+                                                        const errMsg = err?.message || err || "Không xác định";
+                                                        messageApi.error(`Lỗi Camera: ${errMsg}. Vui lòng kiểm tra quyền truy cập.`);
+                                                        setShowScanner(false);
+                                                    }}
+                                                />
+                                            </div>
+                                        )}
+
+                                        <Text type="secondary" style={{ fontSize: '12px' }}>
+                                            Quét mã QR hoặc nhập mã nhận được từ chuyên viên để điểm danh vào/ra.
+                                        </Text>
+                                    </div>
+                                </Descriptions.Item>
+                            )}
                         </Descriptions>
                         <div className="mt-4">
                             {selectedEvent.activityTags && selectedEvent.activityTags.length > 0 ? (
@@ -328,6 +491,14 @@ export default function StudentEvent() {
                             dataIndex: "registeredAt",
                             key: "registeredAt",
                             render: (v) => v ? dayjs(v).format("DD/MM/YYYY HH:mm") : "N/A"
+                        },
+                        {
+                            title: "Trạng thái",
+                            key: "status",
+                            render: (record) => {
+                                if (record.status === "attended") return <Badge status="success" text="Đã tham gia" />;
+                                return <Badge status="default" text="Đã đăng ký" />;
+                            }
                         },
                     ]}
                     locale={{ emptyText: "Chưa có sinh viên nào đăng ký" }}

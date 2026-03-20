@@ -73,3 +73,33 @@ export async function addStudentToActivityApi(id: string, studentId: string) {
     const response = await api.post(`/activities/${id}/add-student`, { studentId });
     return response.data;
 }
+
+export async function removeStudentFromActivityApi(id: string, studentEmail: string) {
+    const response = await api.post(`/activities/${id}/remove-student`, { studentEmail });
+    return response.data;
+}
+
+export async function generateAttendanceCodeApi(id: string, type: 'in' | 'out') {
+    const response = await api.post(`/activities/${id}/attendance/generate`, { type });
+    return response.data;
+}
+
+export async function scanAttendanceQRApi(id: string, code: string, latitude?: number, longitude?: number) {
+    const response = await api.post(`/activities/${id}/attendance/scan`, { code, latitude, longitude });
+    return response.data;
+}
+
+export async function manualAttendanceApi(id: string, data: { studentId: string; type: 'in' | 'out' }) {
+    const response = await api.post(`/activities/${id}/attendance/manual`, data);
+    return response.data;
+}
+
+export async function toggleRegistrationLockApi(id: string) {
+    const response = await api.post(`/activities/${id}/toggle-lock`);
+    return response.data;
+}
+
+export async function resetAttendanceApi(activityId: string, regId: number) {
+    const response = await api.post(`/activities/${activityId}/registrations/${regId}/reset-attendance`);
+    return response.data;
+}

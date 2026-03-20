@@ -254,7 +254,7 @@ function App() {
               <Route path="profile" element={<StudentProfile />} />
               <Route path="course" element={<StudentCourse />} />
               <Route path="scholarship" element={<StudentScholarship />} />
-              <Route path="event" element={<StudentEvent />} />
+              <Route path="event" element={<StudentEvent messageApi={messageApi} />} />
               <Route path="enrollment-records" element={<EnrollmentRecords />} />
             </Route>
           </Route>

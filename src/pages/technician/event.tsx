@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { ColumnsType } from "antd/es/table";
+import MapPicker from "../../components/MapPicker";
 import {
   Row,
   Col,
@@ -22,6 +23,8 @@ import {
   Spin,
   Divider,
   Select,
+  QRCode,
+  Badge,
 } from "antd";
 import type { UploadFile } from "antd";
 import {
@@ -34,6 +37,11 @@ import {
   TeamOutlined,
   SyncOutlined,
   CalendarOutlined,
+  QrcodeOutlined,
+  AuditOutlined,
+  LockOutlined,
+  UnlockOutlined,
+  RollbackOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient, useQueries } from "@tanstack/react-query";
@@ -46,7 +54,12 @@ import {
   activateActivityApi,
   approveActivityApi,
   getRegistrationsApi,
-  addStudentToActivityApi
+  addStudentToActivityApi,
+  removeStudentFromActivityApi,
+  generateAttendanceCodeApi,
+  manualAttendanceApi,
+  toggleRegistrationLockApi,
+  resetAttendanceApi
 } from "../../api/activity";
 import { getKhoasApi, getTagsApi, createTagApi } from "../../api/dm";
 import { useAuthStore } from "../../store/auth";
@@ -54,6 +67,17 @@ import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
+
+const formatDMS = (decimal: number | null | undefined, isLat: boolean) => {
+  if (decimal === undefined || decimal === null || isNaN(decimal)) return "Chưa thiết lập";
+  const dir = decimal >= 0 ? (isLat ? "N" : "E") : (isLat ? "S" : "W");
+  const abs = Math.abs(decimal);
+  const deg = Math.floor(abs);
+  const minFloat = (abs - deg) * 60;
+  const min = Math.floor(minFloat);
+  const sec = ((minFloat - min) * 60).toFixed(1);
+  return `${deg}°${min}'${sec}"${dir}`;
+};
 
 export default function EventPage({ messageApi }: { messageApi: any }) {
   const navigate = useNavigate();
@@ -77,11 +101,20 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
   const [editingEvent, setEditingEvent] = useState<any>(null);
   const [form] = Form.useForm();
 
+  const watchedLat = Form.useWatch('latitude', form);
+  const watchedLng = Form.useWatch('longitude', form);
+  const watchedRadius = Form.useWatch('radius', form);
+
   const [isRegModalOpen, setIsRegModalOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+
+  // Attendance state
+  const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
+  const [attendanceType, setAttendanceType] = useState<'in' | 'out'>('in');
+  const [attendanceCode, setAttendanceCode] = useState<string | null>(null);
 
   // Fetch activities
   const { data: activities = [] as any[], isLoading } = useQuery({
@@ -156,6 +189,25 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
     onError: (err: any) => messageApi.error(err.response?.data?.message || err.message || "Thêm thất bại"),
   });
 
+  const removeStudentMutation = useMutation({
+    mutationFn: (email: string) => removeStudentFromActivityApi(selectedEventId!, email),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["registrations", selectedEventId] });
+      queryClient.invalidateQueries({ queryKey: ["activities"] });
+      messageApi.success("Xóa sinh viên khỏi danh sách thành công");
+    },
+    onError: (err: any) => messageApi.error(err.response?.data?.message || err.message || "Xóa thất bại"),
+  });
+
+  const resetAttendanceMutation = useMutation({
+    mutationFn: (regId: number) => resetAttendanceApi(selectedEventId!, regId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["registrations", selectedEventId] });
+      messageApi.success("Xóa điểm danh thành công");
+    },
+    onError: (err: any) => messageApi.error(err.response?.data?.message || err.message || "Xóa điểm danh thất bại"),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: deleteActivityApi,
     onSuccess: () => {
@@ -183,6 +235,34 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
     onError: (err: any) => messageApi.error(err.message || "Duyệt thất bại"),
   });
 
+  const toggleLockMutation = useMutation({
+    mutationFn: toggleRegistrationLockApi,
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["activities"] });
+      messageApi.success(data.message);
+    },
+    onError: (err: any) => messageApi.error(err.response?.data?.message || err.message || "Thao tác thất bại"),
+  });
+
+  const generateCodeMutation = useMutation({
+    mutationFn: (type: 'in' | 'out') => generateAttendanceCodeApi(selectedEventId!, type),
+    onSuccess: (data: any) => {
+      setAttendanceCode(data.code);
+      messageApi.success(data.message);
+    },
+    onError: (err: any) => messageApi.error(err.response?.data?.message || err.message || "Tạo mã thất bại"),
+  });
+
+  const manualAttendanceMutation = useMutation({
+    mutationFn: (studentId: string) => manualAttendanceApi(selectedEventId!, { studentId, type: attendanceType }),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["registrations", selectedEventId] });
+      messageApi.success(data.message);
+      setNewStudentId("");
+    },
+    onError: (err: any) => messageApi.error(err.response?.data?.message || err.message || "Điểm danh thất bại"),
+  });
+
   const [fileList, setFileList] = useState<UploadFile[]>([]);
 
   const onFinish = (values: any) => {
@@ -207,6 +287,9 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
     if (values.eventTime) formData.append("eventTime", values.eventTime.toISOString());
     if (values.registrationStartTime) formData.append("registrationStartTime", values.registrationStartTime.toISOString());
     if (values.registrationEndTime) formData.append("registrationEndTime", values.registrationEndTime.toISOString());
+    if (values.latitude !== undefined && values.latitude !== null) formData.append("latitude", values.latitude.toString());
+    if (values.longitude !== undefined && values.longitude !== null) formData.append("longitude", values.longitude.toString());
+    if (values.radius !== undefined && values.radius !== null) formData.append("radius", values.radius.toString());
 
     if (fileList.length > 0 && fileList[0].originFileObj) {
       formData.append("image", fileList[0].originFileObj);
@@ -230,6 +313,9 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
       tagIds: record.activityTags?.map((t: any) => t.id) || [],
       facultyId: record.facultyId,
       SoLuongToiDa: record.maxParticipants || record.SoLuongToiDa,
+      latitude: record.latitude,
+      longitude: record.longitude,
+      radius: record.radius,
     });
     setFileList(record.image ? [{ uid: '-1', name: 'image.png', status: 'done', url: record.image }] : []);
     setIsModalOpen(true);
@@ -385,6 +471,28 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
             >
               <Button type="text" danger icon={<DeleteOutlined />} disabled={!canManage(record)} />
             </Popconfirm>
+          </Tooltip>
+
+          <Tooltip title={canManage(record) ? "Điểm danh" : "Bạn không có quyền quản lý điểm danh"}>
+            <Button
+              type="text"
+              icon={<AuditOutlined className={canManage(record) ? "text-orange-500" : "text-gray-400"} />}
+              onClick={() => {
+                setSelectedEventId(record.id);
+                setIsAttendanceModalOpen(true);
+              }}
+              disabled={!canManage(record)}
+            />
+          </Tooltip>
+
+          <Tooltip title={canManage(record) ? (record.isRegistrationLocked ? "Mở khóa đăng ký" : "Khóa đăng ký") : "Bạn không có quyền"}>
+            <Button
+              type="text"
+              icon={record.isRegistrationLocked ? <LockOutlined className="text-red-500" /> : <UnlockOutlined className="text-green-500" />}
+              onClick={() => toggleLockMutation.mutate(record.id)}
+              disabled={!canManage(record)}
+              loading={toggleLockMutation.isPending && selectedEventId === record.id}
+            />
           </Tooltip>
         </Space>
       ),
@@ -585,6 +693,74 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
                 <DatePicker showTime className="w-full" />
               </Form.Item>
             </Col>
+            <Col span={24}>
+              <div className="flex items-center justify-between mb-2 mt-4">
+                <Text strong style={{ fontSize: '15px' }}>📍 Khoanh vùng điểm danh (Tùy chọn)</Text>
+                <Button
+                  size="small"
+                  type="primary"
+                  ghost
+                  onClick={() => {
+                    if (navigator.geolocation) {
+                      navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                          form.setFieldsValue({
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude,
+                            radius: form.getFieldValue("radius") || 100
+                          });
+                          messageApi.success("Đã lấy được tọa độ hiện tại");
+                        },
+                        (_error) => {
+                          messageApi.error("Không thể lấy vị trí. Vui lòng kiểm tra quyền truy cập.");
+                        }
+                      );
+                    } else {
+                      messageApi.error("Trình duyệt không hỗ trợ Geolocation.");
+                    }
+                  }}
+                >
+                  📍 Lấy tọa độ hiện tại
+                </Button>
+              </div>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Tọa độ khu vực (Vĩ độ / Kinh độ)" className="mb-0">
+                <Input
+                  readOnly
+                  value={`${formatDMS(watchedLat, true)}  —  ${formatDMS(watchedLng, false)}`}
+                  className="w-full bg-gray-50 text-center font-medium"
+                />
+              </Form.Item>
+              {/* Hidden inputs to store real form values */}
+              <Form.Item name="latitude" hidden><InputNumber /></Form.Item>
+              <Form.Item name="longitude" hidden><InputNumber /></Form.Item>
+            </Col>
+
+            <Col span={12}>
+              <Form.Item label="Bán kính / Khoảng cách sai số (mét)" name="radius" className="mb-0">
+                <InputNumber className="w-full" min={10} placeholder="100" />
+              </Form.Item>
+            </Col>
+
+            <Col span={24}>
+              <Form.Item className="mb-0">
+                <MapPicker
+                  latitude={watchedLat}
+                  longitude={watchedLng}
+                  radius={watchedRadius || 100}
+                  onChange={(lat, lng) => {
+                    form.setFieldsValue({
+                      latitude: parseFloat(lat.toFixed(6)),
+                      longitude: parseFloat(lng.toFixed(6)),
+                    });
+                  }}
+                />
+                <Text type="secondary" className="block mt-2 text-center" style={{ fontSize: '13px' }}>
+                  (Nhấp lên bản đồ để chọn tọa độ sự kiện. Vòng tròn hiển thị phạm vi bán kính cho phép điểm danh)
+                </Text>
+              </Form.Item>
+            </Col>
           </Row>
           <div className="flex justify-end gap-2 mt-6">
             <Button onClick={() => setIsModalOpen(false)}>Hủy</Button>
@@ -609,7 +785,7 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
       >
         <div className="mb-4 flex gap-2">
           <Input
-            placeholder="Nhập MSSV để thêm trực tiếp"
+            placeholder="MSSV"
             value={newStudentId}
             onChange={(e) => setNewStudentId(e.target.value)}
             onPressEnter={() => newStudentId.trim() && addStudentMutation.mutate(newStudentId.trim())}
@@ -625,12 +801,55 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
         <Table
           dataSource={registrations}
           loading={isLoadingRegs}
-          rowKey="email"
+          rowKey="id"
           columns={[
             { title: "MSSV", dataIndex: ["student", "profile", "studentId"], key: "studentId" },
             { title: "Họ tên", dataIndex: ["student", "fullName"], key: "fullName" },
-            { title: "Lớp", dataIndex: ["student", "profile", "className"], key: "className" },
-            { title: "Ngày đăng ký", dataIndex: "registeredAt", key: "registeredAt", render: (v) => dayjs(v).format("DD/MM/YYYY HH:mm") },
+            { title: "Vào", dataIndex: "checkInTime", key: "checkInTime", render: (v) => v ? dayjs(v).format("HH:mm DD/MM") : "-" },
+            { title: "Ra", dataIndex: "checkOutTime", key: "checkOutTime", render: (v) => v ? dayjs(v).format("HH:mm DD/MM") : "-" },
+            {
+              title: "Trạng thái",
+              dataIndex: "status",
+              key: "status",
+              render: (status) => {
+                let color = "geekblue";
+                let text = "Đã đăng ký";
+                if (status === "attended") { color = "green"; text = "Đã tham gia"; }
+                else if (status === "cancelled") { color = "red"; text = "Đã hủy"; }
+                return <Badge status={color as any} text={text} />;
+              }
+            },
+            {
+              title: "Hành động",
+              key: "action",
+              render: (_: any, record: any) => (
+                <Space>
+                  <Tooltip title="Xóa dữ liệu điểm danh">
+                    <Popconfirm
+                      title="Xóa điểm danh cho sinh viên này?"
+                      onConfirm={() => resetAttendanceMutation.mutate(record.id)}
+                      disabled={!record.checkInTime}
+                    >
+                      <Button
+                        type="text"
+                        icon={<RollbackOutlined />}
+                        disabled={!record.checkInTime}
+                        loading={resetAttendanceMutation.isPending}
+                      />
+                    </Popconfirm>
+                  </Tooltip>
+                  <Popconfirm
+                    title="Xóa sinh viên này khỏi hoạt động?"
+                    onConfirm={() => removeStudentMutation.mutate(record.studentEmail || record.email)}
+                    okText="Xóa"
+                    cancelText="Hủy"
+                    okButtonProps={{ danger: true }}
+                  >
+                    <Button type="text" danger icon={<DeleteOutlined />} loading={removeStudentMutation.isPending} />
+                  </Popconfirm>
+                </Space>
+              )
+            }
           ]}
         />
       </Modal>
@@ -688,6 +907,71 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
           </div>
         )}
       </Modal>
-    </div>
+
+      {/* Modal Attendance Management */}
+      <Modal
+        title={<Title level={4} className="!m-0"><QrcodeOutlined /> Quản lý điểm danh</Title>}
+        open={isAttendanceModalOpen}
+        onCancel={() => {
+          setIsAttendanceModalOpen(false);
+          setAttendanceCode(null);
+        }}
+        footer={null}
+        width={500}
+        centered
+      >
+        <div className="flex flex-col items-center gap-6 py-6">
+          <Select
+            value={attendanceType}
+            onChange={(v) => {
+              setAttendanceType(v);
+              setAttendanceCode(null);
+            }}
+            className="w-full max-w-xs"
+            options={[
+              { label: 'Điểm danh VÀO', value: 'in' },
+              { label: 'Điểm danh RA', value: 'out' },
+            ]}
+          />
+
+          <Button
+            type="primary"
+            size="large"
+            icon={<SyncOutlined />}
+            onClick={() => generateCodeMutation.mutate(attendanceType)}
+            loading={generateCodeMutation.isPending}
+          >
+            Tạo mã QR mới
+          </Button>
+
+          {attendanceCode && (
+            <div className="flex flex-col items-center p-6 bg-white border-2 border-dashed border-blue-200 rounded-2xl shadow-sm">
+              <QRCode value={attendanceCode} size={250} bordered={false} />
+              <div className="mt-4 text-center">
+                <Text strong className="text-lg block">{attendanceCode}</Text>
+                <Text type="secondary">Sinh viên quét mã này để điểm danh {attendanceType === 'in' ? 'vào' : 'ra'}</Text>
+              </div>
+            </div>
+          )}
+
+          <Divider>Hoặc điểm danh thủ công</Divider>
+
+          <div className="w-full flex gap-2">
+            <Input
+              placeholder="Nhập MSSV"
+              value={newStudentId}
+              onChange={(e) => setNewStudentId(e.target.value)}
+              onPressEnter={() => newStudentId.trim() && manualAttendanceMutation.mutate(newStudentId.trim())}
+            />
+            <Button
+              onClick={() => newStudentId.trim() && manualAttendanceMutation.mutate(newStudentId.trim())}
+              loading={manualAttendanceMutation.isPending}
+            >
+              Điểm danh
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </div >
   );
 }
