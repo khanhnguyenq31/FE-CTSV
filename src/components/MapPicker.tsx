@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Circle, useMap, useMapEvents } from 'react-leaflet';
+import { GeoSearchControl, OpenStreetMapProvider } from 'leaflet-geosearch';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet-geosearch/dist/geosearch.css';
 
 // Fix Leaflet's default marker icon issue with Vite/Webpack
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -24,6 +26,44 @@ const MapEvents = ({ onChange }: { onChange: (lat: number, lng: number) => void 
             onChange(e.latlng.lat, e.latlng.lng);
         },
     });
+    return null;
+};
+
+// Search field using leaflet-geosearch
+const SearchField = ({ onChange }: { onChange: (lat: number, lng: number) => void }) => {
+    const map = useMap();
+
+    useEffect(() => {
+        const provider = new OpenStreetMapProvider();
+
+        const searchControl = new (GeoSearchControl as any)({
+            provider: provider,
+            style: 'bar',
+            showMarker: false,
+            showPopup: false,
+            autoClose: true,
+            retainZoomLevel: false,
+            animateZoom: true,
+            keepResult: false,
+            searchLabel: 'Nhập địa chỉ, tên đường (vd: Phố đi bộ)',
+        });
+
+        map.addControl(searchControl);
+
+        const handleLocation = (e: any) => {
+            if (e.location && e.location.y !== undefined && e.location.x !== undefined) {
+                onChange(e.location.y, e.location.x);
+            }
+        };
+
+        map.on('geosearch/showlocation', handleLocation);
+
+        return () => {
+            map.removeControl(searchControl);
+            map.off('geosearch/showlocation', handleLocation);
+        };
+    }, [map, onChange]);
+
     return null;
 };
 
@@ -85,6 +125,7 @@ const MapPicker: React.FC<MapPickerProps> = ({ latitude, longitude, radius = 50,
                     </>
                 )}
                 <MapEvents onChange={onChange} />
+                <SearchField onChange={onChange} />
                 <MapInvalidator />
             </MapContainer>
         </div>

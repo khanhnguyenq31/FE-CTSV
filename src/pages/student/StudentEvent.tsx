@@ -6,6 +6,7 @@ import { useAuthStore } from '../../store/auth';
 import { useMemo, useState, useEffect } from 'react';
 import { SyncOutlined, QrcodeOutlined, CameraOutlined } from '@ant-design/icons';
 import { Html5Qrcode } from "html5-qrcode";
+import "react-quill-new/dist/quill.snow.css";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -349,7 +350,15 @@ export default function StudentEvent({ messageApi }: { messageApi: any }) {
                         )}
                         <Descriptions column={1} bordered size="small">
                             <Descriptions.Item label="Mô tả">{selectedEvent.description}</Descriptions.Item>
-                            <Descriptions.Item label="Nội dung">{selectedEvent.content}</Descriptions.Item>
+                            <Descriptions.Item label="Nội dung">
+                                <div className="ql-snow">
+                                    <div
+                                        className="ql-editor"
+                                        dangerouslySetInnerHTML={{ __html: selectedEvent.content }}
+                                        style={{ padding: 0, border: 'none', wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                                    />
+                                </div>
+                            </Descriptions.Item>
                             <Descriptions.Item label="Thời gian diễn ra">
                                 {dayjs(selectedEvent.eventTime).format("DD/MM/YYYY HH:mm")}
                             </Descriptions.Item>

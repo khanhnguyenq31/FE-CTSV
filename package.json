@@ -19,10 +19,13 @@
     "html5-qrcode": "^2.3.8",
     "jspdf": "^4.0.0",
     "leaflet": "^1.9.4",
+    "leaflet-geosearch": "^4.4.0",
     "qrcode.react": "^4.2.0",
+    "quill": "^2.0.3",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-leaflet": "^5.0.0",
+    "react-quill-new": "^3.8.3",
     "react-router-dom": "^7.9.4",
     "recharts": "^3.7.0",
     "zustand": "^5.0.8"

@@ -1,1 +1,32 @@
 @import "tailwindcss";
+
+/* Fix Quill JS styling inside Ant Design */
+.ql-editor {
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+}
+
+/* Restore list styles that Ant Design resets */
+.ql-editor ul {
+    list-style-type: disc !important;
+    padding-left: 1.5em !important;
+    margin-bottom: 0.5em !important;
+}
+
+.ql-editor ol {
+    list-style-type: decimal !important;
+    padding-left: 1.5em !important;
+    margin-bottom: 0.5em !important;
+}
+
+.ql-editor li {
+    list-style-position: outside !important;
+    margin-bottom: 0.25em;
+}
+
+/* Fix image styles being squished by tables */
+.ql-editor img {
+    max-width: 100% !important;
+    height: auto !important;
+}

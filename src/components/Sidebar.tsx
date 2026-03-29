@@ -1,4 +1,4 @@
-import  { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Layout, Menu, Button } from "antd";
 import {
   HomeOutlined,
@@ -27,10 +27,10 @@ interface SidebarProps {
 
 export default function Sidebar({ messageApi, isMobile = false, onClose }: SidebarProps) {
   const navigate = useNavigate();
-  const location = useLocation(); 
+  const location = useLocation();
   const logout = useAuthStore((s) => s.logout);
 
-  
+
   const pathToKey: Record<string, string> = {
     "/technician/home": "1",
     "/technician/manage": "2",
@@ -41,9 +41,10 @@ export default function Sidebar({ messageApi, isMobile = false, onClose }: Sideb
     "/technician/score": "7",
     "/technician/event": "8",
     "/technician/scholarship": "9",
+    "/technician/discipline": "10",
   };
 
-  
+
   const [selectedKey, setSelectedKey] = useState(pathToKey[location.pathname] || "1");
 
   useEffect(() => {
@@ -67,7 +68,7 @@ export default function Sidebar({ messageApi, isMobile = false, onClose }: Sideb
   const handleMenuClick = (path: string) => {
     navigate(path);
     if (isMobile && onClose) {
-        onClose();
+      onClose();
     }
   };
 
@@ -93,37 +94,40 @@ export default function Sidebar({ messageApi, isMobile = false, onClose }: Sideb
 
       <div style={{ flex: 1, overflowY: 'auto' }}>
         <Menu
-            theme="dark"
-            mode="inline"
-            selectedKeys={[selectedKey]} 
+          theme="dark"
+          mode="inline"
+          selectedKeys={[selectedKey]}
         >
-            <Menu.Item key="1" icon={<HomeOutlined />} onClick={() => handleMenuClick("/technician/home")}>
+          <Menu.Item key="1" icon={<HomeOutlined />} onClick={() => handleMenuClick("/technician/home")}>
             Tổng quan
-            </Menu.Item>
-            <Menu.Item key="2" icon={<UserOutlined />} onClick={() => handleMenuClick("/technician/manage")}>
+          </Menu.Item>
+          <Menu.Item key="2" icon={<UserOutlined />} onClick={() => handleMenuClick("/technician/manage")}>
             Quản lý nhập học
-            </Menu.Item>
-            <Menu.Item key="3" icon={<FileTextOutlined />} onClick={() => handleMenuClick("/technician/profile")}>
+          </Menu.Item>
+          <Menu.Item key="3" icon={<FileTextOutlined />} onClick={() => handleMenuClick("/technician/profile")}>
             Danh sách sinh viên
-            </Menu.Item>
-            <Menu.Item key="4" icon={<SolutionOutlined />} onClick={() => handleMenuClick("/technician/decision")}>
+          </Menu.Item>
+          <Menu.Item key="4" icon={<SolutionOutlined />} onClick={() => handleMenuClick("/technician/decision")}>
             Quyết định học vụ
-            </Menu.Item>
-            <Menu.Item key="5" icon={<TrophyOutlined />} onClick={() => handleMenuClick("/technician/praise")}>
+          </Menu.Item>
+          <Menu.Item key="5" icon={<TrophyOutlined />} onClick={() => handleMenuClick("/technician/praise")}>
             Khen thưởng & Kỷ luật
-            </Menu.Item>
-            <Menu.Item key="6" icon={<BookOutlined />} onClick={() => handleMenuClick("/technician/certificate")}>
+          </Menu.Item>
+          <Menu.Item key="6" icon={<BookOutlined />} onClick={() => handleMenuClick("/technician/certificate")}>
             Chứng nhận
-            </Menu.Item>
-            <Menu.Item key="7" icon={<ScheduleOutlined />} onClick={() => handleMenuClick("/technician/score")}>
+          </Menu.Item>
+          <Menu.Item key="7" icon={<ScheduleOutlined />} onClick={() => handleMenuClick("/technician/score")}>
             Điểm rèn luyện
-            </Menu.Item>
-            <Menu.Item key="8" icon={<CalendarOutlined />} onClick={() => handleMenuClick("/technician/event")}>
+          </Menu.Item>
+          <Menu.Item key="8" icon={<CalendarOutlined />} onClick={() => handleMenuClick("/technician/event")}>
             Sự kiện & hoạt động
-            </Menu.Item>
-            <Menu.Item key="9" icon={<GiftOutlined />} onClick={() => handleMenuClick("/technician/scholarship")}>
+          </Menu.Item>
+          <Menu.Item key="9" icon={<GiftOutlined />} onClick={() => handleMenuClick("/technician/scholarship")}>
             Học bổng
-            </Menu.Item>
+          </Menu.Item>
+          <Menu.Item key="10" icon={<SolutionOutlined />} onClick={() => handleMenuClick("/technician/discipline")}>
+            Cấu hình Kỷ luật
+          </Menu.Item>
         </Menu>
       </div>
 

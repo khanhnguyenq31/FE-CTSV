@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import type { ColumnsType } from "antd/es/table";
 import MapPicker from "../../components/MapPicker";
+import ReactQuill from "react-quill-new";
+import "react-quill-new/dist/quill.snow.css";
 import {
   Row,
   Col,
@@ -77,6 +79,16 @@ const formatDMS = (decimal: number | null | undefined, isLat: boolean) => {
   const min = Math.floor(minFloat);
   const sec = ((minFloat - min) * 60).toFixed(1);
   return `${deg}°${min}'${sec}"${dir}`;
+};
+
+const quillModules = {
+  toolbar: [
+    [{ header: [1, 2, 3, 4, 5, 6, false] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ list: 'ordered' }, { list: 'bullet' }, { indent: '-1' }, { indent: '+1' }],
+    ['link', 'image', 'video'],
+    ['clean']
+  ]
 };
 
 export default function EventPage({ messageApi }: { messageApi: any }) {
@@ -593,7 +605,12 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
             </Col>
             <Col span={24}>
               <Form.Item label="Nội dung chi tiết" name="content" rules={[{ required: true }]}>
-                <Input.TextArea rows={4} placeholder="Mô tả chi tiết về hoạt động" />
+                <ReactQuill
+                  theme="snow"
+                  modules={quillModules}
+                  className="bg-white h-[200px] mb-[40px]"
+                  placeholder="Soạn thảo bài viết, thông báo, hoặc nội dung chi tiết. Có thể chèn ảnh, video, liên kết..."
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -877,7 +894,13 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
             <Descriptions column={1} bordered size="middle">
               <Descriptions.Item label="Mô tả ngắn">{selectedEvent.description}</Descriptions.Item>
               <Descriptions.Item label="Nội dung chi tiết">
-                <div style={{ whiteSpace: 'pre-wrap' }}>{selectedEvent.content}</div>
+                <div className="ql-snow">
+                  <div
+                    className="ql-editor"
+                    dangerouslySetInnerHTML={{ __html: selectedEvent.content }}
+                    style={{ padding: 0, border: 'none', wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                  />
+                </div>
               </Descriptions.Item>
               <Descriptions.Item label="Thời gian diễn ra">
                 <Space>

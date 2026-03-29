@@ -1,10 +1,24 @@
 // src/api/auth.tsx
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:3000/"; // 🔁 Đổi sang URL thật 
+const API_BASE_URL = "http://localhost:3000"; // 🔁 Đổi sang URL thật
 
 //  Tạo instance axios dùng chung
 export const api = axios.create({ baseURL: API_BASE_URL });
+
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
 
 //  Thêm interceptor để tự refresh token khi access token hết hạn
 api.interceptors.response.use(
@@ -13,18 +27,32 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise(function (resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        }).then(token => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
+        }).catch(err => {
+          return Promise.reject(err);
+        });
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
+
       try {
-        // Gọi API refresh token
         const { accessToken } = await refreshTokenApi();
-        // Gắn token mới vào header
+        processQueue(null, accessToken);
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-        // Gửi lại request cũ
         return api(originalRequest);
-      } catch {
-        // Nếu refresh thất bại → xoá token, về trang login
+      } catch (err) {
+        processQueue(err, null);
         localStorage.clear();
         window.location.href = "/login";
+        return Promise.reject(err);
+      } finally {
+        isRefreshing = false;
       }
     }
 

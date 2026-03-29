@@ -23,6 +23,7 @@ import CertificatePage from './pages/technician/certificate'
 import ScorePage from './pages/technician/score'
 import EventPage from './pages/technician/event'
 import ScholarshipPage from './pages/technician/scholarship'
+import DisciplinePage from './pages/technician/discipline'
 // Imports cho Sidebar
 import Sidebar from './components/Sidebar' // Technician Sidebar (Sidebar.tsx gốc)
 import StudentSidebar from './components/StudentSidebar' // Student Sidebar
@@ -243,6 +244,7 @@ function App() {
               <Route path="score" element={<ScorePage messageApi={messageApi} />} />
               <Route path="event" element={<EventPage messageApi={messageApi} />} />
               <Route path="scholarship" element={<ScholarshipPage messageApi={messageApi} />} />
+              <Route path="discipline" element={<DisciplinePage />} />
             </Route>
           </Route>
 
