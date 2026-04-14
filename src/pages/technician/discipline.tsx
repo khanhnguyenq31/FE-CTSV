@@ -5,7 +5,7 @@ import {
     getDisciplineForms, createDisciplineForm, updateDisciplineForm, deleteDisciplineForm,
     getDisciplineConfigs, createDisciplineConfig, updateDisciplineConfig, deleteDisciplineConfig,
     saveDisciplineConditions, evaluateDiscipline, saveEvaluation, getEvaluationHistory, getEvaluationDetails, clearEvaluationHistory,
-    getEvaluationDrafts, finalizeEvaluation, deleteDraftDetail, publishDraft
+    getEvaluationDrafts, finalizeEvaluation, deleteDraftDetail, publishDraft, toggleAppeal, getFormalLists, applyDisciplineStatus
 } from '../../api/discipline';
 import { getAdmissionPeriods } from '../../api/admission';
 import type { DisciplineForm, DisciplineConfig, DisciplineCondition } from '../../api/discipline';
@@ -32,6 +32,9 @@ export default function DisciplinePage() {
                 </TabPane>
                 <TabPane tab="5. Danh sách kỷ luật (Dự kiến)" key="5">
                     <EvaluationDraftsTab />
+                </TabPane>
+                <TabPane tab="6. Danh sách chính thức" key="6">
+                    <FormalListTab />
                 </TabPane>
             </Tabs>
         </div>
@@ -211,6 +214,7 @@ function DisciplineConfigTab() {
         // sort by priority so UI is exact
         rulesGPA.sort((a: any, b: any) => a.doNghiemTrong - b.doNghiemTrong);
         const rulesEsc = record.escalationRules || [];
+        rulesEsc.sort((a: any, b: any) => a.doNghiemTrong - b.doNghiemTrong);
         formConditions.setFieldsValue({ gpaRules: rulesGPA, escalationRules: rulesEsc });
         setIsDrawerOpen(true);
     };
@@ -222,7 +226,11 @@ function DisciplineConfigTab() {
                 ...cond,
                 doNghiemTrong: index + 1
             }));
-            mutationSaveConditions.mutate({ id: activeConfigId, payload: { gpaRules: properlyOrderedGpa, escalationRules: values.escalationRules || [] } });
+            const properlyOrderedEsc = (values.escalationRules || []).map((cond: any, index: number) => ({
+                ...cond,
+                doNghiemTrong: index + 1
+            }));
+            mutationSaveConditions.mutate({ id: activeConfigId, payload: { gpaRules: properlyOrderedGpa, escalationRules: properlyOrderedEsc } });
         }
     };
 
@@ -279,7 +287,7 @@ function DisciplineConfigTab() {
                                 <h4>1. Quy tắc xét bằng GPA (Ưu tiên từ cao tới thấp)</h4>
                                 {fields.map(({ key, name, ...restField }, index) => (
                                     <Card size="small" key={key} style={{ marginBottom: 16 }}
-                                        title={<Text strong>Độ ưu tiên: {index + 1} (Nghiêm trọng nhất xếp đầu)</Text>}
+                                        title={<Text strong>Độ ưu tiên: {index + 1}</Text>}
                                         extra={
                                             <Space>
                                                 <Button size="small" onClick={() => move(index, index - 1)} disabled={index === 0}>Lên</Button>
@@ -319,13 +327,22 @@ function DisciplineConfigTab() {
                     </Form.List>
 
                     <Form.List name="escalationRules">
-                        {(fields, { add, remove }) => (
+                        {(fields, { add, remove, move }) => (
                             <>
                                 <Divider />
-                                <h4>2. Quy tắc Lũy Tiến (Nâng bậc hình phạt)</h4>
+                                <h4>2. Quy tắc Lũy Tiến (Ưu tiên từ cao tới thấp)</h4>
                                 <Text type="secondary">Ví dụ: Nếu sinh viên vi phạm Cảnh Cáo 2 Lần liên tiếp ➔ Buộc Thôi Học</Text>
-                                {fields.map(({ key, name, ...restField }) => (
-                                    <Card size="small" key={key} style={{ marginTop: 16 }} extra={<Button size="small" danger onClick={() => remove(name)}>Xóa Rule</Button>}>
+                                {fields.map(({ key, name, ...restField }, index) => (
+                                    <Card size="small" key={key} style={{ marginTop: 16 }}
+                                        title={<Text strong>Độ ưu tiên: {index + 1}</Text>}
+                                        extra={
+                                            <Space>
+                                                <Button size="small" onClick={() => move(index, index - 1)} disabled={index === 0}>Lên</Button>
+                                                <Button size="small" onClick={() => move(index, index + 1)} disabled={index === fields.length - 1}>Xuống</Button>
+                                                <Button size="small" danger onClick={() => remove(name)}>Xóa Rule</Button>
+                                            </Space>
+                                        }
+                                    >
                                         <Row gutter={16} align="middle">
                                             <Col span={6}>
                                                 <Form.Item {...restField} name={[name, 'tuHinhThucId']} label="TỪ hình thức..." rules={[{ required: true }]}>
@@ -437,7 +454,9 @@ function EvaluateDisciplineTab() {
         { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName' },
         { title: 'MSSV', dataIndex: 'studentId', key: 'studentId' },
         { title: 'Tiến trình vi phạm', dataIndex: ['matchedRule', 'escalationPath'], key: 'escalationPath', render: (t: string) => <Text type="secondary">{t}</Text> },
-        { title: 'Kết quả Kỷ Luật Lũy Tiến', dataIndex: ['matchedRule', 'hinhThuc', 'tenHinhThuc'], key: 'hinhThuc', render: (t: string) => <Tag color="red">{t}</Tag> },
+        { title: 'Kết quả vòng GPA', dataIndex: ['matchedRule', 'gpaForm', 'tenHinhThuc'], key: 'gpaForm', render: (t: string) => <Tag color="blue">{t}</Tag> },
+        { title: 'Kết quả vòng Lũy tiến', dataIndex: ['matchedRule', 'luyTienForm', 'tenHinhThuc'], key: 'luyTienForm', render: (t: string) => t ? <Tag color="orange">{t}</Tag> : <Text type="secondary">-</Text> },
+        { title: 'Kết quả Cuối cùng', dataIndex: ['matchedRule', 'hinhThuc', 'tenHinhThuc'], key: 'hinhThuc', render: (t: string) => <Tag color="red">{t}</Tag> },
         { title: 'GPA thực tế', key: 'actualGpa', render: (_: any, r: any) => `GPA HK: ${r.actualGpaSem?.toFixed(2)} | GPA TL: ${r.actualGpaTotal?.toFixed(2)}` }
     ];
 
@@ -580,11 +599,106 @@ function EvaluationHistoryTab() {
 }
 
 // ==========================================
-// 5. DANH SÁCH DỰ KIẾN (DRAFTS)
+// 5. DANH SÁCH DỰ KIẾN (DRAFTS) & CỨU XÉT
 // ==========================================
 function EvaluationDraftsTab() {
     const queryClient = useQueryClient();
-    const { data: drafts, isLoading } = useQuery({ queryKey: ['evalDrafts'], queryFn: getEvaluationDrafts });
+    const { data: drafts, isLoading: isLoadingDrafts } = useQuery({ queryKey: ['evalDrafts'], queryFn: getEvaluationDrafts });
+
+    // Luôn chỉ có 1 danh sách dự kiến active
+    const activeDraft = drafts?.[0] as any;
+
+    const { data: details, isLoading: isLoadingDetails } = useQuery({
+        queryKey: ['evalDetails', activeDraft?.id],
+        queryFn: () => getEvaluationDetails(activeDraft?.id),
+        enabled: !!activeDraft
+    });
+
+    const mutationToggle = useMutation({
+        mutationFn: toggleAppeal,
+        onSuccess: () => {
+            notification.success({ message: 'Đã cập nhật trạng thái cứu xét' });
+            queryClient.invalidateQueries({ queryKey: ['evalDetails', activeDraft?.id] });
+        }
+    });
+
+    const mutationFinalize = useMutation({
+        mutationFn: finalizeEvaluation,
+        onSuccess: () => {
+            notification.success({ message: 'Đã tạo quyết định kỷ luật thành chính thức!' });
+            queryClient.invalidateQueries({ queryKey: ['evalDrafts'] });
+            queryClient.invalidateQueries({ queryKey: ['formalLists'] });
+        }
+    });
+
+    if (isLoadingDrafts || (activeDraft && isLoadingDetails)) return <div style={{ padding: 50, textAlign: 'center' }}>Đang tải dữ liệu...</div>;
+    if (!activeDraft) return <div style={{ padding: 50, textAlign: 'center' }}>Không có danh sách dự kiến nào đang hoạt động.</div>;
+
+    const dsKytLuat = (details as any[])?.filter(d => !d.isCuuXet) || [];
+    const dsCuuXet = (details as any[])?.filter(d => d.isCuuXet) || [];
+
+    const columns = [
+        { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName' },
+        { title: 'MSSV', dataIndex: 'studentId', key: 'studentId' },
+        { title: 'Lớp / Khóa', dataIndex: 'className', key: 'className' },
+        { title: 'Bị phạt (vòng GPA)', dataIndex: 'hinhThucGpa', key: 'hinhThucGpa', render: (t: string) => <Tag color="blue">{t}</Tag> },
+        { title: 'Hình phạt Dự kiến', dataIndex: 'hinhThuc', key: 'hinhThuc', render: (t: string) => <Tag color="red">{t}</Tag> },
+        {
+            title: 'Trạng thái', key: 'action', render: (_: any, r: any) => (
+                <Popconfirm
+                    title={r.isCuuXet ? "Hủy cứu xét sinh viên này?" : "Khoan hồng cho sinh viên này?"}
+                    description={r.isCuuXet ? "Sinh viên sẽ quay lại danh sách bị kỷ luật." : "Sinh viên sẽ được miễn hình phạt chính thức khi áp dụng."}
+                    onConfirm={() => mutationToggle.mutate(r.id)}
+                    okText="Xác nhận"
+                    cancelText="Hủy"
+                >
+                    <Button
+                        type={r.isCuuXet ? "primary" : "default"}
+                        style={r.isCuuXet ? { backgroundColor: '#52c41a', borderColor: '#52c41a', color: '#fff' } : undefined}
+                        loading={mutationToggle.isPending}
+                        size="small"
+                    >
+                        {r.isCuuXet ? 'Được Cứu Xét' : 'Bị Kỷ Luật'}
+                    </Button>
+                </Popconfirm>
+            )
+        }
+    ];
+
+    return (
+        <div>
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                    <h3>{activeDraft.tenDotXet}</h3>
+                    <Text type="secondary">Danh sách này được dùng để tiếp nhận khiếu nại, cứu xét. Nếu sinh viên được khoan hồng, hãy bật công tắc "Cứu xét".</Text>
+                </div>
+                <Popconfirm
+                    title="Tạo quyết định kỷ luật?"
+                    description="Xác nhận chuyển danh sách kỷ luật dự kiến này thành Quyết định Chính thức?"
+                    onConfirm={() => mutationFinalize.mutate(activeDraft.id)}
+                >
+                    <Button type="primary" size="large" danger>Tạo Quyết Định Kỷ Luật</Button>
+                </Popconfirm>
+            </div>
+
+            <Tabs defaultActiveKey="1" type="card">
+                <TabPane tab={`Danh sách kỷ luật (${dsKytLuat.length})`} key="1">
+                    <Table columns={columns} dataSource={dsKytLuat} rowKey="id" pagination={{ pageSize: 15 }} />
+                </TabPane>
+                <TabPane tab={`Danh sách được cứu xét (${dsCuuXet.length})`} key="2">
+                    <Table columns={columns} dataSource={dsCuuXet} rowKey="id" pagination={{ pageSize: 15 }} />
+                </TabPane>
+            </Tabs>
+        </div>
+    );
+}
+
+// ==========================================
+// 6. DANH SÁCH CHÍNH THỨC & ÁP DỤNG
+// ==========================================
+function FormalListTab() {
+    const queryClient = useQueryClient();
+    const { data: formalLists, isLoading } = useQuery({ queryKey: ['formalLists'], queryFn: getFormalLists });
     const { data: admissionPeriods } = useQuery({ queryKey: ['admissionPeriods'], queryFn: getAdmissionPeriods });
     const [detailId, setDetailId] = useState<number | null>(null);
     const { data: details, isLoading: isLoadingDetails } = useQuery({
@@ -593,20 +707,11 @@ function EvaluationDraftsTab() {
         enabled: !!detailId
     });
 
-    const mutationFinalize = useMutation({
-        mutationFn: finalizeEvaluation,
-        onSuccess: () => {
-            notification.success({ message: 'Đã duyệt danh sách kỷ luật thành chính thức!' });
-            queryClient.invalidateQueries({ queryKey: ['evalDrafts'] });
-            queryClient.invalidateQueries({ queryKey: ['evalHistory'] });
-        }
-    });
-
-    const mutationDeleteDetail = useMutation({
-        mutationFn: deleteDraftDetail,
-        onSuccess: () => {
-            notification.success({ message: 'Đã xóa sinh viên khỏi danh sách dự kiến' });
-            queryClient.invalidateQueries({ queryKey: ['evalDetails', detailId] });
+    const mutationApply = useMutation({
+        mutationFn: applyDisciplineStatus,
+        onSuccess: (data: any) => {
+            notification.success({ message: data.message });
+            queryClient.invalidateQueries({ queryKey: ['formalLists'] });
         }
     });
 
@@ -623,14 +728,17 @@ function EvaluationDraftsTab() {
         },
         { title: 'Năm học', dataIndex: 'namHoc', key: 'namHoc' },
         { title: 'Học kỳ', dataIndex: 'hocKy', key: 'hocKy' },
-        { title: 'Cấu hình', dataIndex: ['cauHinh', 'tenCauHinh'], key: 'cauHinh' },
-        { title: 'Trạng thái', dataIndex: 'trangThai', key: 'trangThai', render: () => <Tag color="orange">Dự kiến</Tag> },
+        { title: 'Thực hiện lúc', dataIndex: 'createdAt', key: 'createdAt', render: (t: string) => new Date(t).toLocaleString('vi-VN') },
         {
             title: 'Thao tác', key: 'action', render: (_: any, r: any) => (
                 <Space>
                     <Button type="link" onClick={() => setDetailId(r.id)}>Chi tiết Sinh viên</Button>
-                    <Popconfirm title="Chốt danh sách này thành Chính thức?" onConfirm={() => mutationFinalize.mutate(r.id)}>
-                        <Button type="primary" size="small">Duyệt & Chốt</Button>
+                    <Popconfirm
+                        title="Áp dụng hình thức kỷ luật vào Tình Trạng Học của sinh viên?"
+                        description="Hành động này sẽ thay đổi trạng thái học thuật của sinh viên. Không áp dụng cho sinh viên được Cứu xét."
+                        onConfirm={() => mutationApply.mutate(r.id)}
+                    >
+                        <Button type="primary" size="small" danger loading={mutationApply.isPending}>Quết định kỷ luật cho danh sách</Button>
                     </Popconfirm>
                 </Space>
             )
@@ -640,21 +748,14 @@ function EvaluationDraftsTab() {
     const detColumns = [
         { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName' },
         { title: 'MSSV', dataIndex: 'studentId', key: 'studentId' },
-        { title: 'Lớp / Khóa', dataIndex: 'className', key: 'className' },
-        { title: 'Hình phạt', dataIndex: 'hinhThuc', key: 'hinhThuc', render: (t: string) => <Tag color="red">{t}</Tag> },
-        {
-            title: 'Thao tác', key: 'action', render: (_: any, r: any) => (
-                <Popconfirm title="Khoan hồng bỏ qua sinh viên khỏi danh sách?" onConfirm={() => mutationDeleteDetail.mutate(r.id)}>
-                    <Button type="link" danger size="small">Khoan hồng</Button>
-                </Popconfirm>
-            )
-        }
+        { title: 'Kết quả Cuối cùng', dataIndex: 'hinhThuc', key: 'hinhThuc', render: (t: string) => <Tag color="red">{t}</Tag> },
+        { title: 'Trạng thái', dataIndex: 'isCuuXet', key: 'isCuuXet', render: (isCuuXet: boolean) => isCuuXet ? <Tag color="green">Được Cứu Xét / Khoan hồng</Tag> : <Tag color="red">Bị Kỷ Luật</Tag> },
     ];
 
     return (
         <div>
-            <Table loading={isLoading} columns={columns} dataSource={drafts as any[]} rowKey="id" />
-            <Drawer title="Điều chỉnh sinh viên vi phạm (Dự kiến)" width={900} open={!!detailId} onClose={() => setDetailId(null)}>
+            <Table loading={isLoading} columns={columns} dataSource={formalLists as any[]} rowKey="id" />
+            <Drawer title="Chi tiết danh sách chính thức" width={900} open={!!detailId} onClose={() => setDetailId(null)}>
                 <Table loading={isLoadingDetails} columns={detColumns} dataSource={details as any[]} rowKey="id" pagination={{ pageSize: 15 }} />
             </Drawer>
         </div>

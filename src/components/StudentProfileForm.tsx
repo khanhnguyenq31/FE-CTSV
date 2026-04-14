@@ -176,7 +176,7 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
                             {renderInput("Mã số sinh viên", "studentId")}
                             {renderInput("Ngành học", "major")}
                             {renderDatePicker("Ngày sinh", "dateOfBirth", "DD/MM/YYYY")}
-                            {renderInput("Khóa", "studentCode")}
+                            {renderInput("Khóa", "className")}
                             {renderInput("Số CCCD", "idCard")}
                             {renderSelect("Giới tính", "gender", [{ value: 'Nam', label: 'Nam' }, { value: 'Nữ', label: 'Nữ' }], "Chọn giới tính")}
                             {renderSelect("Tôn giáo", "religion", religionOptions, "Chọn tôn giáo")}
@@ -202,7 +202,7 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
                 <Row gutter={[16, 16]}>
                     {renderInput("Khoa", "faculty", academicLocked, colProps4)}
                     {renderInput("Bộ môn/Khoa quản lý", "department", academicLocked, colProps4)}
-                    {renderInput("Mã lớp", "className", academicLocked, colProps4)}
+                    {renderInput("Mã lớp", "studentCode", academicLocked, colProps4)}
                     {renderDatePicker("Thời điểm nhập học", "enrollmentDate", "MM/YYYY", colProps4, academicLocked)}
                 </Row>
                 <Row gutter={[16, 16]}>
@@ -216,6 +216,9 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
                     {renderInput("Ngành đào tạo", "trainingMajor", academicLocked, colProps4)}
                     {renderInput("Loại hình đào tạo", "trainingFormat", academicLocked, colProps4)}
                     {renderInput("Bảo lưu/Chuyển", "graduationType", academicLocked, colProps4)}
+                </Row>
+                <Row gutter={[16, 16]}>
+                    {renderInput("Quyết định kỷ luật", "disciplineDecision", true, colProps4)}
                 </Row>
             </Card>
 

@@ -116,3 +116,18 @@ export const deleteDraftDetail = async (detailId: number | string) => {
     const res = await api.delete(`/discipline/drafts/details/${detailId}`);
     return res.data;
 };
+
+export const toggleAppeal = async (detailId: number | string) => {
+    const res = await api.post(`/discipline/drafts/details/${detailId}/toggle-appeal`);
+    return res.data;
+};
+
+export const getFormalLists = async () => {
+    const res = await api.get('/discipline/formal');
+    return res.data;
+};
+
+export const applyDisciplineStatus = async (formalId: number | string) => {
+    const res = await api.post(`/discipline/formal/${formalId}/apply`);
+    return res.data;
+};
