@@ -5,14 +5,26 @@ export interface DisciplineForm {
     maHinhThuc: string;
     tenHinhThuc: string;
     chuyenTrangThaiHoc: boolean;
+    mucDo: number;
+}
+
+export interface DisciplineCondition {
+    id?: number;
+    cauHinhId?: number;
+    hinhThucId: number;
+    uuTien: number;
+    diemTBHK_duoi: number | null;
+    diemTBTL_duoi: number | null;
+    soLanCanhCaoLienTiep_Tu: number | null;
+    soLanCanhCaoKhongLienTiep_Tu: number | null;
+    hinhThuc?: DisciplineForm;
 }
 
 export interface DisciplineConfig {
     id: number;
-    hinhThucId: number;
-    minDiem: number;
-    maxDiem: number;
-    hinhThuc?: DisciplineForm;
+    tenCauHinh: string;
+    trangThai: boolean;
+    dieuKiens?: DisciplineCondition[];
 }
 
 export const getDisciplineForms = async () => {
@@ -52,5 +64,55 @@ export const updateDisciplineConfig = async (id: number, data: any) => {
 
 export const deleteDisciplineConfig = async (id: number) => {
     const res = await api.delete(`/discipline/configs/${id}`);
+    return res.data;
+};
+
+export const saveDisciplineConditions = async (id: number, payload: { gpaRules: any[], escalationRules: any[] }) => {
+    const res = await api.put(`/discipline/configs/${id}/conditions`, payload);
+    return res.data;
+};
+
+export const evaluateDiscipline = async (data: any) => {
+    const res = await api.post('/discipline/evaluate', data);
+    return res.data;
+};
+
+export const saveEvaluation = async (data: any) => {
+    const res = await api.post('/discipline/save-evaluation', data);
+    return res.data;
+};
+
+// Lịch sử Đợt Xét Giai đoạn 2
+export const getEvaluationHistory = async () => {
+    const res = await api.get('/discipline/history');
+    return res.data;
+};
+
+export const getEvaluationDetails = async (dotXetId: number | string) => {
+    const res = await api.get(`/discipline/history/${dotXetId}`);
+    return res.data;
+};
+
+export const clearEvaluationHistory = async () => {
+    const res = await api.delete('/discipline/history');
+    return res.data;
+};
+export const getEvaluationDrafts = async () => {
+    const res = await api.get('/discipline/drafts');
+    return res.data;
+};
+
+export const finalizeEvaluation = async (id: number | string) => {
+    const res = await api.post(`/discipline/drafts/${id}/finalize`);
+    return res.data;
+};
+
+export const publishDraft = async (id: number | string) => {
+    const res = await api.post(`/discipline/history/${id}/publish-draft`);
+    return res.data;
+};
+
+export const deleteDraftDetail = async (detailId: number | string) => {
+    const res = await api.delete(`/discipline/drafts/details/${detailId}`);
     return res.data;
 };

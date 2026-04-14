@@ -1,30 +1,46 @@
 import React, { useState } from 'react';
-import { Tabs, Table, Button, Modal, Form, Input, InputNumber, notification, Select, Space, Popconfirm, Switch } from 'antd';
+import { Tabs, Table, Button, Modal, Form, Input, InputNumber, notification, Select, Space, Popconfirm, Switch, Drawer, Card, Row, Col, Typography, Tag, Divider } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     getDisciplineForms, createDisciplineForm, updateDisciplineForm, deleteDisciplineForm,
-    getDisciplineConfigs, createDisciplineConfig, updateDisciplineConfig, deleteDisciplineConfig
+    getDisciplineConfigs, createDisciplineConfig, updateDisciplineConfig, deleteDisciplineConfig,
+    saveDisciplineConditions, evaluateDiscipline, saveEvaluation, getEvaluationHistory, getEvaluationDetails, clearEvaluationHistory,
+    getEvaluationDrafts, finalizeEvaluation, deleteDraftDetail, publishDraft
 } from '../../api/discipline';
-import type { DisciplineForm, DisciplineConfig } from '../../api/discipline';
+import { getAdmissionPeriods } from '../../api/admission';
+import type { DisciplineForm, DisciplineConfig, DisciplineCondition } from '../../api/discipline';
 
 const { TabPane } = Tabs;
+const { Title, Text } = Typography;
 
 export default function DisciplinePage() {
     return (
         <div>
-            <h2 style={{ marginBottom: 20 }}>Quản lý Kỷ luật sinh viên</h2>
-            <Tabs defaultActiveKey="1" style={{ backgroundColor: '#fff', padding: 20, borderRadius: 8 }}>
-                <TabPane tab="Hình thức kỷ luật" key="1">
+            <h2 style={{ marginBottom: 20 }}>Quản lý Kỷ luật sinh viên (Nâng cao)</h2>
+            <Tabs defaultActiveKey="1" style={{ backgroundColor: '#fff', padding: 20, borderRadius: 8 }} destroyInactiveTabPane>
+                <TabPane tab="1. Hình thức kỷ luật" key="1">
                     <DisciplineFormTab />
                 </TabPane>
-                <TabPane tab="Cấu hình kỷ luật" key="2">
+                <TabPane tab="2. Cấu hình & Điều kiện" key="2">
                     <DisciplineConfigTab />
+                </TabPane>
+                <TabPane tab="3. Xét kỷ luật" key="3">
+                    <EvaluateDisciplineTab />
+                </TabPane>
+                <TabPane tab="4. Lịch sử đợt xét" key="4">
+                    <EvaluationHistoryTab />
+                </TabPane>
+                <TabPane tab="5. Danh sách kỷ luật (Dự kiến)" key="5">
+                    <EvaluationDraftsTab />
                 </TabPane>
             </Tabs>
         </div>
     );
 }
 
+// ==========================================
+// 1. HÌNH THỨC KỶ LUẬT
+// ==========================================
 function DisciplineFormTab() {
     const queryClient = useQueryClient();
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -78,7 +94,8 @@ function DisciplineFormTab() {
     const columns = [
         { title: 'Mã', dataIndex: 'maHinhThuc', key: 'maHinhThuc' },
         { title: 'Tên hình thức', dataIndex: 'tenHinhThuc', key: 'tenHinhThuc' },
-        { title: 'Chuyển trạng thái học', dataIndex: 'chuyenTrangThaiHoc', key: 'chuyenTrangThaiHoc', render: (val: boolean) => val ? 'Có' : 'Không' },
+        { title: 'Trọng số mức độ', dataIndex: 'mucDo', key: 'mucDo' },
+        { title: 'Chuyển trạng thái học', dataIndex: 'chuyenTrangThaiHoc', key: 'chuyenTrangThaiHoc', render: (val: boolean) => val ? <Tag color="red">Có</Tag> : 'Không' },
         {
             title: 'Thao tác', key: 'action',
             render: (_: any, record: DisciplineForm) => (
@@ -107,6 +124,9 @@ function DisciplineFormTab() {
                     <Form.Item name="tenHinhThuc" label="Tên hình thức" rules={[{ required: true }]}>
                         <Input />
                     </Form.Item>
+                    <Form.Item name="mucDo" label="Mức độ nghiêm trọng (1 là nhẹ nhất, số càng to càng nặng)" rules={[{ required: true }]}>
+                        <InputNumber min={1} max={100} style={{ width: '100%' }} />
+                    </Form.Item>
                     <Form.Item name="chuyenTrangThaiHoc" label="Chuyển trạng thái học" valuePropName="checked">
                         <Switch />
                     </Form.Item>
@@ -116,67 +136,109 @@ function DisciplineFormTab() {
     );
 }
 
+// ==========================================
+// 2. CẤU HÌNH & ĐIỀU KIỆN KỶ LUẬT
+// ==========================================
 function DisciplineConfigTab() {
     const queryClient = useQueryClient();
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingId, setEditingId] = useState<number | null>(null);
-    const [form] = Form.useForm();
+    const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+    const [activeConfigId, setActiveConfigId] = useState<number | null>(null);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+    const [formConfig] = Form.useForm();
+    const [formConditions] = Form.useForm();
 
     const { data: configs, isLoading } = useQuery({ queryKey: ['disciplineConfigs'], queryFn: getDisciplineConfigs });
     const { data: forms } = useQuery({ queryKey: ['disciplineForms'], queryFn: getDisciplineForms });
 
-    const mutationCreate = useMutation({
+    // Config Mutations
+    const mutationCreateCfg = useMutation({
         mutationFn: createDisciplineConfig,
         onSuccess: () => {
-            notification.success({ message: 'Thêm cấu hình thành công' });
+            notification.success({ message: 'Tạo cấu hình mới thành công' });
             queryClient.invalidateQueries({ queryKey: ['disciplineConfigs'] });
-            setIsModalOpen(false);
+            setIsConfigModalOpen(false);
         }
     });
 
-    const mutationUpdate = useMutation({
+    const mutationUpdateCfg = useMutation({
         mutationFn: ({ id, data }: { id: number, data: any }) => updateDisciplineConfig(id, data),
         onSuccess: () => {
-            notification.success({ message: 'Cập nhật thành công' });
+            notification.success({ message: 'Cập nhật cấu hình thành công' });
             queryClient.invalidateQueries({ queryKey: ['disciplineConfigs'] });
-            setIsModalOpen(false);
+            setIsConfigModalOpen(false);
         }
     });
 
-    const mutationDelete = useMutation({
+    const mutationDeleteCfg = useMutation({
         mutationFn: deleteDisciplineConfig,
         onSuccess: () => {
-            notification.success({ message: 'Xóa thành công' });
+            notification.success({ message: 'Xóa cấu hình thành công' });
             queryClient.invalidateQueries({ queryKey: ['disciplineConfigs'] });
         }
     });
 
-    const handleOpenModal = (record?: DisciplineConfig) => {
-        if (record) {
-            setEditingId(record.id);
-            form.setFieldsValue(record);
-        } else {
-            setEditingId(null);
-            form.resetFields();
+    // Conditions Mutation
+    const mutationSaveConditions = useMutation({
+        mutationFn: ({ id, payload }: { id: number, payload: any }) => saveDisciplineConditions(id, payload),
+        onSuccess: () => {
+            notification.success({ message: 'Lưu quy tắc điều kiện thành công' });
+            queryClient.invalidateQueries({ queryKey: ['disciplineConfigs'] });
+            setIsDrawerOpen(false);
         }
-        setIsModalOpen(true);
+    });
+
+    const openConfigModal = (record?: DisciplineConfig) => {
+        if (record) {
+            setActiveConfigId(record.id);
+            formConfig.setFieldsValue({ tenCauHinh: record.tenCauHinh, trangThai: record.trangThai });
+        } else {
+            setActiveConfigId(null);
+            formConfig.resetFields();
+            formConfig.setFieldsValue({ trangThai: true });
+        }
+        setIsConfigModalOpen(true);
     };
 
-    const handleFinish = (values: any) => {
-        if (editingId) mutationUpdate.mutate({ id: editingId, data: values });
-        else mutationCreate.mutate(values);
+    const handleConfigSubmit = (values: any) => {
+        if (activeConfigId) mutationUpdateCfg.mutate({ id: activeConfigId, data: values });
+        else mutationCreateCfg.mutate(values);
+    };
+
+    const openConditionsDrawer = (record: any) => {
+        setActiveConfigId(record.id);
+        const rulesGPA = record.gpaRules || [];
+        // sort by priority so UI is exact
+        rulesGPA.sort((a: any, b: any) => a.doNghiemTrong - b.doNghiemTrong);
+        const rulesEsc = record.escalationRules || [];
+        formConditions.setFieldsValue({ gpaRules: rulesGPA, escalationRules: rulesEsc });
+        setIsDrawerOpen(true);
+    };
+
+    const handleConditionsSubmit = (values: any) => {
+        if (activeConfigId) {
+            // Force assign doNghiemTrong based on their order in the UI list
+            const properlyOrderedGpa = (values.gpaRules || []).map((cond: any, index: number) => ({
+                ...cond,
+                doNghiemTrong: index + 1
+            }));
+            mutationSaveConditions.mutate({ id: activeConfigId, payload: { gpaRules: properlyOrderedGpa, escalationRules: values.escalationRules || [] } });
+        }
     };
 
     const columns = [
-        { title: 'Hình thức kỷ luật', key: 'hinhThuc', render: (_: any, record: DisciplineConfig) => `${record.hinhThuc?.maHinhThuc} - ${record.hinhThuc?.tenHinhThuc}` },
-        { title: 'Điểm GPA tối thiểu', dataIndex: 'minDiem', key: 'minDiem' },
-        { title: 'Điểm GPA tối đa', dataIndex: 'maxDiem', key: 'maxDiem' },
+        { title: 'ID', dataIndex: 'id', key: 'id' },
+        { title: 'Tên bộ cấu hình', dataIndex: 'tenCauHinh', key: 'tenCauHinh' },
+        { title: 'Tình trạng', dataIndex: 'trangThai', key: 'trangThai', render: (val: boolean) => val ? <Tag color="green">Kích hoạt</Tag> : <Tag color="gray">Tạm ngưng</Tag> },
+        { title: 'Số Rule GPA', dataIndex: 'gpaRules', key: 'gpaRules', render: (dk: any[]) => dk?.length || 0 },
+        { title: 'Số Rule Lũy Tiến', dataIndex: 'escalationRules', key: 'escalationRules', render: (dk: any[]) => dk?.length || 0 },
         {
             title: 'Thao tác', key: 'action',
             render: (_: any, record: DisciplineConfig) => (
                 <Space>
-                    <Button type="link" onClick={() => handleOpenModal(record)}>Sửa</Button>
-                    <Popconfirm title="Xóa cấu hình này?" onConfirm={() => mutationDelete.mutate(record.id)}>
+                    <Button type="primary" size="small" onClick={() => openConditionsDrawer(record)}>Thiết lập Điều Kiện</Button>
+                    <Button type="link" onClick={() => openConfigModal(record)}>Sửa tên</Button>
+                    <Popconfirm title="Xóa toàn bộ cấu hình này?" onConfirm={() => mutationDeleteCfg.mutate(record.id)}>
                         <Button type="link" danger>Xóa</Button>
                     </Popconfirm>
                 </Space>
@@ -186,28 +248,415 @@ function DisciplineConfigTab() {
 
     return (
         <div>
-            <Button type="primary" onClick={() => handleOpenModal()} style={{ marginBottom: 16 }}>Thêm cấu hình (GPA)</Button>
+            <Button type="primary" onClick={() => openConfigModal()} style={{ marginBottom: 16 }}>Tạo Bộ Cấu Hình Mới</Button>
             <Table rowKey="id" columns={columns} dataSource={configs} loading={isLoading} />
+
+            {/* Modal Sửa Tên Cấu Hình */}
             <Modal
-                title={editingId ? 'Sửa cấu hình' : 'Thêm cấu hình'}
-                open={isModalOpen} onCancel={() => setIsModalOpen(false)} onOk={() => form.submit()}
+                title={activeConfigId ? 'Sửa thông tin Cấu Hình' : 'Tạo mới BỘ CẤU HÌNH'}
+                open={isConfigModalOpen} onCancel={() => setIsConfigModalOpen(false)} onOk={() => formConfig.submit()}
             >
-                <Form form={form} layout="vertical" onFinish={handleFinish}>
-                    <Form.Item name="hinhThucId" label="Chọn hình thức kỷ luật" rules={[{ required: true }]}>
-                        <Select>
-                            {forms?.map((f: DisciplineForm) => (
-                                <Select.Option key={f.id} value={f.id}>{f.maHinhThuc} - {f.tenHinhThuc}</Select.Option>
-                            ))}
-                        </Select>
+                <Form form={formConfig} layout="vertical" onFinish={handleConfigSubmit}>
+                    <Form.Item name="tenCauHinh" label="Tên bộ cấu hình" rules={[{ required: true }]}>
+                        <Input placeholder="VD: Tiêu chuẩn học vụ HK1 Năm học 2024-2025" />
                     </Form.Item>
-                    <Form.Item name="minDiem" label="Điểm trung bình (GPA) từ:" rules={[{ required: true }]}>
-                        <InputNumber step={0.1} style={{ width: '100%' }} />
-                    </Form.Item>
-                    <Form.Item name="maxDiem" label="Điểm trung bình (GPA) đến:" rules={[{ required: true }]}>
-                        <InputNumber step={0.1} style={{ width: '100%' }} />
+                    <Form.Item name="trangThai" label="Đang hoạt động" valuePropName="checked">
+                        <Switch />
                     </Form.Item>
                 </Form>
             </Modal>
+
+            {/* Drawer Cấu Hình Các Khối Điều Kiện */}
+            <Drawer
+                title="Sửa Bộ Điều Kiện Xét (Các Điều Kiện ưu tiên cao xếp trên)"
+                width={800} open={isDrawerOpen} onClose={() => setIsDrawerOpen(false)}
+                extra={<Button type="primary" onClick={() => formConditions.submit()} loading={mutationSaveConditions.isPending}>Lưu thay đổi</Button>}
+            >
+                <Form form={formConditions} layout="vertical" onFinish={handleConditionsSubmit}>
+                    <Form.List name="gpaRules">
+                        {(fields, { add, remove, move }) => (
+                            <>
+                                <h4>1. Quy tắc xét bằng GPA (Ưu tiên từ cao tới thấp)</h4>
+                                {fields.map(({ key, name, ...restField }, index) => (
+                                    <Card size="small" key={key} style={{ marginBottom: 16 }}
+                                        title={<Text strong>Độ ưu tiên: {index + 1} (Nghiêm trọng nhất xếp đầu)</Text>}
+                                        extra={
+                                            <Space>
+                                                <Button size="small" onClick={() => move(index, index - 1)} disabled={index === 0}>Lên</Button>
+                                                <Button size="small" onClick={() => move(index, index + 1)} disabled={index === fields.length - 1}>Xuống</Button>
+                                                <Button size="small" danger onClick={() => remove(name)}>Xóa Rule</Button>
+                                            </Space>
+                                        }
+                                    >
+                                        <Row gutter={16}>
+                                            <Col span={24}>
+                                                <Form.Item {...restField} name={[name, 'hinhThucId']} label="Hình thức kỷ luật nếu vi phạm" rules={[{ required: true }]}>
+                                                    <Select placeholder="Chọn hình thức...">
+                                                        {forms?.map((f: DisciplineForm) => (
+                                                            <Select.Option key={f.id} value={f.id}>{f.maHinhThuc} - {f.tenHinhThuc}</Select.Option>
+                                                        ))}
+                                                    </Select>
+                                                </Form.Item>
+                                            </Col>
+                                        </Row>
+                                        <Row gutter={16}>
+                                            <Col span={12}>
+                                                <Form.Item {...restField} name={[name, 'gpaHocKyDuoi']} label="GPA Học kỳ dưới (VD: 2.5)">
+                                                    <InputNumber step={0.1} style={{ width: '100%' }} />
+                                                </Form.Item>
+                                            </Col>
+                                            <Col span={12}>
+                                                <Form.Item {...restField} name={[name, 'gpaTichLuyDuoi']} label="GPA Tích lũy dưới (VD: 4.0)">
+                                                    <InputNumber step={0.1} style={{ width: '100%' }} />
+                                                </Form.Item>
+                                            </Col>
+                                        </Row>
+                                    </Card>
+                                ))}
+                                <Button type="dashed" onClick={() => add()} block style={{ marginTop: 10, marginBottom: 20 }}>+ Thêm Rule GPA</Button>
+                            </>
+                        )}
+                    </Form.List>
+
+                    <Form.List name="escalationRules">
+                        {(fields, { add, remove }) => (
+                            <>
+                                <Divider />
+                                <h4>2. Quy tắc Lũy Tiến (Nâng bậc hình phạt)</h4>
+                                <Text type="secondary">Ví dụ: Nếu sinh viên vi phạm Cảnh Cáo 2 Lần liên tiếp ➔ Buộc Thôi Học</Text>
+                                {fields.map(({ key, name, ...restField }) => (
+                                    <Card size="small" key={key} style={{ marginTop: 16 }} extra={<Button size="small" danger onClick={() => remove(name)}>Xóa Rule</Button>}>
+                                        <Row gutter={16} align="middle">
+                                            <Col span={6}>
+                                                <Form.Item {...restField} name={[name, 'tuHinhThucId']} label="TỪ hình thức..." rules={[{ required: true }]}>
+                                                    <Select placeholder="Chọn...">
+                                                        {forms?.map((f: DisciplineForm) => <Select.Option key={f.id} value={f.id}>{f.maHinhThuc} - {f.tenHinhThuc}</Select.Option>)}
+                                                    </Select>
+                                                </Form.Item>
+                                            </Col>
+                                            <Col span={6}>
+                                                <Form.Item {...restField} name={[name, 'soLanViPhamTu']} label="Số lần vi phạm >=" rules={[{ required: true }]}>
+                                                    <InputNumber style={{ width: '100%' }} min={1} />
+                                                </Form.Item>
+                                            </Col>
+                                            <Col span={6}>
+                                                <Form.Item {...restField} name={[name, 'loaiViPham']} label="Kiểu vi phạm" rules={[{ required: true }]}>
+                                                    <Select>
+                                                        <Select.Option value="Liên tiếp">Liên tiếp</Select.Option>
+                                                        <Select.Option value="Không liên tiếp">Không liên tiếp</Select.Option>
+                                                    </Select>
+                                                </Form.Item>
+                                            </Col>
+                                            <Col span={6}>
+                                                <Form.Item
+                                                    shouldUpdate={(prevValues, currentValues) => {
+                                                        const prev = prevValues?.escalationRules?.[name]?.tuHinhThucId;
+                                                        const curr = currentValues?.escalationRules?.[name]?.tuHinhThucId;
+                                                        return prev !== curr;
+                                                    }}
+                                                >
+                                                    {({ getFieldValue }) => {
+                                                        const tuHinhThucId = getFieldValue(['escalationRules', name, 'tuHinhThucId']);
+                                                        const tuHinhThuc = forms?.find((f: DisciplineForm) => f.id === tuHinhThucId);
+
+                                                        return (
+                                                            <Form.Item {...restField} name={[name, 'denHinhThucId']} label="NÂNG THÀNH..." rules={[{ required: true }]}>
+                                                                <Select placeholder="Chọn (Phải nặng hơn)...">
+                                                                    {forms?.map((f: DisciplineForm) => {
+                                                                        let isHeavier = true;
+                                                                        if (tuHinhThuc) {
+                                                                            isHeavier = (f.mucDo || 1) > (tuHinhThuc?.mucDo || 1);
+                                                                        }
+                                                                        return (
+                                                                            <Select.Option key={f.id} value={f.id} disabled={!isHeavier}>
+                                                                                {f.tenHinhThuc} {!isHeavier && tuHinhThuc ? '(Cần Mức độ cao hơn)' : ''}
+                                                                            </Select.Option>
+                                                                        );
+                                                                    })}
+                                                                </Select>
+                                                            </Form.Item>
+                                                        );
+                                                    }}
+                                                </Form.Item>
+                                            </Col>
+                                        </Row>
+                                    </Card>
+                                ))}
+                                <Button type="dashed" onClick={() => add()} block style={{ marginTop: 10 }}>+ Thêm Rule Lũy Tiến</Button>
+                            </>
+                        )}
+                    </Form.List>
+                </Form>
+            </Drawer>
+        </div>
+    );
+}
+
+// ==========================================
+// 3. XÉT KỶ LUẬT (PREVIEW & SAVE)
+// ==========================================
+function EvaluateDisciplineTab() {
+    const [evalResults, setEvalResults] = useState<any[]>([]);
+    const [hasTested, setHasTested] = useState(false);
+    const [form] = Form.useForm();
+
+    const { data: configs } = useQuery({ queryKey: ['disciplineConfigs'], queryFn: getDisciplineConfigs });
+    const { data: admissionPeriods, isLoading: isLoadingPeriods } = useQuery({ queryKey: ['admissionPeriods'], queryFn: getAdmissionPeriods });
+
+    const mutationEvaluate = useMutation({
+        mutationFn: evaluateDiscipline,
+        onSuccess: (data: any) => {
+            setEvalResults(data.results || []);
+            setHasTested(true);
+            notification.success({ message: `Đã lọc ra ${data.results?.length || 0} sinh viên vi phạm.` });
+        }
+    });
+
+    const mutationSaveEvaluation = useMutation({
+        mutationFn: saveEvaluation,
+        onSuccess: () => {
+            notification.success({ message: 'Lưu kết quả xét kỷ luật thành công!' });
+            setHasTested(false);
+            setEvalResults([]);
+        }
+    });
+
+    const onFinishEval = (values: any) => {
+        mutationEvaluate.mutate(values);
+    };
+
+    const handleSaveList = () => {
+        const payload = {
+            ...form.getFieldsValue(),
+            results: evalResults
+        };
+        mutationSaveEvaluation.mutate(payload);
+    };
+
+    const columns = [
+        { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName' },
+        { title: 'MSSV', dataIndex: 'studentId', key: 'studentId' },
+        { title: 'Tiến trình vi phạm', dataIndex: ['matchedRule', 'escalationPath'], key: 'escalationPath', render: (t: string) => <Text type="secondary">{t}</Text> },
+        { title: 'Kết quả Kỷ Luật Lũy Tiến', dataIndex: ['matchedRule', 'hinhThuc', 'tenHinhThuc'], key: 'hinhThuc', render: (t: string) => <Tag color="red">{t}</Tag> },
+        { title: 'GPA thực tế', key: 'actualGpa', render: (_: any, r: any) => `GPA HK: ${r.actualGpaSem?.toFixed(2)} | GPA TL: ${r.actualGpaTotal?.toFixed(2)}` }
+    ];
+
+    return (
+        <div>
+            <Card title="Khung Filter & Xét Duyệt (Chạy Thử)" style={{ marginBottom: 20 }}>
+                <Form form={form} layout="inline" onFinish={onFinishEval}>
+                    <Form.Item name="namHoc" label="Năm học" rules={[{ required: true }]} initialValue="2025-2026">
+                        <Input placeholder="YYYY-YYYY" style={{ width: 120 }} />
+                    </Form.Item>
+                    <Form.Item name="hocKy" label="Học kỳ" rules={[{ required: true }]} initialValue="1">
+                        <Select style={{ width: 100 }}>
+                            <Select.Option value="1">HK 1</Select.Option>
+                            <Select.Option value="2">HK 2</Select.Option>
+                        </Select>
+                    </Form.Item>
+                    <Form.Item name="khoaSinhVien" label="Khóa (Khóa trúng tuyển)">
+                        <Select
+                            mode="multiple"
+                            style={{ minWidth: 200 }}
+                            placeholder="Chọn khóa sinh viên..."
+                            allowClear
+                            loading={isLoadingPeriods}
+                        >
+                            {admissionPeriods?.periods?.filter((p: any) => /^Khóa 202[234]/.test(p.name)).map((p: any) => (
+                                <Select.Option key={p.id} value={p.id}>{p.name}</Select.Option>
+                            ))}
+                        </Select>
+                    </Form.Item>
+                    <Form.Item name="cauHinhId" label="Bộ Cấu hình áp dụng" rules={[{ required: true }]}>
+                        <Select style={{ width: 300 }} placeholder="Chọn bộ quy tắc xét">
+                            {configs?.filter((c: DisciplineConfig) => c.trangThai).map((c: DisciplineConfig) => (
+                                <Select.Option key={c.id} value={c.id}>{c.tenCauHinh}</Select.Option>
+                            ))}
+                        </Select>
+                    </Form.Item>
+                    <Form.Item>
+                        <Button type="primary" htmlType="submit" loading={mutationEvaluate.isPending}>
+                            Chạy Xét Kỷ Luật (Preview)
+                        </Button>
+                    </Form.Item>
+                </Form>
+            </Card>
+
+            {hasTested && (
+                <Card
+                    title={`Danh sách Sinh viên vi phạm (Số lượng: ${evalResults.length})`}
+                    extra={<Button type="primary" danger onClick={handleSaveList} loading={mutationSaveEvaluation.isPending}>Ghim & Lưu Lịch Sử Nhắc Nhở</Button>}
+                >
+                    <Table rowKey="studentEmail" columns={columns} dataSource={evalResults} pagination={{ pageSize: 15 }} />
+                </Card>
+            )}
+        </div>
+    );
+}
+
+// ==========================================
+// 4. LỊCH SỬ KỶ LUẬT (LOGS)
+// ==========================================
+function EvaluationHistoryTab() {
+    const queryClient = useQueryClient();
+    const { data: history, isLoading } = useQuery({ queryKey: ['evalHistory'], queryFn: getEvaluationHistory });
+    const { data: admissionPeriods } = useQuery({ queryKey: ['admissionPeriods'], queryFn: getAdmissionPeriods });
+    const [detailId, setDetailId] = useState<number | null>(null);
+    const { data: details, isLoading: isLoadingDetails } = useQuery({
+        queryKey: ['evalDetails', detailId],
+        queryFn: () => getEvaluationDetails(detailId!),
+        enabled: !!detailId
+    });
+
+    const mutationClear = useMutation({
+        mutationFn: clearEvaluationHistory,
+        onSuccess: () => {
+            notification.success({ message: 'Đã xóa toàn bộ lịch sử kỷ luật' });
+            queryClient.invalidateQueries({ queryKey: ['evalHistory'] });
+        }
+    });
+
+    const mutationPublish = useMutation({
+        mutationFn: publishDraft,
+        onSuccess: () => {
+            notification.success({ message: 'Đã tạo danh sách dự kiến! Chuyển sang Tab 5 để xem và chỉnh sửa.' });
+            queryClient.invalidateQueries({ queryKey: ['evalDrafts'] });
+        }
+    });
+
+    const columns = [
+        { title: 'Tên Đợt Xét', dataIndex: 'tenDotXet', key: 'tenDotXet' },
+        {
+            title: 'Khóa áp dụng', dataIndex: 'khoaSinhVien', key: 'khoaSinhVien', render: (val: string) => {
+                if (!val) return 'Tất cả';
+                if (!admissionPeriods?.periods) return val;
+                const ids = val.split(',').map(Number);
+                const matched = admissionPeriods.periods.filter((p: any) => ids.includes(p.id));
+                return matched.map((p: any) => p.name).join(', ');
+            }
+        },
+        { title: 'Năm học', dataIndex: 'namHoc', key: 'namHoc' },
+        { title: 'Học kỳ', dataIndex: 'hocKy', key: 'hocKy' },
+        { title: 'Cấu hình', dataIndex: ['cauHinh', 'tenCauHinh'], key: 'cauHinh' },
+        { title: 'Người thực hiện', dataIndex: 'nguoiXet', key: 'nguoiXet' },
+        { title: 'Thời gian lưu', dataIndex: 'createdAt', key: 'createdAt', render: (t: string) => new Date(t).toLocaleString('vi-VN') },
+        {
+            title: 'Thao tác', key: 'action', render: (_: any, r: any) => (
+                <Space>
+                    <Button type="link" onClick={() => setDetailId(r.id)}>Xem chi tiết</Button>
+                    <Popconfirm
+                        title="Tạo danh sách dự kiến từ đợt xét này?"
+                        description="Danh sách dự kiến sẽ xuất hiện ở Tab 5 để xem xét và chỉnh sửa trước khi chính thức."
+                        onConfirm={() => mutationPublish.mutate(r.id)}
+                    >
+                        <Button type="primary" size="small" loading={mutationPublish.isPending}>Tạo danh sách dự kiến</Button>
+                    </Popconfirm>
+                </Space>
+            )
+        }
+    ];
+
+    const detColumns = [
+        { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName' },
+        { title: 'MSSV', dataIndex: 'studentId', key: 'studentId' },
+        { title: 'Lớp / Khóa', dataIndex: 'className', key: 'className' },
+        { title: 'Hình phạt', dataIndex: 'hinhThuc', key: 'hinhThuc', render: (t: string) => <Tag color="red">{t}</Tag> },
+        { title: 'Lý do', dataIndex: 'lyDo', key: 'lyDo' }
+    ];
+
+    return (
+        <div>
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+                <Popconfirm title="Xác nhận xóa trắng Lịch sử đợt xét?" onConfirm={() => mutationClear.mutate()}>
+                    <Button type="primary" danger loading={mutationClear.isPending}>Xóa trắng lịch sử (Reset DB)</Button>
+                </Popconfirm>
+            </div>
+            <Table loading={isLoading} columns={columns} dataSource={history as any[]} rowKey="id" />
+            <Drawer title="Chi tiết sinh viên trong đợt xét" width={800} open={!!detailId} onClose={() => setDetailId(null)}>
+                <Table loading={isLoadingDetails} columns={detColumns} dataSource={details as any[]} rowKey="id" pagination={{ pageSize: 15 }} />
+            </Drawer>
+        </div>
+    );
+}
+
+// ==========================================
+// 5. DANH SÁCH DỰ KIẾN (DRAFTS)
+// ==========================================
+function EvaluationDraftsTab() {
+    const queryClient = useQueryClient();
+    const { data: drafts, isLoading } = useQuery({ queryKey: ['evalDrafts'], queryFn: getEvaluationDrafts });
+    const { data: admissionPeriods } = useQuery({ queryKey: ['admissionPeriods'], queryFn: getAdmissionPeriods });
+    const [detailId, setDetailId] = useState<number | null>(null);
+    const { data: details, isLoading: isLoadingDetails } = useQuery({
+        queryKey: ['evalDetails', detailId],
+        queryFn: () => getEvaluationDetails(detailId!),
+        enabled: !!detailId
+    });
+
+    const mutationFinalize = useMutation({
+        mutationFn: finalizeEvaluation,
+        onSuccess: () => {
+            notification.success({ message: 'Đã duyệt danh sách kỷ luật thành chính thức!' });
+            queryClient.invalidateQueries({ queryKey: ['evalDrafts'] });
+            queryClient.invalidateQueries({ queryKey: ['evalHistory'] });
+        }
+    });
+
+    const mutationDeleteDetail = useMutation({
+        mutationFn: deleteDraftDetail,
+        onSuccess: () => {
+            notification.success({ message: 'Đã xóa sinh viên khỏi danh sách dự kiến' });
+            queryClient.invalidateQueries({ queryKey: ['evalDetails', detailId] });
+        }
+    });
+
+    const columns = [
+        { title: 'Tên Đợt Xét', dataIndex: 'tenDotXet', key: 'tenDotXet' },
+        {
+            title: 'Khóa áp dụng', dataIndex: 'khoaSinhVien', key: 'khoaSinhVien', render: (val: string) => {
+                if (!val) return 'Tất cả';
+                if (!admissionPeriods?.periods) return val;
+                const ids = val.split(',').map(Number);
+                const matched = admissionPeriods.periods.filter((p: any) => ids.includes(p.id));
+                return matched.map((p: any) => p.name).join(', ');
+            }
+        },
+        { title: 'Năm học', dataIndex: 'namHoc', key: 'namHoc' },
+        { title: 'Học kỳ', dataIndex: 'hocKy', key: 'hocKy' },
+        { title: 'Cấu hình', dataIndex: ['cauHinh', 'tenCauHinh'], key: 'cauHinh' },
+        { title: 'Trạng thái', dataIndex: 'trangThai', key: 'trangThai', render: () => <Tag color="orange">Dự kiến</Tag> },
+        {
+            title: 'Thao tác', key: 'action', render: (_: any, r: any) => (
+                <Space>
+                    <Button type="link" onClick={() => setDetailId(r.id)}>Chi tiết Sinh viên</Button>
+                    <Popconfirm title="Chốt danh sách này thành Chính thức?" onConfirm={() => mutationFinalize.mutate(r.id)}>
+                        <Button type="primary" size="small">Duyệt & Chốt</Button>
+                    </Popconfirm>
+                </Space>
+            )
+        }
+    ];
+
+    const detColumns = [
+        { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName' },
+        { title: 'MSSV', dataIndex: 'studentId', key: 'studentId' },
+        { title: 'Lớp / Khóa', dataIndex: 'className', key: 'className' },
+        { title: 'Hình phạt', dataIndex: 'hinhThuc', key: 'hinhThuc', render: (t: string) => <Tag color="red">{t}</Tag> },
+        {
+            title: 'Thao tác', key: 'action', render: (_: any, r: any) => (
+                <Popconfirm title="Khoan hồng bỏ qua sinh viên khỏi danh sách?" onConfirm={() => mutationDeleteDetail.mutate(r.id)}>
+                    <Button type="link" danger size="small">Khoan hồng</Button>
+                </Popconfirm>
+            )
+        }
+    ];
+
+    return (
+        <div>
+            <Table loading={isLoading} columns={columns} dataSource={drafts as any[]} rowKey="id" />
+            <Drawer title="Điều chỉnh sinh viên vi phạm (Dự kiến)" width={900} open={!!detailId} onClose={() => setDetailId(null)}>
+                <Table loading={isLoadingDetails} columns={detColumns} dataSource={details as any[]} rowKey="id" pagination={{ pageSize: 15 }} />
+            </Drawer>
         </div>
     );
 }
