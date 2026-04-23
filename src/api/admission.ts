@@ -42,7 +42,14 @@ export interface AdmissionStats {
     totalStudents: number;
     completedAdmissions: number;
     pendingAdmissions: number;
-    byMajor: { major: string; count: number }[];
+    byCtdt: {
+        name: string;
+        count: number;
+    }[];
+    byMajor: {
+        major: string;
+        count: number;
+    }[];
 }
 
 export async function getAdmissionPeriods() {
@@ -53,7 +60,7 @@ export async function getAdmissionPeriods() {
     return response.data;
 }
 
-export async function createAdmissionPeriod(data: { name: string; startDate: string; endDate: string }) {
+export async function createAdmissionPeriod(data: { name: string; startDate: string; endDate: string; requiredDocuments?: string[] }) {
     const token = localStorage.getItem("accessToken");
     const response = await api.post("/admission/periods", data, {
         headers: { Authorization: `Bearer ${token}` },
@@ -61,9 +68,17 @@ export async function createAdmissionPeriod(data: { name: string; startDate: str
     return response.data;
 }
 
-export async function updatePeriodStatus(id: string, status: "active" | "locked") {
+export async function updatePeriodStatus(id: string, status: string) {
     const token = localStorage.getItem("accessToken");
     const response = await api.patch(`/admission/periods/${id}/status`, { status }, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+}
+
+export async function deleteAdmissionPeriod(id: string) {
+    const token = localStorage.getItem("accessToken");
+    const response = await api.delete(`/admission/periods/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;
@@ -123,9 +138,13 @@ export async function finalizeAdmission(studentId: string) {
     return response.data;
 }
 
-export async function getAdmissionStats(periodId: string) {
+export async function getAdmissionStats(periodId: string | number, startDate?: string, endDate?: string) {
+    let url = `/admission/periods/${periodId}/stats`;
+    if (startDate && endDate) {
+        url += `?startDate=${startDate}&endDate=${endDate}`;
+    }
     const token = localStorage.getItem("accessToken");
-    const response = await api.get(`/admission/periods/${periodId}/stats`, {
+    const response = await api.get(url, {
         headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;

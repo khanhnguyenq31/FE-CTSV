@@ -9,7 +9,7 @@ import {
   MessageOutlined,
   MenuOutlined
 } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const { Header } = Layout;
 const { useBreakpoint } = Grid;
@@ -21,9 +21,34 @@ interface CustomHeaderProps {
   showMenuButton?: boolean; // Prop để hiển thị nút menu
 }
 
+const routeTitles: Record<string, string> = {
+  "/technician/home": "Tổng quan",
+  "/technician/manage": "Quản lý nhập học",
+  "/technician/profile": "Danh sách sinh viên",
+  "/technician/decision": "Quyết định học vụ",
+  "/technician/praise": "Khen thưởng & Kỷ luật",
+  "/technician/certificate": "Chứng nhận",
+  "/technician/score": "Điểm rèn luyện",
+  "/technician/event": "Sự kiện & hoạt động",
+  "/technician/scholarship": "Học bổng",
+  "/technician/discipline": "Cấu hình Kỷ luật",
+  "/student/home": "Tổng quan",
+  "/student/profile": "Hồ sơ cá nhân",
+  "/student/course": "Kết quả học tập",
+  "/student/scholarship": "Thông tin học bổng",
+  "/student/event": "Sự kiện & hoạt động",
+  "/student/enrollment-records": "Hồ sơ nhập học",
+  "/admin/overview": "Tổng quan",
+  "/admin/manage-account": "Quản lý tài khoản",
+  "/change-password": "Đổi mật khẩu"
+};
+
 const CustomHeader: React.FC<CustomHeaderProps> = ({ showBackButton = false, title, onMenuClick, showMenuButton = false }) => {
   const navigate = useNavigate();
   const screens = useBreakpoint();
+  const location = useLocation();
+
+  const displayTitle = title || routeTitles[location.pathname] || "";
 
   const handleBack = () => {
     navigate(-1);
@@ -81,8 +106,8 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({ showBackButton = false, tit
             }}
           />
         )}
-        {title && (
-          <span style={{ fontWeight: 700, fontSize: xs ? '18px' : '22px', marginRight: 24, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '150px' }}>{title}</span>
+        {displayTitle && (
+          <span style={{ fontWeight: 700, fontSize: xs ? '18px' : '22px', marginRight: 24, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: screens.sm ? '300px' : '150px' }}>{displayTitle}</span>
         )}
 
         {/* Thanh Tìm kiếm - Ẩn trên màn hình nhỏ */}
@@ -103,14 +128,6 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({ showBackButton = false, tit
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-        {/* Hiển thị nút search icon trên mobile nếu hidden search bar */}
-        {!screens.md && (
-          <Button
-            type="text"
-            icon={<SearchOutlined style={{ fontSize: 20, color: '#000' }} />}
-            style={{ width: 40, height: 40, borderRadius: '50%' }}
-          />
-        )}
 
         {/* Các biểu tượng */}
         <Button

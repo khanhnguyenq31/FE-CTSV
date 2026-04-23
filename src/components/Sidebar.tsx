@@ -3,12 +3,8 @@ import { Layout, Menu, Button } from "antd";
 import {
   HomeOutlined,
   UserOutlined,
-  FileTextOutlined,
   SolutionOutlined,
   TrophyOutlined,
-  BookOutlined,
-  ScheduleOutlined,
-  CalendarOutlined,
   GiftOutlined,
   LogoutOutlined,
 } from "@ant-design/icons";
@@ -29,6 +25,13 @@ export default function Sidebar({ messageApi, isMobile = false, onClose }: Sideb
   const navigate = useNavigate();
   const location = useLocation();
   const logout = useAuthStore((s) => s.logout);
+  const technicianType = useAuthStore((s) => s.technicianType);
+  const permissions = useAuthStore((s) => s.permissions);
+
+  const hasAccess = (requiredPermission: string) => {
+    if (technicianType === "senior") return true;
+    return permissions.includes(requiredPermission);
+  };
 
 
   const pathToKey: Record<string, string> = {
@@ -46,6 +49,13 @@ export default function Sidebar({ messageApi, isMobile = false, onClose }: Sideb
 
 
   const [selectedKey, setSelectedKey] = useState(pathToKey[location.pathname] || "1");
+
+  const keyToSub: Record<string, string> = {
+    "2": "sub-student", "3": "sub-student",
+    "4": "sub-academic", "6": "sub-academic",
+    "7": "sub-evaluation", "5": "sub-evaluation", "10": "sub-evaluation",
+    "8": "sub-activity", "9": "sub-activity"
+  };
 
   useEffect(() => {
     setSelectedKey(pathToKey[location.pathname] || "1");
@@ -72,6 +82,88 @@ export default function Sidebar({ messageApi, isMobile = false, onClose }: Sideb
     }
   };
 
+  const menuItems = [
+    {
+      key: "1",
+      icon: <HomeOutlined />,
+      label: "Tổng quan",
+      onClick: () => handleMenuClick("/technician/home"),
+    },
+    (hasAccess("ADMISSION") || hasAccess("STUDENT_LIST")) && {
+      key: "sub-student",
+      icon: <UserOutlined />,
+      label: "Sinh viên & Nhập học",
+      children: [
+        hasAccess("ADMISSION") && {
+          key: "2",
+          label: "Quản lý nhập học",
+          onClick: () => handleMenuClick("/technician/manage"),
+        },
+        hasAccess("STUDENT_LIST") && {
+          key: "3",
+          label: "Danh sách sinh viên",
+          onClick: () => handleMenuClick("/technician/profile"),
+        },
+      ].filter(Boolean),
+    },
+    (hasAccess("ACADEMIC_DECISION") || hasAccess("CERTIFICATE")) && {
+      key: "sub-academic",
+      icon: <SolutionOutlined />,
+      label: "Học vụ & Minh chứng",
+      children: [
+        hasAccess("ACADEMIC_DECISION") && {
+          key: "4",
+          label: "Quyết định học vụ",
+          onClick: () => handleMenuClick("/technician/decision"),
+        },
+        hasAccess("CERTIFICATE") && {
+          key: "6",
+          label: "Chứng nhận",
+          onClick: () => handleMenuClick("/technician/certificate"),
+        },
+      ].filter(Boolean),
+    },
+    (hasAccess("TRAINING_POINT") || hasAccess("REWARD_DISCIPLINE")) && {
+      key: "sub-evaluation",
+      icon: <TrophyOutlined />,
+      label: "Đánh giá & Kỷ luật",
+      children: [
+        hasAccess("TRAINING_POINT") && {
+          key: "7",
+          label: "Điểm rèn luyện",
+          onClick: () => handleMenuClick("/technician/score"),
+        },
+        hasAccess("REWARD_DISCIPLINE") && {
+          key: "5",
+          label: "Khen thưởng & Kỷ luật",
+          onClick: () => handleMenuClick("/technician/praise"),
+        },
+        hasAccess("REWARD_DISCIPLINE") && {
+          key: "10",
+          label: "Cấu hình Kỷ luật",
+          onClick: () => handleMenuClick("/technician/discipline"),
+        },
+      ].filter(Boolean),
+    },
+    (hasAccess("EVENT_ACTIVITY") || hasAccess("SCHOLARSHIP")) && {
+      key: "sub-activity",
+      icon: <GiftOutlined />,
+      label: "Hoạt động & Hỗ trợ",
+      children: [
+        hasAccess("EVENT_ACTIVITY") && {
+          key: "8",
+          label: "Sự kiện & hoạt động",
+          onClick: () => handleMenuClick("/technician/event"),
+        },
+        hasAccess("SCHOLARSHIP") && {
+          key: "9",
+          label: "Học bổng",
+          onClick: () => handleMenuClick("/technician/scholarship"),
+        },
+      ].filter(Boolean),
+    },
+  ].filter(Boolean);
+
   const content = (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#001529' }}>
       <div
@@ -97,38 +189,9 @@ export default function Sidebar({ messageApi, isMobile = false, onClose }: Sideb
           theme="dark"
           mode="inline"
           selectedKeys={[selectedKey]}
-        >
-          <Menu.Item key="1" icon={<HomeOutlined />} onClick={() => handleMenuClick("/technician/home")}>
-            Tổng quan
-          </Menu.Item>
-          <Menu.Item key="2" icon={<UserOutlined />} onClick={() => handleMenuClick("/technician/manage")}>
-            Quản lý nhập học
-          </Menu.Item>
-          <Menu.Item key="3" icon={<FileTextOutlined />} onClick={() => handleMenuClick("/technician/profile")}>
-            Danh sách sinh viên
-          </Menu.Item>
-          <Menu.Item key="4" icon={<SolutionOutlined />} onClick={() => handleMenuClick("/technician/decision")}>
-            Quyết định học vụ
-          </Menu.Item>
-          <Menu.Item key="5" icon={<TrophyOutlined />} onClick={() => handleMenuClick("/technician/praise")}>
-            Khen thưởng & Kỷ luật
-          </Menu.Item>
-          <Menu.Item key="6" icon={<BookOutlined />} onClick={() => handleMenuClick("/technician/certificate")}>
-            Chứng nhận
-          </Menu.Item>
-          <Menu.Item key="7" icon={<ScheduleOutlined />} onClick={() => handleMenuClick("/technician/score")}>
-            Điểm rèn luyện
-          </Menu.Item>
-          <Menu.Item key="8" icon={<CalendarOutlined />} onClick={() => handleMenuClick("/technician/event")}>
-            Sự kiện & hoạt động
-          </Menu.Item>
-          <Menu.Item key="9" icon={<GiftOutlined />} onClick={() => handleMenuClick("/technician/scholarship")}>
-            Học bổng
-          </Menu.Item>
-          <Menu.Item key="10" icon={<SolutionOutlined />} onClick={() => handleMenuClick("/technician/discipline")}>
-            Cấu hình Kỷ luật
-          </Menu.Item>
-        </Menu>
+          defaultOpenKeys={keyToSub[pathToKey[location.pathname]] ? [keyToSub[pathToKey[location.pathname]]] : []}
+          items={menuItems as any}
+        />
       </div>
 
       <div style={{ padding: "20px 24px", flexShrink: 0 }}>

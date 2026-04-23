@@ -8,6 +8,7 @@ import {
   CalendarOutlined,
   LogoutOutlined,
   FilePdfOutlined,
+  LockOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -86,12 +87,22 @@ export default function StudentSidebar({ messageApi, isMobile = false, onClose }
     { key: "6", icon: <FilePdfOutlined />, label: "Hồ sơ nhập học", path: "/student/enrollment-records", onlyInEnrollment: true },
   ];
 
-  const visibleItems = menuItems.filter(item => {
-    if (isEnrollmentMode) {
-      return item.onlyInEnrollment;
-    } else {
-      return !item.onlyInEnrollment;
-    }
+  let filteredItems = menuItems;
+  if (!isEnrollmentMode) {
+    filteredItems = menuItems.filter(item => !item.onlyInEnrollment);
+  }
+
+  const visibleItems = filteredItems.map(item => {
+    const isLocked = isEnrollmentMode && !item.onlyInEnrollment;
+    return {
+      ...item,
+      label: isLocked ? (
+        <span style={{ color: "rgba(255, 255, 255, 0.45)" }}>
+          {item.label} <LockOutlined style={{ marginLeft: 8 }} />
+        </span>
+      ) : item.label,
+      isLocked
+    };
   });
 
   const renderMenuItems = () => {
@@ -114,7 +125,17 @@ export default function StudentSidebar({ messageApi, isMobile = false, onClose }
         selectedKeys={[selectedKey]}
       >
         {visibleItems.map(item => (
-          <Menu.Item key={item.key} icon={item.icon} onClick={() => handleMenuClick(item.path)}>
+          <Menu.Item
+            key={item.key}
+            icon={item.icon}
+            onClick={() => {
+              if (item.isLocked) {
+                if (messageApi) messageApi.warning("Vui lòng hoàn tất nộp hồ sơ nhập học để mở khóa tính năng này!");
+                return;
+              }
+              handleMenuClick(item.path);
+            }}
+          >
             {item.label}
           </Menu.Item>
         ))}

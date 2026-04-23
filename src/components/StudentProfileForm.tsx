@@ -114,7 +114,7 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
     const colProps6: ColProps = { xs: 24, sm: 24, md: 12, lg: 4 };
 
     // Helpers
-    const renderInput = (label: string, name: string | number, disabled: boolean = false, colProps: ColProps = defaultColProps, rules: Rule[] = []) => (
+    const renderInput = (label: string, name: string | number | (string | number)[], disabled: boolean = false, colProps: ColProps = defaultColProps, rules: Rule[] = []) => (
         <Col {...colProps}>
             <Form.Item label={label} name={name} rules={rules}>
                 <Input disabled={disabled} />
@@ -219,6 +219,19 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
                 </Row>
                 <Row gutter={[16, 16]}>
                     {renderInput("Quyết định kỷ luật", "disciplineDecision", true, colProps4)}
+                </Row>
+            </Card>
+
+            <Card title="Thông tin tuyển sinh (Dữ liệu gốc từ đợt tuyển sinh)" style={{ marginBottom: 20 }}>
+                <Row gutter={[16, 16]}>
+                    {renderInput("Trường THPT", "truongTHPT", true, colProps4)}
+                    {renderInput("Phương thức xét tuyển", "phuongThucXetTuyen", true, colProps4)}
+                    {renderInput("Tổng điểm xét tuyển", "tongDiemXetTuyen", true, colProps4)}
+                </Row>
+                <Row gutter={[16, 16]}>
+                    {renderInput("Mã ngành trúng tuyển", ["nganhTrungTuyen", "maNganh"], true, colProps4)}
+                    {renderInput("Tên ngành trúng tuyển", ["nganhTrungTuyen", "tenNganh"], true, colProps4)}
+                    {renderInput("Mã chương trình đào tạo", ["ctdt", "maCtdt"], true, colProps4)}
                 </Row>
             </Card>
 

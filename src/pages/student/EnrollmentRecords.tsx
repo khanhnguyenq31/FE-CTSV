@@ -10,7 +10,6 @@ import {
     Button,
     DatePicker,
     Select,
-    Checkbox,
     Divider,
     message,
     Spin,
@@ -54,6 +53,7 @@ export default function EnrollmentRecords() {
     const [uploading, setUploading] = useState(false);
     const cvRef = useRef<HTMLDivElement>(null);
     const receiptRef = useRef<HTMLDivElement>(null);
+    const [periodChecklist, setPeriodChecklist] = useState<string[]>(documentChecklist);
 
     // Fetch dữ liệu profile để pre-fill
     useEffect(() => {
@@ -76,20 +76,31 @@ export default function EnrollmentRecords() {
                             religion: profile.religion || "Không",
                             studentId: profile.studentId,
                             major: profile.major,
-                            idCard: profile.idCardNumber,
+                            idCard: profile.idCard || profile.idCardNumber,
                             hometown: profile.hometown,
                             permanentAddress: profile.permanentAddress,
-                            phone: profile.phoneNumber,
+                            phone: profile.phoneNumber || profile.phone,
                             email: profile.email,
                             faculty: profile.faculty,
                             classId: profile.className,
+                            truongTHPT: profile.truongTHPT,
+                            admissionsArea: profile.priorityArea,
+                            totalScore: profile.tongDiemXetTuyen,
+                            examId: profile.soBaoDanh,
                         };
+
+                        if (profile.admissionPeriod?.requiredDocuments?.length > 0) {
+                            setPeriodChecklist(profile.admissionPeriod.requiredDocuments);
+                        }
+
                         form.setFieldsValue(formatted);
                         receiptForm.setFieldsValue({
                             fullName: profile.fullName,
                             dob: profile.dateOfBirth ? dayjs(profile.dateOfBirth) : null,
                             studentId: profile.studentId,
                             major: profile.major,
+                            examId: profile.soBaoDanh,
+                            idCard: profile.idCard || profile.idCardNumber,
                         });
                         if (profile.avatar) {
                             setAvatarUrl(profile.avatar);
@@ -204,19 +215,17 @@ export default function EnrollmentRecords() {
                             <Row gutter={16}>
                                 <Col xs={24} md={6}>{renderFormItem("Dân tộc", "ethnicity")}</Col>
                                 <Col xs={24} md={6}>{renderFormItem("Tôn giáo", "religion")}</Col>
-                                <Col xs={24} md={6}>{renderFormItem("Thuộc khu vực tuyển sinh nào?", "admissionsArea")}</Col>
-                                <Col xs={24} md={6}>{renderSelect("Thành phần xuất thân", "origin", [{ label: "Công nhân viên chức (1)", value: "1" }, { label: "Nông dân (2)", value: "2" }, { label: "Khác (3)", value: "3" }])}</Col>
+                                <Col xs={24} md={12}>{renderSelect("Thành phần xuất thân", "origin", [{ label: "Công nhân viên chức (1)", value: "1" }, { label: "Nông dân (2)", value: "2" }, { label: "Khác (3)", value: "3" }])}</Col>
                             </Row>
                             <Row gutter={16}>
                                 <Col xs={24} md={8}>{renderFormItem("Đối tượng dự thi", "candidateType")}</Col>
-                                <Col xs={24} md={8}>{renderFormItem("Ký hiệu trường", "schoolCode")}</Col>
-                                <Col xs={24} md={8}>{renderFormItem("Số báo danh", "examId")}</Col>
+                                <Col xs={24} md={8}>{renderFormItem("Trường THPT", "truongTHPT", false, true)}</Col>
+                                <Col xs={24} md={8}>{renderFormItem("Số báo danh", "examId", false, true)}</Col>
                             </Row>
                             <Row gutter={16}>
-                                <Col xs={24} md={6}>{renderFormItem("Điểm môn 1", "score1")}</Col>
-                                <Col xs={24} md={6}>{renderFormItem("Điểm môn 2", "score2")}</Col>
-                                <Col xs={24} md={6}>{renderFormItem("Điểm môn 3", "score3")}</Col>
-                                <Col xs={24} md={6}>{renderFormItem("Tổng điểm", "totalScore")}</Col>
+                                <Col xs={24} md={8}>{renderFormItem("Số điện thoại", "phone", false, true)}</Col>
+                                <Col xs={24} md={8}>{renderFormItem("Thuộc khu vực tuyển sinh nào?", "admissionsArea", false, true)}</Col>
+                                <Col xs={24} md={8}>{renderFormItem("Tổng điểm", "totalScore", false, true)}</Col>
                             </Row>
                             <Divider style={{ margin: '12px 0' }} />
                             <Row gutter={16}>
@@ -224,9 +233,8 @@ export default function EnrollmentRecords() {
                                 <Col xs={24} md={12}>{renderFormItem("Hộ khẩu thường trú", "permanentAddress")}</Col>
                             </Row>
                             <Row gutter={16}>
-                                <Col xs={24} md={8}>{renderFormItem("Số CMND/CCCD", "idCard")}</Col>
-                                <Col xs={24} md={8}>{renderFormItem("Số điện thoại", "phone")}</Col>
-                                <Col xs={24} md={8}>{renderFormItem("Email", "email")}</Col>
+                                <Col xs={24} md={12}>{renderFormItem("Số CMND/CCCD", "idCard", false, true)}</Col>
+                                <Col xs={24} md={12}>{renderFormItem("Email", "email", false, true)}</Col>
                             </Row>
                             <Row gutter={16}>
                                 <Col xs={24} md={12}>{renderDatePicker("Ngày vào Đoàn", "unionDate")}</Col>
@@ -284,17 +292,14 @@ export default function EnrollmentRecords() {
                             </Row>
 
                             <Title level={5} style={{ marginTop: 16 }}>Danh mục giấy tờ nộp:</Title>
-                            <Form.Item name="documentsChecked">
-                                <Checkbox.Group style={{ width: "100%" }}>
-                                    <Row>
-                                        {documentChecklist.map((item, index) => (
-                                            <Col span={24} key={index} style={{ marginBottom: 8 }}>
-                                                <Checkbox value={index}>{index + 1}. {item}</Checkbox>
-                                            </Col>
-                                        ))}
-                                    </Row>
-                                </Checkbox.Group>
-                            </Form.Item>
+                            <div style={{ marginBottom: 16 }}>
+                                <Text strong>Danh sách các giấy tờ cần nộp:</Text>
+                                <ul style={{ marginTop: 8, paddingLeft: 24, fontSize: 14 }}>
+                                    {periodChecklist.map((item, index) => (
+                                        <li key={index} style={{ marginBottom: 8 }}>{item}</li>
+                                    ))}
+                                </ul>
+                            </div>
 
                             <div style={{ marginTop: 24, textAlign: "right" }}>
                                 <Button type="primary" icon={<FilePdfOutlined />} onClick={handleExportReceipt} loading={exporting}>
@@ -423,8 +428,9 @@ export default function EnrollmentRecords() {
                             <div>- Thuộc khu vực tuyển sinh: {form.getFieldValue("admissionsArea")}</div>
                             <div>- Ngành học: {form.getFieldValue("major")}</div>
                             <div>- Đối tượng dự thi: {form.getFieldValue("candidateType")}</div>
+                            <div>- Trường THPT: {form.getFieldValue("truongTHPT")}</div>
                             <div>- Số báo danh: {form.getFieldValue("examId")}</div>
-                            <div>- Điểm thi: {form.getFieldValue("score1")} ; {form.getFieldValue("score2")} ; {form.getFieldValue("score3")} = {form.getFieldValue("totalScore")}</div>
+                            <div>- Tổng điểm xét tuyển: {form.getFieldValue("totalScore")}</div>
                             <div style={{ gridColumn: "span 2" }}>- Kết quả học cuối cấp: Học tập: {form.getFieldValue("academicRank")} ; Hạnh kiểm: {form.getFieldValue("conductRank")} ; Tốt nghiệp: {form.getFieldValue("gradRank")}</div>
                             <div>- Ngày vào Đoàn: {form.getFieldValue("unionDate")?.format("DD/MM/YYYY")}</div>
                             <div>- Ngày vào Đảng: {form.getFieldValue("partyDate")?.format("DD/MM/YYYY")}</div>
@@ -497,16 +503,13 @@ export default function EnrollmentRecords() {
                             </tr>
                         </thead>
                         <tbody>
-                            {documentChecklist.map((item, idx) => {
-                                const isChecked = receiptForm.getFieldValue("documentsChecked")?.includes(idx);
+                            {periodChecklist.map((item, idx) => {
                                 return (
                                     <tr key={idx}>
                                         <td style={{ border: "1px solid #000", textAlign: "center", height: "30px" }}>{idx + 1}</td>
                                         <td style={{ border: "1px solid #000", padding: "5px" }}>{item}</td>
-                                        <td style={{ border: "1px solid #000", textAlign: "center" }}>{isChecked ? "X" : ""}</td>
-                                        {idx === 0 && <td rowSpan={5} style={{ border: "1px solid #000", textAlign: "center" }}>Ban QLĐT</td>}
-                                        {idx === 5 && <td rowSpan={2} style={{ border: "1px solid #000", textAlign: "center" }}>Ban CTCT-SV</td>}
-                                        {idx === 7 && <td style={{ border: "1px solid #000", textAlign: "center" }}>Đoàn TN</td>}
+                                        <td style={{ border: "1px solid #000", textAlign: "center" }}></td>
+                                        {idx === 0 && <td rowSpan={periodChecklist.length} style={{ border: "1px solid #000", textAlign: "center" }}>Ban QLĐT</td>}
                                         <td style={{ border: "1px solid #000" }}></td>
                                         <td style={{ border: "1px solid #000" }}></td>
                                     </tr>

@@ -25,6 +25,7 @@ import {
   Tabs,
   Select,
   Spin,
+  Checkbox,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -44,6 +45,7 @@ import {
   SolutionOutlined,
   ScanOutlined,
   FilterOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 // import { Html5QrcodeScanner } from "html5-qrcode"; // Remove this
 import { Html5Qrcode } from "html5-qrcode";
@@ -74,10 +76,22 @@ import {
   finalizeAdmission,
   searchAdmissionStudent,
   cancelFinalizeAdmission,
+  deleteAdmissionPeriod
 } from "../../api/admission";
 import type { AdmissionPeriod, AdmissionStudent, AdmissionStats } from "../../api/admission";
 const { Title, Text } = Typography;
 const { Search } = Input;
+
+const documentChecklist = [
+  "Giấy báo trúng tuyển (bản photo)",
+  "Giấy chứng nhận tốt nghiệp THPT tạm thời hoặc Bằng tốt nghiệp (Bản sao công chứng)",
+  "Học bạ THPT hoặc tương đương + Giấy khai sinh (Bản sao công chứng)",
+  "01 ảnh 2x3 (ghi họ tên, ngày sinh, mã số sinh viên ở mặt sau)",
+  "Giấy tờ xác nhận ưu tiên (con liệt sĩ, thương binh...) (Bản sao công chứng)",
+  "Bản photo chứng minh thư + Thẻ sinh viên",
+  "Giấy chứng nhận đăng ký nghĩa vụ quân sự (với nam)",
+  "Giấy chuyển sinh hoạt đoàn, Sổ đoàn viên",
+];
 
 // Component quét QR riêng để đảm bảo DOM element đã mount và có kiểm soát camera tốt hơn
 interface ScannerProps {
@@ -184,27 +198,28 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
     return Array.isArray(studentsData) ? studentsData : (studentsData.students || []);
   }, [studentsData]);
 
+  const [statDateRange, setStatDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
+
   // React Query cho thống kê
   const { data: statsData } = useQuery({
-    queryKey: ["admissionStats", selectedPeriod?.id],
-    queryFn: () => getAdmissionStats(selectedPeriod!.id),
+    queryKey: [
+      "admissionStats",
+      selectedPeriod?.id,
+      statDateRange?.[0]?.format("YYYY-MM-DD"),
+      statDateRange?.[1]?.format("YYYY-MM-DD")
+    ],
+    queryFn: () => getAdmissionStats(
+      selectedPeriod!.id,
+      statDateRange?.[0]?.format("YYYY-MM-DD"),
+      statDateRange?.[1]?.format("YYYY-MM-DD")
+    ),
     enabled: !!selectedPeriod?.id && viewMode === "detail",
     refetchInterval: 3000,
   });
 
   const stats: AdmissionStats | null = statsData?.stats || null;
 
-  // State cho lọc thống kê (Mock)
-  const [statDateRange, setStatDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
-  const [educationType, setEducationType] = useState<string | null>(null);
   const [isFiltering, setIsFiltering] = useState(false);
-
-  // Mock data cho hệ đào tạo
-  const mockEduStats = useMemo(() => [
-    { name: 'Chính quy', value: stats ? Math.floor(stats.totalStudents * 0.7) : 700 },
-    { name: 'Chất lượng cao', value: stats ? Math.floor(stats.totalStudents * 0.2) : 200 },
-    { name: 'Liên thông', value: stats ? Math.floor(stats.totalStudents * 0.1) : 100 },
-  ], [stats]);
 
   // Student Detail Modal
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
@@ -250,6 +265,7 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
         name: values.name,
         startDate: values.range[0].format("YYYY-MM-DD"),
         endDate: values.range[1].format("YYYY-MM-DD"),
+        requiredDocuments: values.requiredDocuments || []
       });
       if (messageApi) messageApi.success("Tạo đợt nhập học thành công");
       setIsModalOpen(false);
@@ -271,6 +287,16 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
       }
     } catch (error) {
       if (messageApi) messageApi.error("Cập nhật trạng thái thất bại");
+    }
+  };
+
+  const handleDeletePeriod = async (id: string) => {
+    try {
+      await deleteAdmissionPeriod(id);
+      if (messageApi) messageApi.success("Đã xóa đợt nhập học thành công");
+      fetchPeriods();
+    } catch (error: any) {
+      if (messageApi) messageApi.error(error.response?.data?.message || "Xóa đợt thất bại");
     }
   };
 
@@ -430,6 +456,20 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
               {record.status === "active" ? "Khóa" : "Mở"}
             </Button>
           </Popconfirm>
+          <Popconfirm
+            title="Bạn có chắc muốn xóa đợt này?"
+            description="Lưu ý: Không thể xóa đợt nếu đã có sinh viên tồn tại."
+            onConfirm={() => handleDeletePeriod(record.id)}
+            okButtonProps={{ danger: true }}
+          >
+            <Button
+              type="link"
+              danger
+              icon={<DeleteOutlined />}
+            >
+              Xóa
+            </Button>
+          </Popconfirm>
         </Space>
       ),
     },
@@ -494,24 +534,8 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
                   }}
                   format="DD/MM/YYYY"
                 />
-                <Select
-                  placeholder="Hệ đào tạo"
-                  style={{ width: 160 }}
-                  allowClear
-                  value={educationType}
-                  onChange={(val) => {
-                    setEducationType(val);
-                    setIsFiltering(true);
-                    setTimeout(() => setIsFiltering(false), 500);
-                  }}
-                >
-                  <Select.Option value="CQ">Chính quy</Select.Option>
-                  <Select.Option value="CLC">Chất lượng cao</Select.Option>
-                  <Select.Option value="LT">Liên thông</Select.Option>
-                </Select>
                 <Button icon={<FilterOutlined />} onClick={() => {
                   setStatDateRange(null);
-                  setEducationType(null);
                 }}>Làm mới</Button>
               </Space>
             </Col>
@@ -526,30 +550,30 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
               <Col xs={24} sm={8}>
                 <Card bordered={false} className="shadow-sm" style={{ height: '100%' }}>
                   <Statistic
-                    title="Tổng sinh viên"
-                    value={educationType ? (educationType === 'CQ' ? 700 : educationType === 'CLC' ? 200 : 100) : stats.totalStudents}
+                    title="Tổng sinh viên đợt"
+                    value={stats.totalStudents}
                     prefix={<TeamOutlined style={{ color: '#1890ff' }} />}
                   />
-                  <div style={{ marginTop: 8 }}><Text type="secondary">Theo tiêu chí lọc</Text></div>
+                  <div style={{ marginTop: 8 }}><Text type="secondary">Tất cả hồ sơ</Text></div>
                 </Card>
               </Col>
               <Col xs={24} sm={8}>
                 <Card bordered={false} className="shadow-sm" style={{ height: '100%' }}>
-                  <Statistic title="Đã hoàn tất" value={educationType ? Math.floor((educationType === 'CQ' ? 700 : 200) * 0.8) : stats.completedAdmissions} valueStyle={{ color: '#52c41a' }} prefix={<CheckCircleOutlined />} />
-                  <div style={{ marginTop: 8 }}><Text type="secondary">Tỉ lệ: {educationType ? '80%' : Math.round((stats.completedAdmissions / stats.totalStudents) * 100) + '%'}</Text></div>
+                  <Statistic title="Đã hoàn tất" value={stats.completedAdmissions} valueStyle={{ color: '#52c41a' }} prefix={<CheckCircleOutlined />} />
+                  <div style={{ marginTop: 8 }}><Text type="secondary">Tỉ lệ: {stats.totalStudents ? Math.round((stats.completedAdmissions / stats.totalStudents) * 100) : 0}%</Text></div>
                 </Card>
               </Col>
               <Col xs={24} sm={8}>
                 <Card bordered={false} className="shadow-sm" style={{ height: '100%' }}>
-                  <Statistic title="Đang chờ" value={educationType ? Math.floor((educationType === 'CQ' ? 700 : 200) * 0.2) : stats.pendingAdmissions} valueStyle={{ color: '#faad14' }} prefix={<ClockCircleOutlined />} />
-                  <div style={{ marginTop: 8 }}><Text type="secondary">Cần xử lý gấp</Text></div>
+                  <Statistic title="Đang chờ duyệt" value={stats.pendingAdmissions} valueStyle={{ color: '#faad14' }} prefix={<ClockCircleOutlined />} />
+                  <div style={{ marginTop: 8 }}><Text type="secondary">Đang nhập học</Text></div>
                 </Card>
               </Col>
             </Row>
 
             <Row gutter={[16, 16]}>
               <Col xs={24} lg={16}>
-                <Card title="Thống kê sinh viên theo ngành" bordered={false} className="shadow-sm">
+                <Card title="Thống kê sinh viên theo ngành (Top 5)" bordered={false} className="shadow-sm">
                   <div style={{ width: '100%', height: 350 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
@@ -571,7 +595,7 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
                           contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                         />
                         <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={40}>
-                          {stats.byMajor.map((_, index) => (
+                          {stats.byMajor?.map((_: any, index: any) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Bar>
@@ -581,18 +605,20 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
                 </Card>
               </Col>
               <Col xs={24} lg={8}>
-                <Card title="Tỉ lệ theo hệ đào tạo" bordered={false} className="shadow-sm">
+                <Card title="Tỉ lệ theo chương trình đào tạo" bordered={false} className="shadow-sm">
                   <div style={{ width: '100%', height: 350 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={mockEduStats}
+                          data={stats.byCtdt}
                           innerRadius={60}
                           outerRadius={80}
                           paddingAngle={5}
-                          dataKey="value"
+                          dataKey="count"
+                          nameKey="name"
+                          label={({ name, percent }) => `${(percent * 100).toFixed(1)}%`}
                         >
-                          {mockEduStats.map((_, index) => (
+                          {stats.byCtdt?.map((_: any, index: any) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
@@ -959,6 +985,15 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
           <Form.Item name="range" label="Thời gian diễn ra" rules={[{ required: true, message: "Chọn thời gian" }]}>
             <DatePicker.RangePicker format="DD/MM/YYYY" style={{ width: "100%" }} />
           </Form.Item>
+
+          <Form.Item name="requiredDocuments" label="Cấu hình danh sách giấy tờ nộp (Biên nhận)" initialValue={documentChecklist}>
+            <Checkbox.Group style={{ width: "100%", display: "flex", flexDirection: "column", gap: "8px" }}>
+              {documentChecklist.map((doc, idx) => (
+                <Checkbox key={idx} value={doc}>{doc}</Checkbox>
+              ))}
+            </Checkbox.Group>
+          </Form.Item>
+
           <Form.Item style={{ marginBottom: 0, textAlign: "right" }}>
             <Space>
               <Button onClick={() => setIsModalOpen(false)}>Hủy</Button>

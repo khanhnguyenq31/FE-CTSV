@@ -83,24 +83,16 @@ const StudentLayout = ({ messageApi }: { messageApi: any }) => {
   const screens = useBreakpoint();
   const [mobileOpen, setMobileOpen] = useState(false);
   const isMobile = !screens.lg;
-  const navigate = useNavigate();
   const location = useLocation();
 
   const { data, isLoading } = useQuery({
     queryKey: ["studentProfile"],
     queryFn: getStudentProfileApi,
     staleTime: 5 * 60 * 1000,
+    refetchInterval: (queryData: any) => queryData?.profile?.graduationType === "Đang nhập học" ? 5000 : false,
   });
 
   const graduationType = data?.profile?.graduationType || "";
-
-  useEffect(() => {
-    if (!isLoading && graduationType === "Đang nhập học") {
-      if (location.pathname !== "/student/enrollment-records") {
-        navigate("/student/enrollment-records", { replace: true });
-      }
-    }
-  }, [graduationType, isLoading, location.pathname, navigate]);
 
   if (isLoading) {
     return (
@@ -108,6 +100,11 @@ const StudentLayout = ({ messageApi }: { messageApi: any }) => {
         <Skeleton active />
       </div>
     );
+  }
+
+  // Instant redirect to hide flashing UI
+  if (graduationType === "Đang nhập học" && location.pathname !== "/student/enrollment-records") {
+    return <Navigate to="/student/enrollment-records" replace />;
   }
 
   return (
