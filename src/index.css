@@ -2,7 +2,7 @@
 
 /* Fix Quill JS styling inside Ant Design */
 .ql-editor {
-    word-break: break-word !important;
+    word-break: normal !important;
     overflow-wrap: break-word !important;
     white-space: normal !important;
 }

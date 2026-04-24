@@ -47,7 +47,7 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient, useQueries } from "@tanstack/react-query";
-import { InboxOutlined } from "@ant-design/icons";
+import { InboxOutlined, EnvironmentOutlined, AimOutlined } from "@ant-design/icons";
 import {
   getActivitiesApi,
   createActivityApi,
@@ -122,6 +122,8 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
 
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+
+  const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
 
   // Attendance state
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
@@ -225,8 +227,12 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["activities"] });
       messageApi.success("Xóa thành công");
+      setSelectedActionId(null);
     },
-    onError: (err: any) => messageApi.error(err.message || "Xóa thất bại"),
+    onError: (err: any) => {
+      messageApi.error(err.message || "Xóa thất bại");
+      setSelectedActionId(null);
+    },
   });
 
   const activateMutation = useMutation({
@@ -234,8 +240,12 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["activities"] });
       messageApi.success("Thay đổi trạng thái kích hoạt thành công");
+      setSelectedActionId(null);
     },
-    onError: (err: any) => messageApi.error(err.message || "Thao tác thất bại"),
+    onError: (err: any) => {
+      messageApi.error(err.message || "Thao tác thất bại");
+      setSelectedActionId(null);
+    },
   });
 
   const approveMutation = useMutation({
@@ -243,8 +253,12 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["activities"] });
       messageApi.success("Duyệt hoạt động thành công");
+      setSelectedActionId(null);
     },
-    onError: (err: any) => messageApi.error(err.message || "Duyệt thất bại"),
+    onError: (err: any) => {
+      messageApi.error(err.message || "Duyệt thất bại");
+      setSelectedActionId(null);
+    },
   });
 
   const toggleLockMutation = useMutation({
@@ -461,8 +475,9 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
               shape="circle"
               ghost
               icon={<PoweroffOutlined className={record.isActive ? (canManage(record) ? "text-red-500" : "text-gray-400") : (canManage(record) ? "text-green-500" : "text-gray-400")} />}
-              onClick={() => activateMutation.mutate(record.id)}
+              onClick={() => { setSelectedActionId(record.id); activateMutation.mutate(record.id); }}
               disabled={!canManage(record)}
+              loading={activateMutation.isPending && selectedActionId === record.id}
             />
           </Tooltip>
 
@@ -473,7 +488,8 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
                 shape="circle"
                 ghost
                 icon={<CheckCircleOutlined className="text-green-500" />}
-                onClick={() => approveMutation.mutate(record.id)}
+                onClick={() => { setSelectedActionId(record.id); approveMutation.mutate(record.id); }}
+                loading={approveMutation.isPending && selectedActionId === record.id}
               />
             </Tooltip>
           )}
@@ -481,13 +497,20 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
           <Tooltip title={canManage(record) ? "Xóa" : "Bạn không có quyền xóa (Chỉ người tạo mới có quyền)"}>
             <Popconfirm
               title="Xóa hoạt động này?"
-              onConfirm={() => deleteMutation.mutate(record.id)}
+              onConfirm={async () => {
+                setSelectedActionId(record.id);
+                try {
+                  await deleteMutation.mutateAsync(record.id);
+                } finally {
+                  setSelectedActionId(null);
+                }
+              }}
               okText="Xóa"
               cancelText="Hủy"
-              okButtonProps={{ danger: true }}
+              okButtonProps={{ danger: true, loading: deleteMutation.isPending && selectedActionId === record.id }}
               disabled={!canManage(record)}
             >
-              <Button type="primary" shape="circle" ghost danger icon={<DeleteOutlined />} disabled={!canManage(record)} />
+              <Button type="primary" shape="circle" ghost danger icon={<DeleteOutlined />} disabled={!canManage(record)} loading={deleteMutation.isPending && selectedActionId === record.id} />
             </Popconfirm>
           </Tooltip>
 
@@ -706,11 +729,6 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item label="Thời gian diễn ra" name="eventTime" rules={[{ required: true }]}>
-                <DatePicker showTime className="w-full" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
               <Form.Item label="Bắt đầu đăng ký" name="registrationStartTime" rules={[{ required: true }]}>
                 <DatePicker showTime className="w-full" />
               </Form.Item>
@@ -720,13 +738,19 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
                 <DatePicker showTime className="w-full" />
               </Form.Item>
             </Col>
+            <Col span={8}>
+              <Form.Item label="Thời gian diễn ra" name="eventTime" rules={[{ required: true }]}>
+                <DatePicker showTime className="w-full" />
+              </Form.Item>
+            </Col>
             <Col span={24}>
               <div className="flex items-center justify-between mb-2 mt-4">
-                <Text strong style={{ fontSize: '15px' }}>📍 Khoanh vùng điểm danh (Tùy chọn)</Text>
+                <Text strong style={{ fontSize: '15px' }}><EnvironmentOutlined className="text-blue-500 mr-2" /> Khoanh vùng điểm danh (Tùy chọn)</Text>
                 <Button
                   size="small"
                   type="primary"
                   ghost
+                  icon={<AimOutlined />}
                   onClick={() => {
                     if (navigator.geolocation) {
                       navigator.geolocation.getCurrentPosition(
@@ -747,7 +771,7 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
                     }
                   }}
                 >
-                  📍 Lấy tọa độ hiện tại
+                  Lấy tọa độ hiện tại
                 </Button>
               </div>
             </Col>
@@ -903,15 +927,6 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
             )}
             <Descriptions column={1} bordered size="middle">
               <Descriptions.Item label="Mô tả ngắn">{selectedEvent.description}</Descriptions.Item>
-              <Descriptions.Item label="Nội dung chi tiết">
-                <div className="ql-snow">
-                  <div
-                    className="ql-editor"
-                    dangerouslySetInnerHTML={{ __html: selectedEvent.content }}
-                    style={{ padding: 0, border: 'none', wordBreak: 'break-word', overflowWrap: 'break-word' }}
-                  />
-                </div>
-              </Descriptions.Item>
               <Descriptions.Item label="Thời gian diễn ra">
                 <Space>
                   <CalendarOutlined />
@@ -937,6 +952,18 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
                 </Descriptions.Item>
               )}
             </Descriptions>
+
+            <div className="mt-4">
+              <Text strong style={{ display: 'block', marginBottom: 8 }}>Nội dung chi tiết</Text>
+              <div style={{ border: '1px solid #f0f0f0', borderRadius: 8, overflow: 'hidden' }}>
+                <ReactQuill
+                  value={selectedEvent.content}
+                  readOnly={true}
+                  theme="snow"
+                  modules={{ toolbar: false }}
+                />
+              </div>
+            </div>
           </div>
         )}
       </Modal>

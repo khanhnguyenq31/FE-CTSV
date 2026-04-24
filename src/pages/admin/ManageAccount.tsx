@@ -130,14 +130,20 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
       title: 'Hành động',
       key: 'actions',
       fixed: 'right' as const,
-      width: 120,
+      width: 150,
       render: (_: any, record: UserData) => (
-        <Space size="small">
+        <Space>
           <Tooltip title="Chỉnh sửa">
-            <Button type="text" icon={<EditOutlined className="text-blue-500" />} />
+            <Button type="primary" shape="circle" ghost icon={<EditOutlined />} />
           </Tooltip>
           <Tooltip title={record.status === 'locked' ? "Mở khóa" : "Khóa tài khoản"}>
-            <Button type="text" icon={<LockOutlined className="text-orange-500" />} />
+            <Button
+              type="primary"
+              shape="circle"
+              ghost
+              icon={<LockOutlined />}
+              style={{ color: '#fa8c16', borderColor: '#fa8c16' }}
+            />
           </Tooltip>
           <Tooltip title="Xóa tài khoản">
             <Popconfirm
@@ -149,7 +155,7 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
               okButtonProps={{ danger: true, loading: loading }}
               icon={<QuestionCircleOutlined style={{ color: 'red' }} />}
             >
-              <Button type="text" danger icon={<DeleteOutlined />} loading={loading} />
+              <Button type="primary" shape="circle" ghost danger icon={<DeleteOutlined />} loading={loading} />
             </Popconfirm>
           </Tooltip>
         </Space>
