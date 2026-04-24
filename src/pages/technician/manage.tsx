@@ -431,45 +431,50 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
     {
       title: "Thao tác",
       key: "action",
-      width: 250,
+      align: "center",
       render: (_, record) => (
         <Space size="middle">
-          <Button
-            type="link"
-            icon={<EyeOutlined />}
-            onClick={() => {
-              setSelectedPeriod(record);
-              setViewMode("detail");
-            }}
-          >
-            Chi tiết
-          </Button>
-          <Popconfirm
-            title={record.status === "active" ? "Khóa đợt này?" : "Mở đợt này?"}
-            onConfirm={() => toggleStatus(record)}
-          >
+          <Tooltip title="Xem chi tiết">
             <Button
-              type="link"
-              danger={record.status === "active"}
-              icon={record.status === "active" ? <LockOutlined /> : <UnlockOutlined />}
+              type="primary"
+              shape="circle"
+              ghost
+              icon={<EyeOutlined />}
+              onClick={() => {
+                setSelectedPeriod(record);
+                setViewMode("detail");
+              }}
+            />
+          </Tooltip>
+          <Tooltip title={record.status === "active" ? "Khóa" : "Mở"}>
+            <Popconfirm
+              title={record.status === "active" ? "Khóa đợt này?" : "Mở đợt này?"}
+              onConfirm={() => toggleStatus(record)}
             >
-              {record.status === "active" ? "Khóa" : "Mở"}
-            </Button>
-          </Popconfirm>
-          <Popconfirm
-            title="Bạn có chắc muốn xóa đợt này?"
-            description="Lưu ý: Không thể xóa đợt nếu đã có sinh viên tồn tại."
-            onConfirm={() => handleDeletePeriod(record.id)}
-            okButtonProps={{ danger: true }}
-          >
-            <Button
-              type="link"
-              danger
-              icon={<DeleteOutlined />}
+              <Button
+                shape="circle"
+                type="default"
+                danger={record.status === "active"}
+                icon={record.status === "active" ? <LockOutlined /> : <UnlockOutlined />}
+              />
+            </Popconfirm>
+          </Tooltip>
+          <Tooltip title="Xóa đợt">
+            <Popconfirm
+              title="Bạn có chắc muốn xóa đợt này?"
+              description="Lưu ý: Không thể xóa đợt nếu đã có sinh viên tồn tại."
+              onConfirm={() => handleDeletePeriod(record.id)}
+              okButtonProps={{ danger: true }}
             >
-              Xóa
-            </Button>
-          </Popconfirm>
+              <Button
+                type="primary"
+                danger
+                shape="circle"
+                ghost
+                icon={<DeleteOutlined />}
+              />
+            </Popconfirm>
+          </Tooltip>
         </Space>
       ),
     },

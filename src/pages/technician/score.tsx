@@ -195,7 +195,9 @@ export default function ScorePage({ }: { messageApi: any }) {
         <Space>
           <Tooltip title="Xem chi tiết đánh giá">
             <Button
-              type="text"
+              type="primary"
+              shape="circle"
+              ghost
               icon={<EyeOutlined />}
               onClick={() => {
                 alert(`Xem đánh giá ĐRL: ${record.semester} - ${record.academicYear} của ${record.name}`);

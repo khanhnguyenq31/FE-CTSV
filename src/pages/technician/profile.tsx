@@ -25,7 +25,6 @@ import {
   PlusOutlined,
   EyeOutlined,
   SearchOutlined,
-  CalendarOutlined,
   EditOutlined,
   DeleteOutlined,
 } from "@ant-design/icons";
@@ -92,22 +91,24 @@ export default function ProfilePage({ }: { messageApi: any }) {
         const json = await res.json();
         // Map dữ liệu API sang RowData
         const rawStudents = Array.isArray(json) ? json : (json.students || []);
-        const students: RowData[] = rawStudents.map(
-          (s: any, idx: number) => ({
-            // Ensure key is unique by combining studentId and index
-            key: s.studentId ? `${s.studentId}_${idx}` : `student_${idx}`,
-            stt: idx + 1 < 10 ? `0${idx + 1}` : `${idx + 1}`,
-            name: s.fullName || "",
-            studentId: s.studentId || "",
-            classId: s.className || "",
-            major: s.major || "",
-            course: s.studentCode || "", // Khóa
-            gpa: Number(s.gpaTotal) || 0,
-            trainingScore: 100, // Mặc định 100
-            status: "Đang học", // Mặc định
-            faculty: s.faculty || "", // Chỉ dùng cho xem chi tiết
-          })
-        );
+        const students: RowData[] = rawStudents
+          .filter((s: any) => s.graduationType !== "Đang nhập học")
+          .map(
+            (s: any, idx: number) => ({
+              // Ensure key is unique by combining studentId and index
+              key: s.studentId ? `${s.studentId}_${idx}` : `student_${idx}`,
+              stt: idx + 1 < 10 ? `0${idx + 1}` : `${idx + 1}`,
+              name: s.fullName || "",
+              studentId: s.studentId || "",
+              classId: "Chưa xếp lớp",
+              major: s.major || "",
+              course: s.className || s.studentCode || "", // Khóa
+              gpa: Number(s.gpaTotal) || 0,
+              trainingScore: "NaN" as any,
+              status: s.graduationType || "Đang học",
+              faculty: s.faculty || s.nganhTrungTuyen?.khoa?.khoaName || "", // Chỉ dùng cho xem chi tiết
+            })
+          );
         setData(students);
       } catch (e) {
         // Có thể show message lỗi ở đây
@@ -245,13 +246,16 @@ export default function ProfilePage({ }: { messageApi: any }) {
       title: "",
       key: "action",
       width: 60,
+      align: "center",
       render: (_: any, record: RowData) => (
         <Space>
           <Tooltip title="Xem chi tiết hồ sơ">
             <Button
-              type="text"
+              type="primary"
+              shape="circle"
+              ghost
               icon={<EyeOutlined />}
-              onClick={() => showStudentDetail(record)} // Mở Modal khi click
+              onClick={() => showStudentDetail(record)}
             />
           </Tooltip>
         </Space>
@@ -273,9 +277,6 @@ export default function ProfilePage({ }: { messageApi: any }) {
   const handleEditClick = async () => {
     if (!selectedStudent) return;
     setEditLoading(true);
-    setIsEditModalOpen(true);
-    // Ẩn modal xem chi tiết
-    setIsModalOpen(false);
 
     try {
       const token = localStorage.getItem("accessToken");
@@ -300,6 +301,13 @@ export default function ProfilePage({ }: { messageApi: any }) {
       });
 
       setEditingStudent(profileData);
+
+      // Delay nhẹ để tạo hiệu ứng chuyển Modal mượt mà
+      setIsModalOpen(false);
+      setTimeout(() => {
+        setIsEditModalOpen(true);
+      }, 150);
+
     } catch (error) {
       console.error(error);
       message.warning("Không thể tải đầy đủ thông tin, hiển thị thông tin cơ bản.");
@@ -487,11 +495,21 @@ export default function ProfilePage({ }: { messageApi: any }) {
       title: 'Hành động',
       key: 'action',
       render: (_: any, r: Period) => (
-        <Space>
-          <Button icon={<EditOutlined />} size="small" onClick={() => handleOpenPeriodModal(r)} />
-          <Popconfirm title="Bạn chắc chắn muốn xóa?" onConfirm={() => handleDeletePeriod(r.id)}>
-            <Button icon={<DeleteOutlined />} size="small" danger />
-          </Popconfirm>
+        <Space size="middle">
+          <Tooltip title="Chỉnh sửa đợt">
+            <Button
+              type="primary"
+              shape="circle"
+              ghost
+              icon={<EditOutlined />}
+              onClick={() => handleOpenPeriodModal(r)}
+            />
+          </Tooltip>
+          <Tooltip title="Xóa đợt">
+            <Popconfirm title="Bạn chắc chắn muốn xóa đợt này?" onConfirm={() => handleDeletePeriod(r.id)}>
+              <Button type="primary" danger shape="circle" ghost icon={<DeleteOutlined />} />
+            </Popconfirm>
+          </Tooltip>
         </Space>
       )
     }
@@ -752,7 +770,7 @@ export default function ProfilePage({ }: { messageApi: any }) {
                       <Text strong>{selectedStudent.major}</Text>
                     </Descriptions.Item>
                     <Descriptions.Item label="Lớp">
-                      {selectedStudent.classId}
+                      Chưa xếp lớp
                     </Descriptions.Item>
                     <Descriptions.Item label="Khóa">
                       {selectedStudent.course}
@@ -807,10 +825,10 @@ export default function ProfilePage({ }: { messageApi: any }) {
                       headStyle={{ borderBottom: "none" }}
                       size="small"
                     >
-                      <Title level={2} style={{ margin: 0, color: "#52c41a" }}>
-                        {selectedStudent.trainingScore}
+                      <Title level={2} style={{ margin: 0, color: "#faad14" }}>
+                        NaN
                       </Title>
-                      <Text type="secondary">Kỳ gần nhất</Text>
+                      <Text type="secondary">Xếp loại: NaN</Text>
                     </Card>
                   </Col>
                 </Row>

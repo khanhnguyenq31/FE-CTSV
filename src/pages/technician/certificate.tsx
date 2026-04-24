@@ -180,7 +180,9 @@ export default function CertificatePage({ }: { messageApi: any }) {
         <Space>
           <Tooltip title="Xem chi tiết yêu cầu">
             <Button
-              type="text"
+              type="primary"
+              shape="circle"
+              ghost
               icon={<EyeOutlined />}
               onClick={() => {
                 alert(`Xem yêu cầu: ${record.certificateType} của ${record.name}`);

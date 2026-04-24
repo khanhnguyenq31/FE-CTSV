@@ -446,7 +446,9 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
         <Space>
           <Tooltip title={canManage(record) ? "Chỉnh sửa" : "Bạn không có quyền chỉnh sửa (Chỉ người tạo mới có quyền)"}>
             <Button
-              type="text"
+              type="primary"
+              shape="circle"
+              ghost
               icon={<EditOutlined />}
               onClick={() => handleEdit(record)}
               disabled={!canManage(record)}
@@ -455,7 +457,9 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
 
           <Tooltip title={!canManage(record) ? "Bạn không có quyền (Chỉ người tạo mới có quyền)" : (record.isActive ? "Tắt kích hoạt" : "Bật kích hoạt")}>
             <Button
-              type="text"
+              type="primary"
+              shape="circle"
+              ghost
               icon={<PoweroffOutlined className={record.isActive ? (canManage(record) ? "text-red-500" : "text-gray-400") : (canManage(record) ? "text-green-500" : "text-gray-400")} />}
               onClick={() => activateMutation.mutate(record.id)}
               disabled={!canManage(record)}
@@ -465,7 +469,9 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
           {canApprove() && !record.isApproved && (
             <Tooltip title="Duyệt hoạt động">
               <Button
-                type="text"
+                type="primary"
+                shape="circle"
+                ghost
                 icon={<CheckCircleOutlined className="text-green-500" />}
                 onClick={() => approveMutation.mutate(record.id)}
               />
@@ -481,13 +487,15 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
               okButtonProps={{ danger: true }}
               disabled={!canManage(record)}
             >
-              <Button type="text" danger icon={<DeleteOutlined />} disabled={!canManage(record)} />
+              <Button type="primary" shape="circle" ghost danger icon={<DeleteOutlined />} disabled={!canManage(record)} />
             </Popconfirm>
           </Tooltip>
 
           <Tooltip title={canManage(record) ? "Điểm danh" : "Bạn không có quyền quản lý điểm danh"}>
             <Button
-              type="text"
+              type="primary"
+              shape="circle"
+              ghost
               icon={<AuditOutlined className={canManage(record) ? "text-orange-500" : "text-gray-400"} />}
               onClick={() => {
                 setSelectedEventId(record.id);
@@ -499,7 +507,9 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
 
           <Tooltip title={canManage(record) ? (record.isRegistrationLocked ? "Mở khóa đăng ký" : "Khóa đăng ký") : "Bạn không có quyền"}>
             <Button
-              type="text"
+              type="primary"
+              shape="circle"
+              ghost
               icon={record.isRegistrationLocked ? <LockOutlined className="text-red-500" /> : <UnlockOutlined className="text-green-500" />}
               onClick={() => toggleLockMutation.mutate(record.id)}
               disabled={!canManage(record)}

@@ -185,7 +185,9 @@ export default function PraisePage({ }: { messageApi: any }) {
         <Space>
           <Tooltip title="Xem chi tiết">
             <Button
-              type="text"
+              type="primary"
+              shape="circle"
+              ghost
               icon={<EyeOutlined />}
               onClick={() => {
                 alert(`Xem chi tiết: ${record.type} - ${record.level} của ${record.name}`);

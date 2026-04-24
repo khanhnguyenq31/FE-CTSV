@@ -176,7 +176,9 @@ export default function DecisionPage({ }: { messageApi: any }) {
         <Space>
           <Tooltip title="Xem chi tiết quyết định">
             <Button
-              type="text"
+              type="primary"
+              shape="circle"
+              ghost
               icon={<EyeOutlined />}
               onClick={() => {
                 alert(`Xem quyết định: ${record.type} của ${record.name} (${record.studentId})`);
