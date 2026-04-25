@@ -10,6 +10,8 @@ export default function DetailedStudentProfile() {
     const [initialValues, setInitialValues] = useState<any>(null);
     const [canEdit, setCanEdit] = useState(false);
     const [periodName, setPeriodName] = useState("");
+    const [decisions, setDecisions] = useState<any[]>([]);
+    const [tinhTrang, setTinhTrang] = useState<string>('Đang học');
 
     // Fetch profile on mount
     useEffect(() => {
@@ -66,6 +68,28 @@ export default function DetailedStudentProfile() {
                 });
 
                 setInitialValues(profile);
+
+                // 3. Derive tinhTrang
+                if (profile.tinhTrangHoc?.tenTinhTrang) {
+                    setTinhTrang(profile.tinhTrangHoc.tenTinhTrang);
+                }
+
+                // 4. Fetch discipline decisions
+                try {
+                    const email = profile.email || localStorage.getItem('email');
+                    if (email) {
+                        const decRes = await fetch(`http://localhost:3000/discipline/decisions/${encodeURIComponent(email)}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (decRes.ok) {
+                            const decData = await decRes.json();
+                            setDecisions(decData.decisions || []);
+                        }
+                    }
+                } catch (err) {
+                    console.warn('Could not load discipline decisions:', err);
+                }
+
             } catch (e: any) {
                 console.error(e);
                 message.error(e.message || 'Có lỗi xảy ra khi tải hồ sơ');
@@ -182,6 +206,8 @@ export default function DetailedStudentProfile() {
                 onFinish={onFinish}
                 formDisabled={!canEdit}
                 academicLocked={true}
+                decisions={decisions}
+                tinhTrang={tinhTrang}
             />
         </div>
     );

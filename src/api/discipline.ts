@@ -127,7 +127,31 @@ export const getFormalLists = async () => {
     return res.data;
 };
 
-export const applyDisciplineStatus = async (formalId: number | string) => {
-    const res = await api.post(`/discipline/formal/${formalId}/apply`);
+export const applyDisciplineStatus = async (formalId: number | string, data: {
+    soQuyetDinh: string;
+    tieuDe: string;
+    trichDan: string;
+    ngayKy: string;
+    nguoiKy: string;
+}) => {
+    const res = await api.post(`/discipline/formal/${formalId}/apply`, data);
+    return res.data;
+};
+
+export const downloadDisciplinePdf = async (formalId: number | string, quyetDinhId: number | string) => {
+    const res = await api.get(`/discipline/formal/${formalId}/pdf?quyetDinhId=${quyetDinhId}`, {
+        responseType: 'blob'
+    });
+    const blob = new Blob([res.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `QD_KyLuat_${formalId}.pdf`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+};
+
+export const getStudentDecisions = async (email: string) => {
+    const res = await api.get(`/discipline/decisions/${encodeURIComponent(email)}`);
     return res.data;
 };

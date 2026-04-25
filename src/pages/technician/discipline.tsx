@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
-import { Tabs, Table, Button, Modal, Form, Input, InputNumber, notification, Select, Space, Popconfirm, Switch, Drawer, Card, Row, Col, Typography, Tag, Divider } from 'antd';
+import { Tabs, Table, Button, Modal, Form, Input, InputNumber, notification, Select, Space, Popconfirm, Switch, Drawer, Card, Row, Col, Typography, Tag, Divider, Tooltip, DatePicker } from 'antd';
+import {
+    PlusOutlined, EditOutlined, DeleteOutlined, SettingOutlined,
+    ArrowUpOutlined, ArrowDownOutlined, EyeOutlined, SaveOutlined,
+    ClearOutlined, ExclamationCircleOutlined, SendOutlined,
+    CheckCircleOutlined, CloseCircleOutlined, ThunderboltOutlined,
+    FileTextOutlined, PlayCircleOutlined, HistoryOutlined,
+    WarningOutlined
+} from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     getDisciplineForms, createDisciplineForm, updateDisciplineForm, deleteDisciplineForm,
     getDisciplineConfigs, createDisciplineConfig, updateDisciplineConfig, deleteDisciplineConfig,
     saveDisciplineConditions, evaluateDiscipline, saveEvaluation, getEvaluationHistory, getEvaluationDetails, clearEvaluationHistory,
-    getEvaluationDrafts, finalizeEvaluation, deleteDraftDetail, publishDraft, toggleAppeal, getFormalLists, applyDisciplineStatus
+    getEvaluationDrafts, finalizeEvaluation, deleteDraftDetail, publishDraft, toggleAppeal, getFormalLists, applyDisciplineStatus, downloadDisciplinePdf
 } from '../../api/discipline';
 import { getAdmissionPeriods } from '../../api/admission';
 import type { DisciplineForm, DisciplineConfig, DisciplineCondition } from '../../api/discipline';
@@ -100,12 +108,16 @@ function DisciplineFormTab() {
         { title: 'Trọng số mức độ', dataIndex: 'mucDo', key: 'mucDo' },
         { title: 'Chuyển trạng thái học', dataIndex: 'chuyenTrangThaiHoc', key: 'chuyenTrangThaiHoc', render: (val: boolean) => val ? <Tag color="red">Có</Tag> : 'Không' },
         {
-            title: 'Thao tác', key: 'action',
+            title: 'Thao tác', key: 'action', align: 'center' as const,
             render: (_: any, record: DisciplineForm) => (
                 <Space>
-                    <Button type="link" onClick={() => handleOpenModal(record)}>Sửa</Button>
-                    <Popconfirm title="Xóa hình thức này?" onConfirm={() => mutationDelete.mutate(record.id)}>
-                        <Button type="link" danger>Xóa</Button>
+                    <Tooltip title="Chỉnh sửa">
+                        <Button type="primary" shape="circle" ghost icon={<EditOutlined />} onClick={() => handleOpenModal(record)} />
+                    </Tooltip>
+                    <Popconfirm title="Xóa hình thức này?" onConfirm={() => mutationDelete.mutate(record.id)} okText="Xóa" cancelText="Hủy" okButtonProps={{ danger: true }}>
+                        <Tooltip title="Xóa">
+                            <Button type="primary" shape="circle" ghost danger icon={<DeleteOutlined />} />
+                        </Tooltip>
                     </Popconfirm>
                 </Space>
             )
@@ -114,7 +126,11 @@ function DisciplineFormTab() {
 
     return (
         <div>
-            <Button type="primary" onClick={() => handleOpenModal()} style={{ marginBottom: 16 }}>Thêm hình thức kỷ luật</Button>
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+                <Button type="primary" icon={<PlusOutlined />} size="large" onClick={() => handleOpenModal()} style={{ borderRadius: 8, boxShadow: '0 2px 8px rgba(22, 119, 255, 0.15)' }}>
+                    Thêm hình thức kỷ luật
+                </Button>
+            </div>
             <Table rowKey="id" columns={columns} dataSource={forms} loading={isLoading} />
             <Modal
                 title={editingId ? 'Sửa hình thức kỷ luật' : 'Thêm hình thức kỷ luật'}
@@ -241,13 +257,19 @@ function DisciplineConfigTab() {
         { title: 'Số Rule GPA', dataIndex: 'gpaRules', key: 'gpaRules', render: (dk: any[]) => dk?.length || 0 },
         { title: 'Số Rule Lũy Tiến', dataIndex: 'escalationRules', key: 'escalationRules', render: (dk: any[]) => dk?.length || 0 },
         {
-            title: 'Thao tác', key: 'action',
+            title: 'Thao tác', key: 'action', align: 'center' as const,
             render: (_: any, record: DisciplineConfig) => (
                 <Space>
-                    <Button type="primary" size="small" onClick={() => openConditionsDrawer(record)}>Thiết lập Điều Kiện</Button>
-                    <Button type="link" onClick={() => openConfigModal(record)}>Sửa tên</Button>
-                    <Popconfirm title="Xóa toàn bộ cấu hình này?" onConfirm={() => mutationDeleteCfg.mutate(record.id)}>
-                        <Button type="link" danger>Xóa</Button>
+                    <Tooltip title="Thiết lập Điều Kiện">
+                        <Button type="primary" shape="circle" ghost icon={<SettingOutlined />} onClick={() => openConditionsDrawer(record)} />
+                    </Tooltip>
+                    <Tooltip title="Chỉnh sửa tên">
+                        <Button type="primary" shape="circle" ghost icon={<EditOutlined />} onClick={() => openConfigModal(record)} />
+                    </Tooltip>
+                    <Popconfirm title="Xóa toàn bộ cấu hình này?" onConfirm={() => mutationDeleteCfg.mutate(record.id)} okText="Xóa" cancelText="Hủy" okButtonProps={{ danger: true }}>
+                        <Tooltip title="Xóa">
+                            <Button type="primary" shape="circle" ghost danger icon={<DeleteOutlined />} />
+                        </Tooltip>
                     </Popconfirm>
                 </Space>
             )
@@ -256,7 +278,11 @@ function DisciplineConfigTab() {
 
     return (
         <div>
-            <Button type="primary" onClick={() => openConfigModal()} style={{ marginBottom: 16 }}>Tạo Bộ Cấu Hình Mới</Button>
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+                <Button type="primary" icon={<PlusOutlined />} size="large" onClick={() => openConfigModal()} style={{ borderRadius: 8, boxShadow: '0 2px 8px rgba(22, 119, 255, 0.15)' }}>
+                    Tạo Bộ Cấu Hình Mới
+                </Button>
+            </div>
             <Table rowKey="id" columns={columns} dataSource={configs} loading={isLoading} />
 
             {/* Modal Sửa Tên Cấu Hình */}
@@ -278,7 +304,7 @@ function DisciplineConfigTab() {
             <Drawer
                 title="Sửa Bộ Điều Kiện Xét (Các Điều Kiện ưu tiên cao xếp trên)"
                 width={800} open={isDrawerOpen} onClose={() => setIsDrawerOpen(false)}
-                extra={<Button type="primary" onClick={() => formConditions.submit()} loading={mutationSaveConditions.isPending}>Lưu thay đổi</Button>}
+                extra={<Button type="primary" icon={<SaveOutlined />} onClick={() => formConditions.submit()} loading={mutationSaveConditions.isPending} style={{ borderRadius: 8 }}>Lưu thay đổi</Button>}
             >
                 <Form form={formConditions} layout="vertical" onFinish={handleConditionsSubmit}>
                     <Form.List name="gpaRules">
@@ -289,10 +315,10 @@ function DisciplineConfigTab() {
                                     <Card size="small" key={key} style={{ marginBottom: 16 }}
                                         title={<Text strong>Độ ưu tiên: {index + 1}</Text>}
                                         extra={
-                                            <Space>
-                                                <Button size="small" onClick={() => move(index, index - 1)} disabled={index === 0}>Lên</Button>
-                                                <Button size="small" onClick={() => move(index, index + 1)} disabled={index === fields.length - 1}>Xuống</Button>
-                                                <Button size="small" danger onClick={() => remove(name)}>Xóa Rule</Button>
+                                            <Space size={4}>
+                                                <Tooltip title="Di chuyển lên"><Button size="small" shape="circle" icon={<ArrowUpOutlined />} onClick={() => move(index, index - 1)} disabled={index === 0} /></Tooltip>
+                                                <Tooltip title="Di chuyển xuống"><Button size="small" shape="circle" icon={<ArrowDownOutlined />} onClick={() => move(index, index + 1)} disabled={index === fields.length - 1} /></Tooltip>
+                                                <Tooltip title="Xóa Rule"><Button size="small" shape="circle" danger icon={<DeleteOutlined />} onClick={() => remove(name)} /></Tooltip>
                                             </Space>
                                         }
                                     >
@@ -321,7 +347,7 @@ function DisciplineConfigTab() {
                                         </Row>
                                     </Card>
                                 ))}
-                                <Button type="dashed" onClick={() => add()} block style={{ marginTop: 10, marginBottom: 20 }}>+ Thêm Rule GPA</Button>
+                                <Button type="dashed" icon={<PlusOutlined />} onClick={() => add()} block style={{ marginTop: 10, marginBottom: 20, borderRadius: 8 }}>Thêm Rule GPA</Button>
                             </>
                         )}
                     </Form.List>
@@ -336,10 +362,10 @@ function DisciplineConfigTab() {
                                     <Card size="small" key={key} style={{ marginTop: 16 }}
                                         title={<Text strong>Độ ưu tiên: {index + 1}</Text>}
                                         extra={
-                                            <Space>
-                                                <Button size="small" onClick={() => move(index, index - 1)} disabled={index === 0}>Lên</Button>
-                                                <Button size="small" onClick={() => move(index, index + 1)} disabled={index === fields.length - 1}>Xuống</Button>
-                                                <Button size="small" danger onClick={() => remove(name)}>Xóa Rule</Button>
+                                            <Space size={4}>
+                                                <Tooltip title="Di chuyển lên"><Button size="small" shape="circle" icon={<ArrowUpOutlined />} onClick={() => move(index, index - 1)} disabled={index === 0} /></Tooltip>
+                                                <Tooltip title="Di chuyển xuống"><Button size="small" shape="circle" icon={<ArrowDownOutlined />} onClick={() => move(index, index + 1)} disabled={index === fields.length - 1} /></Tooltip>
+                                                <Tooltip title="Xóa Rule"><Button size="small" shape="circle" danger icon={<DeleteOutlined />} onClick={() => remove(name)} /></Tooltip>
                                             </Space>
                                         }
                                     >
@@ -399,7 +425,7 @@ function DisciplineConfigTab() {
                                         </Row>
                                     </Card>
                                 ))}
-                                <Button type="dashed" onClick={() => add()} block style={{ marginTop: 10 }}>+ Thêm Rule Lũy Tiến</Button>
+                                <Button type="dashed" icon={<PlusOutlined />} onClick={() => add()} block style={{ marginTop: 10, borderRadius: 8 }}>Thêm Rule Lũy Tiến</Button>
                             </>
                         )}
                     </Form.List>
@@ -494,7 +520,7 @@ function EvaluateDisciplineTab() {
                         </Select>
                     </Form.Item>
                     <Form.Item>
-                        <Button type="primary" htmlType="submit" loading={mutationEvaluate.isPending}>
+                        <Button type="primary" icon={<PlayCircleOutlined />} htmlType="submit" loading={mutationEvaluate.isPending} style={{ borderRadius: 8 }}>
                             Chạy Xét Kỷ Luật (Preview)
                         </Button>
                     </Form.Item>
@@ -504,7 +530,7 @@ function EvaluateDisciplineTab() {
             {hasTested && (
                 <Card
                     title={`Danh sách Sinh viên vi phạm (Số lượng: ${evalResults.length})`}
-                    extra={<Button type="primary" danger onClick={handleSaveList} loading={mutationSaveEvaluation.isPending}>Ghim & Lưu Lịch Sử Nhắc Nhở</Button>}
+                    extra={<Button type="primary" danger icon={<SaveOutlined />} onClick={handleSaveList} loading={mutationSaveEvaluation.isPending} style={{ borderRadius: 8 }}>Ghim & Lưu Lịch Sử Nhắc Nhở</Button>}
                 >
                     <Table rowKey="studentEmail" columns={columns} dataSource={evalResults} pagination={{ pageSize: 15 }} />
                 </Card>
@@ -560,15 +586,20 @@ function EvaluationHistoryTab() {
         { title: 'Người thực hiện', dataIndex: 'nguoiXet', key: 'nguoiXet' },
         { title: 'Thời gian lưu', dataIndex: 'createdAt', key: 'createdAt', render: (t: string) => new Date(t).toLocaleString('vi-VN') },
         {
-            title: 'Thao tác', key: 'action', render: (_: any, r: any) => (
+            title: 'Thao tác', key: 'action', align: 'center' as const, render: (_: any, r: any) => (
                 <Space>
-                    <Button type="link" onClick={() => setDetailId(r.id)}>Xem chi tiết</Button>
+                    <Tooltip title="Xem chi tiết">
+                        <Button type="primary" shape="circle" ghost icon={<EyeOutlined />} onClick={() => setDetailId(r.id)} />
+                    </Tooltip>
                     <Popconfirm
                         title="Tạo danh sách dự kiến từ đợt xét này?"
                         description="Danh sách dự kiến sẽ xuất hiện ở Tab 5 để xem xét và chỉnh sửa trước khi chính thức."
                         onConfirm={() => mutationPublish.mutate(r.id)}
+                        okText="Xác nhận" cancelText="Hủy"
                     >
-                        <Button type="primary" size="small" loading={mutationPublish.isPending}>Tạo danh sách dự kiến</Button>
+                        <Tooltip title="Tạo danh sách dự kiến">
+                            <Button type="primary" shape="circle" ghost icon={<SendOutlined />} loading={mutationPublish.isPending} />
+                        </Tooltip>
                     </Popconfirm>
                 </Space>
             )
@@ -586,8 +617,8 @@ function EvaluationHistoryTab() {
     return (
         <div>
             <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
-                <Popconfirm title="Xác nhận xóa trắng Lịch sử đợt xét?" onConfirm={() => mutationClear.mutate()}>
-                    <Button type="primary" danger loading={mutationClear.isPending}>Xóa trắng lịch sử (Reset DB)</Button>
+                <Popconfirm title="Xác nhận xóa trắng Lịch sử đợt xét?" onConfirm={() => mutationClear.mutate()} okText="Xóa" cancelText="Hủy" okButtonProps={{ danger: true }}>
+                    <Button type="primary" danger icon={<ClearOutlined />} loading={mutationClear.isPending} style={{ borderRadius: 8 }}>Xóa trắng lịch sử (Reset DB)</Button>
                 </Popconfirm>
             </div>
             <Table loading={isLoading} columns={columns} dataSource={history as any[]} rowKey="id" />
@@ -644,7 +675,14 @@ function EvaluationDraftsTab() {
         { title: 'Bị phạt (vòng GPA)', dataIndex: 'hinhThucGpa', key: 'hinhThucGpa', render: (t: string) => <Tag color="blue">{t}</Tag> },
         { title: 'Hình phạt Dự kiến', dataIndex: 'hinhThuc', key: 'hinhThuc', render: (t: string) => <Tag color="red">{t}</Tag> },
         {
-            title: 'Trạng thái', key: 'action', render: (_: any, r: any) => (
+            title: 'Trạng thái', key: 'status', align: 'center' as const, width: 140, render: (_: any, r: any) => (
+                r.isCuuXet
+                    ? <Tag icon={<CheckCircleOutlined />} color="success" style={{ fontSize: 13, padding: '4px 12px' }}>Được cứu xét</Tag>
+                    : <Tag icon={<ExclamationCircleOutlined />} color="error" style={{ fontSize: 13, padding: '4px 12px' }}>Bị kỷ luật</Tag>
+            )
+        },
+        {
+            title: 'Hành động', key: 'action', align: 'center' as const, width: 160, render: (_: any, r: any) => (
                 <Popconfirm
                     title={r.isCuuXet ? "Hủy cứu xét sinh viên này?" : "Khoan hồng cho sinh viên này?"}
                     description={r.isCuuXet ? "Sinh viên sẽ quay lại danh sách bị kỷ luật." : "Sinh viên sẽ được miễn hình phạt chính thức khi áp dụng."}
@@ -652,14 +690,19 @@ function EvaluationDraftsTab() {
                     okText="Xác nhận"
                     cancelText="Hủy"
                 >
-                    <Button
-                        type={r.isCuuXet ? "primary" : "default"}
-                        style={r.isCuuXet ? { backgroundColor: '#52c41a', borderColor: '#52c41a', color: '#fff' } : undefined}
-                        loading={mutationToggle.isPending}
-                        size="small"
-                    >
-                        {r.isCuuXet ? 'Được Cứu Xét' : 'Bị Kỷ Luật'}
-                    </Button>
+                    <Tooltip title={r.isCuuXet ? "Đưa lại vào danh sách kỷ luật" : "Cho phép sinh viên được miễn hình phạt"}>
+                        <Button
+                            type="primary"
+                            ghost
+                            icon={r.isCuuXet ? <CloseCircleOutlined /> : <CheckCircleOutlined />}
+                            style={{ borderRadius: 8 }}
+                            danger={r.isCuuXet}
+                            loading={mutationToggle.isPending}
+                            size="small"
+                        >
+                            {r.isCuuXet ? 'Hủy cứu xét' : 'Cứu xét'}
+                        </Button>
+                    </Tooltip>
                 </Popconfirm>
             )
         }
@@ -676,8 +719,9 @@ function EvaluationDraftsTab() {
                     title="Tạo quyết định kỷ luật?"
                     description="Xác nhận chuyển danh sách kỷ luật dự kiến này thành Quyết định Chính thức?"
                     onConfirm={() => mutationFinalize.mutate(activeDraft.id)}
+                    okText="Xác nhận" cancelText="Hủy" okButtonProps={{ danger: true }}
                 >
-                    <Button type="primary" size="large" danger>Tạo Quyết Định Kỷ Luật</Button>
+                    <Button type="primary" size="large" danger icon={<ThunderboltOutlined />} style={{ borderRadius: 8, boxShadow: '0 2px 8px rgba(255, 77, 79, 0.2)' }}>Tạo Quyết Định Kỷ Luật</Button>
                 </Popconfirm>
             </div>
 
@@ -707,13 +751,50 @@ function FormalListTab() {
         enabled: !!detailId
     });
 
+    const [isDecisionModalOpen, setIsDecisionModalOpen] = useState(false);
+    const [selectedFormalId, setSelectedFormalId] = useState<number | null>(null);
+    const [formDecision] = Form.useForm();
+
     const mutationApply = useMutation({
-        mutationFn: applyDisciplineStatus,
-        onSuccess: (data: any) => {
-            notification.success({ message: data.message });
+        mutationFn: (params: { id: number; data: any }) => applyDisciplineStatus(params.id, params.data),
+        onSuccess: async (result: any) => {
+            notification.success({ message: result.message });
             queryClient.invalidateQueries({ queryKey: ['formalLists'] });
+            setIsDecisionModalOpen(false);
+            formDecision.resetFields();
+            // Tải PDF tự động
+            if (result.quyetDinhId && selectedFormalId) {
+                try {
+                    await downloadDisciplinePdf(selectedFormalId, result.quyetDinhId);
+                    notification.info({ message: 'Đã tải file PDF quyết định kỷ luật' });
+                } catch (e) {
+                    notification.warning({ message: 'Không thể tải PDF tự động. Vui lòng tải lại sau.' });
+                }
+            }
+        },
+        onError: (err: any) => {
+            notification.error({ message: err?.response?.data?.message || 'Lỗi khi áp dụng kỷ luật' });
         }
     });
+
+    const handleOpenDecisionModal = (formalId: number) => {
+        setSelectedFormalId(formalId);
+        formDecision.resetFields();
+        setIsDecisionModalOpen(true);
+    };
+
+    const handleSubmitDecision = async () => {
+        try {
+            const values = await formDecision.validateFields();
+            mutationApply.mutate({
+                id: selectedFormalId!,
+                data: {
+                    ...values,
+                    ngayKy: values.ngayKy.format('YYYY-MM-DD')
+                }
+            });
+        } catch (e) { /* validation failed */ }
+    };
 
     const columns = [
         { title: 'Tên Đợt Xét', dataIndex: 'tenDotXet', key: 'tenDotXet' },
@@ -730,16 +811,14 @@ function FormalListTab() {
         { title: 'Học kỳ', dataIndex: 'hocKy', key: 'hocKy' },
         { title: 'Thực hiện lúc', dataIndex: 'createdAt', key: 'createdAt', render: (t: string) => new Date(t).toLocaleString('vi-VN') },
         {
-            title: 'Thao tác', key: 'action', render: (_: any, r: any) => (
+            title: 'Thao tác', key: 'action', align: 'center' as const, render: (_: any, r: any) => (
                 <Space>
-                    <Button type="link" onClick={() => setDetailId(r.id)}>Chi tiết Sinh viên</Button>
-                    <Popconfirm
-                        title="Áp dụng hình thức kỷ luật vào Tình Trạng Học của sinh viên?"
-                        description="Hành động này sẽ thay đổi trạng thái học thuật của sinh viên. Không áp dụng cho sinh viên được Cứu xét."
-                        onConfirm={() => mutationApply.mutate(r.id)}
-                    >
-                        <Button type="primary" size="small" danger loading={mutationApply.isPending}>Quết định kỷ luật cho danh sách</Button>
-                    </Popconfirm>
+                    <Tooltip title="Chi tiết Sinh viên">
+                        <Button type="primary" shape="circle" ghost icon={<EyeOutlined />} onClick={() => setDetailId(r.id)} />
+                    </Tooltip>
+                    <Tooltip title="Tạo quyết định kỷ luật và áp dụng">
+                        <Button type="primary" danger icon={<FileTextOutlined />} onClick={() => handleOpenDecisionModal(r.id)} style={{ borderRadius: 8 }}>Áp dụng KL</Button>
+                    </Tooltip>
                 </Space>
             )
         }
@@ -758,6 +837,44 @@ function FormalListTab() {
             <Drawer title="Chi tiết danh sách chính thức" width={900} open={!!detailId} onClose={() => setDetailId(null)}>
                 <Table loading={isLoadingDetails} columns={detColumns} dataSource={details as any[]} rowKey="id" pagination={{ pageSize: 15 }} />
             </Drawer>
+
+            {/* Modal Tạo Quyết Định Kỷ Luật */}
+            <Modal
+                title={<span><FileTextOutlined /> Tạo Quyết Định Kỷ Luật</span>}
+                open={isDecisionModalOpen}
+                onCancel={() => setIsDecisionModalOpen(false)}
+                onOk={handleSubmitDecision}
+                okText="Tạo quyết định & Xuất PDF"
+                cancelText="Hủy"
+                confirmLoading={mutationApply.isPending}
+                width={640}
+                okButtonProps={{ danger: true, icon: <WarningOutlined /> }}
+            >
+                <Divider />
+                <Form form={formDecision} layout="vertical">
+                    <Row gutter={16}>
+                        <Col span={12}>
+                            <Form.Item name="soQuyetDinh" label="Số quyết định" rules={[{ required: true, message: 'Vui lòng nhập số QĐ' }]}>
+                                <Input placeholder="Vd: 464/QĐ-ĐHBK" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item name="ngayKy" label="Ngày ký" rules={[{ required: true, message: 'Vui lòng chọn ngày ký' }]}>
+                                <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                    <Form.Item name="tieuDe" label="Tiêu đề quyết định" rules={[{ required: true, message: 'Vui lòng nhập tiêu đề' }]}>
+                        <Input placeholder="Vd: Quyết định kỷ luật sinh viên HK1 năm học 2025-2026" />
+                    </Form.Item>
+                    <Form.Item name="nguoiKy" label="Người ký" rules={[{ required: true, message: 'Vui lòng nhập người ký' }]}>
+                        <Input placeholder="Vd: PGS.TS. Nguyễn Văn A - Hiệu trưởng" />
+                    </Form.Item>
+                    <Form.Item name="trichDan" label="Trích dẫn / Căn cứ">
+                        <Input.TextArea rows={4} placeholder="Căn cứ Quy chế đào tạo...; Căn cứ kết quả xét kỷ luật..." />
+                    </Form.Item>
+                </Form>
+            </Modal>
         </div>
     );
 }
