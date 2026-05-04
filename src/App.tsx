@@ -17,12 +17,9 @@ import ResetPassword from './pages/ResetPassword';
 import HomePage from './pages/technician/home'
 import ManagePage from './pages/technician/manage'
 import ProfilePage from './pages/technician/profile'
-import DecisionPage from './pages/technician/decision'
-import PraisePage from './pages/technician/praise'
-import CertificatePage from './pages/technician/certificate'
-import ScorePage from './pages/technician/score'
+import RegulationConfigPage from './pages/technician/regulation-config'
+import RegulationPage from './pages/technician/regulation'
 import EventPage from './pages/technician/event'
-import ScholarshipPage from './pages/technician/scholarship'
 import DisciplinePage from './pages/technician/discipline'
 // Imports cho Sidebar
 import Sidebar from './components/Sidebar' // Technician Sidebar (Sidebar.tsx gốc)
@@ -236,13 +233,10 @@ function App() {
               <Route path="home" element={<HomePage messageApi={messageApi} />} />
               <Route path="manage" element={<ManagePage messageApi={messageApi} />} />
               <Route path="profile" element={<ProfilePage messageApi={messageApi} />} />
-              <Route path="decision" element={<DecisionPage messageApi={messageApi} />} />
-              <Route path="praise" element={<PraisePage messageApi={messageApi} />} />
-              <Route path="certificate" element={<CertificatePage messageApi={messageApi} />} />
-              <Route path="score" element={<ScorePage messageApi={messageApi} />} />
               <Route path="event" element={<EventPage messageApi={messageApi} />} />
-              <Route path="scholarship" element={<ScholarshipPage messageApi={messageApi} />} />
               <Route path="discipline" element={<DisciplinePage />} />
+              <Route path="regulation-config" element={<RegulationConfigPage messageApi={messageApi} />} />
+              <Route path="regulation" element={<RegulationPage messageApi={messageApi} />} />
             </Route>
           </Route>
 

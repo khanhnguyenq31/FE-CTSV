@@ -621,7 +621,7 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
                           paddingAngle={5}
                           dataKey="count"
                           nameKey="name"
-                          label={({ name, percent }) => `${(percent * 100).toFixed(1)}%`}
+                          label={({ percent }) => `${((percent || 0) * 100).toFixed(1)}%`}
                         >
                           {stats.byCtdt?.map((_: any, index: any) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

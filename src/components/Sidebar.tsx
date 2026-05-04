@@ -38,13 +38,10 @@ export default function Sidebar({ messageApi, isMobile = false, onClose }: Sideb
     "/technician/home": "1",
     "/technician/manage": "2",
     "/technician/profile": "3",
-    "/technician/decision": "4",
-    "/technician/praise": "5",
-    "/technician/certificate": "6",
-    "/technician/score": "7",
     "/technician/event": "8",
-    "/technician/scholarship": "9",
     "/technician/discipline": "10",
+    "/technician/regulation-config": "11",
+    "/technician/regulation": "12",
   };
 
 
@@ -52,9 +49,8 @@ export default function Sidebar({ messageApi, isMobile = false, onClose }: Sideb
 
   const keyToSub: Record<string, string> = {
     "2": "sub-student", "3": "sub-student",
-    "4": "sub-academic", "6": "sub-academic",
-    "7": "sub-evaluation", "5": "sub-evaluation", "10": "sub-evaluation",
-    "8": "sub-activity", "9": "sub-activity"
+    "10": "sub-evaluation", "11": "sub-evaluation", "12": "sub-evaluation",
+    "8": "sub-activity"
   };
 
   useEffect(() => {
@@ -106,46 +102,29 @@ export default function Sidebar({ messageApi, isMobile = false, onClose }: Sideb
         },
       ].filter(Boolean),
     },
-    (hasAccess("ACADEMIC_DECISION") || hasAccess("CERTIFICATE")) && {
-      key: "sub-academic",
-      icon: <SolutionOutlined />,
-      label: "Học vụ & Minh chứng",
-      children: [
-        hasAccess("ACADEMIC_DECISION") && {
-          key: "4",
-          label: "Quyết định học vụ",
-          onClick: () => handleMenuClick("/technician/decision"),
-        },
-        hasAccess("CERTIFICATE") && {
-          key: "6",
-          label: "Chứng nhận",
-          onClick: () => handleMenuClick("/technician/certificate"),
-        },
-      ].filter(Boolean),
-    },
     (hasAccess("TRAINING_POINT") || hasAccess("REWARD_DISCIPLINE")) && {
       key: "sub-evaluation",
       icon: <TrophyOutlined />,
       label: "Đánh giá & Kỷ luật",
       children: [
-        hasAccess("TRAINING_POINT") && {
-          key: "7",
-          label: "Điểm rèn luyện",
-          onClick: () => handleMenuClick("/technician/score"),
-        },
-        hasAccess("REWARD_DISCIPLINE") && {
-          key: "5",
-          label: "Khen thưởng & Kỷ luật",
-          onClick: () => handleMenuClick("/technician/praise"),
-        },
         hasAccess("REWARD_DISCIPLINE") && {
           key: "10",
-          label: "Cấu hình Kỷ luật",
+          label: "Cấu hình học vụ",
           onClick: () => handleMenuClick("/technician/discipline"),
+        },
+        hasAccess("REWARD_DISCIPLINE") && {
+          key: "11",
+          label: "Cấu hình quy chế",
+          onClick: () => handleMenuClick("/technician/regulation-config"),
+        },
+        hasAccess("REWARD_DISCIPLINE") && {
+          key: "12",
+          label: "Xử lý vi phạm",
+          onClick: () => handleMenuClick("/technician/regulation"),
         },
       ].filter(Boolean),
     },
-    (hasAccess("EVENT_ACTIVITY") || hasAccess("SCHOLARSHIP")) && {
+    hasAccess("EVENT_ACTIVITY") && {
       key: "sub-activity",
       icon: <GiftOutlined />,
       label: "Hoạt động & Hỗ trợ",
@@ -154,11 +133,6 @@ export default function Sidebar({ messageApi, isMobile = false, onClose }: Sideb
           key: "8",
           label: "Sự kiện & hoạt động",
           onClick: () => handleMenuClick("/technician/event"),
-        },
-        hasAccess("SCHOLARSHIP") && {
-          key: "9",
-          label: "Học bổng",
-          onClick: () => handleMenuClick("/technician/scholarship"),
         },
       ].filter(Boolean),
     },
