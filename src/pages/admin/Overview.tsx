@@ -5,9 +5,10 @@ import {
   TeamOutlined,
   SolutionOutlined,
   SafetyCertificateOutlined,
-  ArrowUpOutlined,
-  ClockCircleOutlined
+  ClockCircleOutlined,
+  LockOutlined
 } from '@ant-design/icons';
+import { useState, useEffect } from 'react';
 
 const { Title, Text } = Typography;
 
@@ -16,34 +17,55 @@ interface AdminOverviewProps {
 }
 
 export default function AdminOverview({ messageApi }: AdminOverviewProps) {
-  // Mock data for statistics
+  const [adminStats, setAdminStats] = useState<any>({
+    totalUsers: 0,
+    totalStudents: 0,
+    totalTechnicians: 0,
+    lockedUsers: 0
+  });
+
+  const fetchStats = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch('http://localhost:3000/auth/admin-stats', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAdminStats(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
   const stats = [
     {
-      title: 'Tổng số Người dùng',
-      value: 3500,
+      title: 'Tổng số Tài khoản',
+      value: adminStats.totalUsers,
       icon: <TeamOutlined style={{ fontSize: '24px', color: '#1890ff' }} />,
-      suffix: '+5%',
       color: '#e6f7ff'
     },
     {
-      title: 'Tổng số Sinh viên',
-      value: 3200,
+      title: 'Tài khoản Sinh viên',
+      value: adminStats.totalStudents,
       icon: <UserOutlined style={{ fontSize: '24px', color: '#52c41a' }} />,
-      suffix: '+12%',
       color: '#f6ffed'
     },
     {
-      title: 'Chuyên viên',
-      value: 150,
+      title: 'Tài khoản Chuyên viên',
+      value: adminStats.totalTechnicians,
       icon: <SolutionOutlined style={{ fontSize: '24px', color: '#faad14' }} />,
-      suffix: '',
       color: '#fff7e6'
     },
     {
-      title: 'Yêu cầu chờ duyệt',
-      value: 45,
-      icon: <SafetyCertificateOutlined style={{ fontSize: '24px', color: '#f5222d' }} />,
-      suffix: '-2%',
+      title: 'Tài khoản bị Khóa',
+      value: adminStats.lockedUsers,
+      icon: <LockOutlined style={{ fontSize: '24px', color: '#f5222d' }} />,
       color: '#fff1f0'
     },
   ];
@@ -113,7 +135,6 @@ export default function AdminOverview({ messageApi }: AdminOverviewProps) {
                     <Title level={3} style={{ margin: 0 }}>
                       {item.value.toLocaleString()}
                     </Title>
-                    {item.suffix && <Text type="success" style={{ fontSize: 12 }}><ArrowUpOutlined /> {item.suffix}</Text>}
                   </div>
                 </div>
               </Card>

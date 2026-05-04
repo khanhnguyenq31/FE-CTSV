@@ -26,6 +26,7 @@ import {
   Select,
   Spin,
   Checkbox,
+  Popover,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -46,6 +47,9 @@ import {
   ScanOutlined,
   FilterOutlined,
   DeleteOutlined,
+  InfoCircleOutlined,
+  SendOutlined,
+  StopOutlined,
 } from "@ant-design/icons";
 // import { Html5QrcodeScanner } from "html5-qrcode"; // Remove this
 import { Html5Qrcode } from "html5-qrcode";
@@ -500,6 +504,19 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
         : "N/A"
     },
     {
+      title: () => (
+        <Tooltip title="Trạng thái gửi email thông báo nhập học">
+          <Space size={4}><MailOutlined /> Email</Space>
+        </Tooltip>
+      ),
+      key: "isNotified",
+      width: 90,
+      align: "center" as const,
+      render: (_, s) => s.isNotified
+        ? <Tooltip title="Đã gửi email thông báo nhập học"><SendOutlined style={{ color: '#52c41a', fontSize: 16 }} /></Tooltip>
+        : <Tooltip title="Chưa gửi email thông báo"><StopOutlined style={{ color: '#bfbfbf', fontSize: 16 }} /></Tooltip>
+    },
+    {
       title: "Trạng thái",
       key: "status",
       width: 150,
@@ -692,6 +709,71 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
             </Col>
             <Col>
               <Space>
+                <Popover
+                  title={
+                    <Space>
+                      <InfoCircleOutlined style={{ color: '#1890ff' }} />
+                      <span style={{ fontWeight: 600 }}>Hướng dẫn định dạng file Excel</span>
+                    </Space>
+                  }
+                  content={
+                    <div style={{ maxWidth: 380 }}>
+                      <p style={{ margin: '0 0 8px', color: '#595959' }}>
+                        File Excel (.xlsx/.xls) cần có các cột theo đúng thứ tự sau:
+                      </p>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                        <thead>
+                          <tr style={{ background: '#f0f5ff' }}>
+                            <th style={{ padding: '6px 10px', border: '1px solid #d9d9d9', textAlign: 'left' }}>Cột</th>
+                            <th style={{ padding: '6px 10px', border: '1px solid #d9d9d9', textAlign: 'left' }}>Tên cột (header)</th>
+                            <th style={{ padding: '6px 10px', border: '1px solid #d9d9d9', textAlign: 'left' }}>Ví dụ</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[
+                            ['A', 'MSSV', '22110001'],
+                            ['B', 'Họ và tên', 'Nguyễn Văn A'],
+                            ['C', 'Email cá nhân', 'nguyenvana@gmail.com'],
+                            ['D', 'Ngành', 'Công nghệ thông tin'],
+                            ['E', 'Khóa / Lớp', '2022'],
+                          ].map(([col, name, ex]) => (
+                            <tr key={col}>
+                              <td style={{ padding: '5px 10px', border: '1px solid #d9d9d9', fontWeight: 600, color: '#1890ff' }}>{col}</td>
+                              <td style={{ padding: '5px 10px', border: '1px solid #d9d9d9' }}>{name}</td>
+                              <td style={{ padding: '5px 10px', border: '1px solid #d9d9d9', color: '#8c8c8c' }}>{ex}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <Divider style={{ margin: '10px 0' }} />
+                      <p style={{ margin: 0, fontSize: 12, color: '#8c8c8c' }}>
+                        ⚠️ Dòng đầu tiên là <b>header</b>. Dữ liệu bắt đầu từ dòng 2. Không để ô trống ở cột MSSV và Email.
+                      </p>
+                      <Divider style={{ margin: '10px 0' }} />
+                      <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: 13 }}>Ký hiệu trong danh sách:</p>
+                      <Space direction="vertical" size={4}>
+                        <Space size={6}>
+                          <SendOutlined style={{ color: '#52c41a', fontSize: 14 }} />
+                          <span style={{ fontSize: 12 }}>Đã gửi email thông báo nhập học</span>
+                        </Space>
+                        <Space size={6}>
+                          <StopOutlined style={{ color: '#bfbfbf', fontSize: 14 }} />
+                          <span style={{ fontSize: 12 }}>Chưa gửi email thông báo</span>
+                        </Space>
+                        <Space size={6}>
+                          <FileDoneOutlined style={{ color: '#52c41a', fontSize: 14 }} />
+                          <span style={{ fontSize: 12 }}>Đã nộp hồ sơ giấy</span>
+                        </Space>
+                      </Space>
+                    </div>
+                  }
+                  trigger="click"
+                  placement="bottomRight"
+                >
+                  <Button icon={<InfoCircleOutlined />} style={{ color: '#1890ff', borderColor: '#1890ff' }}>
+                    Hướng dẫn
+                  </Button>
+                </Popover>
                 <Upload beforeUpload={handleUpload} showUploadList={false} accept=".xlsx,.xls">
                   <Button icon={<UploadOutlined />}>Bổ sung sinh viên (Excel)</Button>
                 </Upload>

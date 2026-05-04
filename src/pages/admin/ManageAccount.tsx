@@ -1,5 +1,5 @@
 import { Button, Table, Modal, Form, Input, Select, Tag, Space, Card, Tooltip, Popconfirm } from 'antd';
-import { PlusOutlined, EditOutlined, LockOutlined, DeleteOutlined, SearchOutlined, UserOutlined, ToolOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, LockOutlined, UnlockOutlined, DeleteOutlined, SearchOutlined, UserOutlined, ToolOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
 import { createStudentApi, createTechnicianApi } from '../../api/auth';
 
@@ -14,10 +14,31 @@ interface UserData {
 
 export default function ManageAccounts({ messageApi }: { messageApi: any }) {
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [form] = Form.useForm();
+  const [editForm] = Form.useForm();
   const [dataSource, setDataSource] = useState<UserData[]>([]);
+  const [permissionsList, setPermissionsList] = useState<{code: string, name: string}[]>([]);
+
+  const fetchPermissions = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch('http://localhost:3000/auth/permissions', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) setPermissionsList(data.permissions || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchPermissions();
+  }, []);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -36,7 +57,9 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
         email: u.email,
         name: u.fullName || '',
         role: u.role,
-        status: 'active', // Mặc định đang hoạt động
+        status: u.status || 'active',
+        technicianType: u.technicianType,
+        permissions: u.permissions || [],
         createdAt: today,
       }));
       setDataSource(users);
@@ -72,6 +95,65 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
       fetchUsers();
     } catch (err: any) {
       messageApi.error(err.message || 'Có lỗi xảy ra khi xóa tài khoản');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleLock = async (email: string, currentStatus: string) => {
+    setLoading(true);
+    const newStatus = currentStatus === 'locked' ? 'active' : 'locked';
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`http://localhost:3000/auth/user/${email}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (!res.ok) throw new Error('Cập nhật trạng thái thất bại');
+      messageApi.success(`Đã ${newStatus === 'locked' ? 'khóa' : 'mở khóa'} tài khoản thành công`);
+      fetchUsers();
+    } catch (err: any) {
+      messageApi.error(err.message || 'Lỗi cập nhật trạng thái');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openEditModal = (record: UserData) => {
+    setEditingUser(record);
+    editForm.setFieldsValue({
+      technicianType: (record as any).technicianType || 'normal',
+      permissions: (record as any).permissions || []
+    });
+    setEditOpen(true);
+  };
+
+  const handleEditPermissions = async (values: any) => {
+    if (!editingUser) return;
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`http://localhost:3000/auth/user/${editingUser.email}/permissions`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          technicianType: values.technicianType,
+          permissions: values.technicianType === 'senior' ? [] : values.permissions
+        })
+      });
+      if (!res.ok) throw new Error('Cập nhật quyền thất bại');
+      messageApi.success('Cập nhật quyền chuyên viên thành công');
+      setEditOpen(false);
+      fetchUsers();
+    } catch (err: any) {
+      messageApi.error(err.message || 'Lỗi cập nhật quyền');
     } finally {
       setLoading(false);
     }
@@ -120,30 +202,30 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
       }
     },
     {
-      title: 'Ngày tạo',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      width: 150,
-      responsive: ['md'] as any // Ẩn trên mobile nhỏ
-    },
-    {
       title: 'Hành động',
       key: 'actions',
       fixed: 'right' as const,
       width: 150,
       render: (_: any, record: UserData) => (
         <Space>
-          <Tooltip title="Chỉnh sửa">
-            <Button type="primary" shape="circle" ghost icon={<EditOutlined />} />
-          </Tooltip>
+          {record.role === 'technician' && (
+            <Tooltip title="Chỉnh sửa quyền">
+              <Button type="primary" shape="circle" ghost icon={<EditOutlined />} onClick={() => openEditModal(record)} />
+            </Tooltip>
+          )}
           <Tooltip title={record.status === 'locked' ? "Mở khóa" : "Khóa tài khoản"}>
-            <Button
-              type="primary"
-              shape="circle"
-              ghost
-              icon={<LockOutlined />}
-              style={{ color: '#fa8c16', borderColor: '#fa8c16' }}
-            />
+            <Popconfirm
+              title={record.status === 'locked' ? "Mở khóa tài khoản?" : "Khóa tài khoản?"}
+              onConfirm={() => handleToggleLock(record.email, record.status)}
+            >
+              <Button
+                type="primary"
+                shape="circle"
+                ghost
+                icon={record.status === 'locked' ? <UnlockOutlined /> : <LockOutlined />}
+                style={record.status === 'locked' ? { color: '#52c41a', borderColor: '#52c41a' } : { color: '#fa8c16', borderColor: '#fa8c16' }}
+              />
+            </Popconfirm>
           </Tooltip>
           <Tooltip title="Xóa tài khoản">
             <Popconfirm
@@ -306,14 +388,9 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
                           rules={[{ required: true, message: 'Vui lòng chọn ít nhất một quyền!' }]}
                         >
                           <Select mode="multiple" size="large" placeholder="Chọn các quyền hạn">
-                            <Select.Option value="ADMISSION">Quản lý nhập học</Select.Option>
-                            <Select.Option value="STUDENT_LIST">Danh sách sinh viên</Select.Option>
-                            <Select.Option value="ACADEMIC_DECISION">Quyết định học vụ</Select.Option>
-                            <Select.Option value="REWARD_DISCIPLINE">Khen thưởng & Kỷ luật</Select.Option>
-                            <Select.Option value="CERTIFICATE">Chứng nhận</Select.Option>
-                            <Select.Option value="TRAINING_POINT">Điểm rèn luyện</Select.Option>
-                            <Select.Option value="EVENT_ACTIVITY">Sự kiện & hoạt động</Select.Option>
-                            <Select.Option value="SCHOLARSHIP">Học bổng</Select.Option>
+                            {permissionsList.map(p => (
+                              <Select.Option key={p.code} value={p.code}>{p.name}</Select.Option>
+                            ))}
                           </Select>
                         </Form.Item>
                       )
@@ -328,6 +405,53 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
             <Button size="large" onClick={() => setOpen(false)}>Hủy</Button>
             <Button type="primary" htmlType="submit" size="large" loading={loading} block>
               Tạo tài khoản
+            </Button>
+          </div>
+        </Form>
+      </Modal>
+
+      {/* Modal Edit Permissions */}
+      <Modal
+        title={<div className="text-lg font-bold">Chỉnh sửa chuyên viên: {editingUser?.name}</div>}
+        open={editOpen}
+        onCancel={() => setEditOpen(false)}
+        footer={null}
+        destroyOnClose
+      >
+        <Form form={editForm} layout="vertical" onFinish={handleEditPermissions} className="mt-4">
+          <Form.Item
+            label="Loại chuyên viên"
+            name="technicianType"
+            rules={[{ required: true, message: 'Vui lòng chọn loại chuyên viên!' }]}
+          >
+            <Select size="large">
+              <Select.Option value="normal">Chuyên viên (Normal)</Select.Option>
+              <Select.Option value="senior">Chuyên viên cấp cao (Senior)</Select.Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item noStyle shouldUpdate={(prev, curr) => prev.technicianType !== curr.technicianType}>
+            {({ getFieldValue }) =>
+              getFieldValue('technicianType') === 'normal' && (
+                <Form.Item
+                  label="Quyền hạn"
+                  name="permissions"
+                  rules={[{ required: true, message: 'Vui lòng chọn ít nhất một quyền!' }]}
+                >
+                  <Select mode="multiple" size="large" placeholder="Chọn các quyền hạn">
+                    {permissionsList.map(p => (
+                      <Select.Option key={p.code} value={p.code}>{p.name}</Select.Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              )
+            }
+          </Form.Item>
+
+          <div className="flex justify-end gap-2 mt-6">
+            <Button size="large" onClick={() => setEditOpen(false)}>Hủy</Button>
+            <Button type="primary" htmlType="submit" size="large" loading={loading} block>
+              Lưu thay đổi
             </Button>
           </div>
         </Form>

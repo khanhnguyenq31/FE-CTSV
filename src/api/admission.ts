@@ -17,6 +17,7 @@ export interface AdmissionStudent {
     className: string; // Khóa
     hasExportedFiles: boolean;
     isPhysicalDocSubmitted: boolean;
+    isNotified?: boolean;
     graduationType: string;
     user?: {
         isFirstLogin: boolean;
