@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Button,
   Card,
@@ -34,8 +35,11 @@ const { Title, Text } = Typography;
 
 
 function CustomCalendar() {
-  const [current, setCurrent] = useState<Date>(new Date(2021, 8, 1));
-  const [selected, setSelected] = useState<Date | null>(new Date(2021, 8, 19));
+  const [current, setCurrent] = useState<Date>(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const [selected, setSelected] = useState<Date | null>(new Date());
 
   const year = current.getFullYear();
   const month = current.getMonth();
@@ -159,6 +163,7 @@ function CustomCalendar() {
 }
 
 export default function HomePage({ }: { messageApi: any }) {
+  const navigate = useNavigate();
   const profile = useAuthStore(s => s.profile);
   const fullName = profile?.fullName || 'Technician';
 
@@ -187,10 +192,10 @@ export default function HomePage({ }: { messageApi: any }) {
   }));
 
   const quickActions = [
-    { icon: <UserOutlined />, label: "Quản lý sinh viên" },
-    { icon: <SolutionOutlined />, label: "Xử lý chứng chỉ" },
-    { icon: <FileAddOutlined />, label: "Tạo sự kiện mới" },
-    { icon: <TrophyOutlined />, label: "Quản lý học bổng" },
+    { icon: <UserOutlined />, label: "Danh sách sinh viên", path: "/technician/profile" },
+    { icon: <SolutionOutlined />, label: "Quản lý nhập học", path: "/technician/manage" },
+    { icon: <CalendarOutlined />, label: "Sự kiện & hoạt động", path: "/technician/event" },
+    { icon: <TrophyOutlined />, label: "Xử lý vi phạm", path: "/technician/regulation" },
   ];
   const renderCardTitle = (title: string, description: string) => (
     <div>
@@ -332,6 +337,7 @@ export default function HomePage({ }: { messageApi: any }) {
                   <Button
                     block
                     icon={act.icon}
+                    onClick={() => navigate(act.path)}
                     style={{
                       textAlign: "left",
                       borderRadius: 12,

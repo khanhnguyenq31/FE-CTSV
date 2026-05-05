@@ -30,7 +30,6 @@ import AdminSidebar from './components/AdminSidebar';
 import StudentHome from './pages/student/StudentHome'
 import StudentProfile from './pages/student/StudentProfile'
 import StudentCourse from './pages/student/StudentCourse'
-import StudentScholarship from './pages/student/StudentScholarship'
 import StudentEvent from './pages/student/StudentEvent'
 import StudentEventDetail from './pages/student/StudentEventDetail'
 import EnrollmentRecords from './pages/student/EnrollmentRecords'
@@ -247,7 +246,6 @@ function App() {
               <Route path="home" element={<StudentHome />} />
               <Route path="profile" element={<StudentProfile />} />
               <Route path="course" element={<StudentCourse />} />
-              <Route path="scholarship" element={<StudentScholarship />} />
               <Route path="event" element={<StudentEvent messageApi={messageApi} />} />
               <Route path="event/:id" element={<StudentEventDetail messageApi={messageApi} />} />
               <Route path="enrollment-records" element={<EnrollmentRecords />} />

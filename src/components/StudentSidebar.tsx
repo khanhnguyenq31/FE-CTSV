@@ -34,7 +34,6 @@ export default function StudentSidebar({ messageApi, isMobile = false, onClose }
     "/student/home": "1",
     "/student/profile": "2",
     "/student/course": "3",
-    "/student/scholarship": "4",
     "/student/event": "5",
     "/student/enrollment-records": "6",
   };
@@ -82,7 +81,6 @@ export default function StudentSidebar({ messageApi, isMobile = false, onClose }
     { key: "1", icon: <HomeOutlined />, label: "Tổng quan sinh viên", path: "/student/home" },
     { key: "2", icon: <UserOutlined />, label: "Hồ sơ cá nhân", path: "/student/profile" },
     { key: "3", icon: <BookOutlined />, label: "Kết quả học tập", path: "/student/course" },
-    { key: "4", icon: <GiftOutlined />, label: "Thông tin học bổng", path: "/student/scholarship" },
     { key: "5", icon: <CalendarOutlined />, label: "Sự kiện & hoạt động", path: "/student/event" },
     { key: "6", icon: <FilePdfOutlined />, label: "Hồ sơ nhập học", path: "/student/enrollment-records", onlyInEnrollment: true },
   ];
