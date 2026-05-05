@@ -164,8 +164,15 @@ function CustomCalendar() {
 
 export default function HomePage({ }: { messageApi: any }) {
   const navigate = useNavigate();
-  const profile = useAuthStore(s => s.profile);
-  const fullName = profile?.fullName || 'Technician';
+  const technicianType = useAuthStore(s => s.technicianType);
+
+  // Thêm kiểm tra ở mức component
+  if (technicianType !== "senior") {
+    navigate("/technician/profile");
+    return null;
+  }
+
+  const fullName = useAuthStore(s => s.fullName) || 'Technician';
 
   const { data: activitiesData } = useQuery({
     queryKey: ['activities'],

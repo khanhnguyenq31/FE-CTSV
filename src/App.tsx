@@ -229,13 +229,27 @@ function App() {
           {/* --- ROUTE CỦA TECHNICIAN / KỸ THUẬT VIÊN (DÙNG TechnicianLayout) --- */}
           <Route path="/technician" element={<ProtectedRoute allowedRoles={["technician"]} />}>
             <Route element={<TechnicianLayout messageApi={messageApi} />}>
-              <Route path="home" element={<HomePage messageApi={messageApi} />} />
-              <Route path="manage" element={<ManagePage messageApi={messageApi} />} />
-              <Route path="profile" element={<ProfilePage messageApi={messageApi} />} />
-              <Route path="event" element={<EventPage messageApi={messageApi} />} />
-              <Route path="discipline" element={<DisciplinePage />} />
-              <Route path="regulation-config" element={<RegulationConfigPage messageApi={messageApi} />} />
-              <Route path="regulation" element={<RegulationPage messageApi={messageApi} />} />
+              <Route path="home" element={<ProtectedRoute allowedRoles={["technician"]} requireSenior={true} />}>
+                <Route index element={<HomePage messageApi={messageApi} />} />
+              </Route>
+              <Route path="manage" element={<ProtectedRoute allowedRoles={["technician"]} requiredPermission="ADMISSION" />}>
+                <Route index element={<ManagePage messageApi={messageApi} />} />
+              </Route>
+              <Route path="profile" element={<ProtectedRoute allowedRoles={["technician"]} requiredPermission="STUDENT_LIST" />}>
+                <Route index element={<ProfilePage messageApi={messageApi} />} />
+              </Route>
+              <Route path="event" element={<ProtectedRoute allowedRoles={["technician"]} requiredPermission="EVENT_ACTIVITY" />}>
+                <Route index element={<EventPage messageApi={messageApi} />} />
+              </Route>
+              <Route path="discipline" element={<ProtectedRoute allowedRoles={["technician"]} requiredPermission="REWARD_DISCIPLINE" />}>
+                <Route index element={<DisciplinePage />} />
+              </Route>
+              <Route path="regulation-config" element={<ProtectedRoute allowedRoles={["technician"]} requiredPermission="REWARD_DISCIPLINE" />}>
+                <Route index element={<RegulationConfigPage messageApi={messageApi} />} />
+              </Route>
+              <Route path="regulation" element={<ProtectedRoute allowedRoles={["technician"]} requiredPermission="REWARD_DISCIPLINE" />}>
+                <Route index element={<RegulationPage messageApi={messageApi} />} />
+              </Route>
             </Route>
           </Route>
 

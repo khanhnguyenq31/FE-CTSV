@@ -10,6 +10,8 @@ interface UserData {
   role: 'student' | 'technician';
   status: 'active' | 'locked' | 'inactive';
   createdAt: string;
+  technicianType?: 'normal' | 'senior';
+  permissions?: string[];
 }
 
 export default function ManageAccounts({ messageApi }: { messageApi: any }) {
@@ -29,8 +31,9 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
       const res = await fetch('http://localhost:3000/auth/permissions', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      if (!res.ok) throw new Error('Không thể tải danh sách quyền');
       const data = await res.json();
-      if (res.ok) setPermissionsList(data.permissions || []);
+      setPermissionsList(data.permissions || []);
     } catch (e) {
       console.error(e);
     }
@@ -57,7 +60,7 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
         email: u.email,
         name: u.fullName || '',
         role: u.role,
-        status: u.status || 'active',
+        status: u.isActive === false ? 'locked' : 'active',
         technicianType: u.technicianType,
         permissions: u.permissions || [],
         createdAt: today,
@@ -113,7 +116,10 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
         },
         body: JSON.stringify({ status: newStatus })
       });
-      if (!res.ok) throw new Error('Cập nhật trạng thái thất bại');
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.message || 'Cập nhật trạng thái thất bại');
+      }
       messageApi.success(`Đã ${newStatus === 'locked' ? 'khóa' : 'mở khóa'} tài khoản thành công`);
       fetchUsers();
     } catch (err: any) {
@@ -148,7 +154,10 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
           permissions: values.technicianType === 'senior' ? [] : values.permissions
         })
       });
-      if (!res.ok) throw new Error('Cập nhật quyền thất bại');
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({}));
+        throw new Error(error.message || 'Cập nhật quyền thất bại');
+      }
       messageApi.success('Cập nhật quyền chuyên viên thành công');
       setEditOpen(false);
       fetchUsers();

@@ -19,13 +19,27 @@ export default function Login({ messageApi }: { messageApi: any }) {
       login({
         role: data.role,
         userEmail: variables.email,
+        fullName: data.fullName,
         technicianType: data.technicianType,
         permissions: data.permissions
       });
       messageApi.success("Đăng nhập thành công!");
       if (data.role === "admin") navigate("/admin/overview");
       else if (data.role === "student") navigate("/student/home");
-      else navigate("/technician/home");
+      else {
+        // technician
+        if (data.technicianType === "senior") {
+          navigate("/technician/home");
+        } else {
+          // find first allowed permission
+          const perms = data.permissions || [];
+          if (perms.includes("ADMISSION")) navigate("/technician/manage");
+          else if (perms.includes("STUDENT_LIST")) navigate("/technician/profile");
+          else if (perms.includes("EVENT_ACTIVITY")) navigate("/technician/event");
+          else if (perms.includes("REWARD_DISCIPLINE")) navigate("/technician/regulation");
+          else navigate("/technician/profile"); // default
+        }
+      }
     },
     onError: (err: any) => {
       const errMsg =

@@ -3,7 +3,6 @@ import { Layout, Menu, Button } from "antd";
 import {
   HomeOutlined,
   UserOutlined,
-  SolutionOutlined,
   TrophyOutlined,
   GiftOutlined,
   LogoutOutlined,
@@ -79,7 +78,7 @@ export default function Sidebar({ messageApi, isMobile = false, onClose }: Sideb
   };
 
   const menuItems = [
-    {
+    technicianType === "senior" && {
       key: "1",
       icon: <HomeOutlined />,
       label: "Tổng quan",
@@ -102,7 +101,7 @@ export default function Sidebar({ messageApi, isMobile = false, onClose }: Sideb
         },
       ].filter(Boolean),
     },
-    (hasAccess("TRAINING_POINT") || hasAccess("REWARD_DISCIPLINE")) && {
+    hasAccess("REWARD_DISCIPLINE") && {
       key: "sub-evaluation",
       icon: <TrophyOutlined />,
       label: "Đánh giá & Kỷ luật",

@@ -65,20 +65,21 @@ export async function loginApi(email: string, password: string) {
   try {
     const response = await api.post("/auth/login", { email, password });
 
-    const { accessToken, refreshToken, role, technicianType, permissions } = response.data;
+    const { accessToken, refreshToken, role, fullName, technicianType, permissions } = response.data;
 
     // Lưu token vào localStorage
     localStorage.setItem("accessToken", accessToken);
     localStorage.setItem("refreshToken", refreshToken);
     localStorage.setItem("role", role);
     localStorage.setItem("userEmail", email);
+    if (fullName) localStorage.setItem("fullName", fullName);
     if (technicianType) localStorage.setItem("technicianType", technicianType);
     if (permissions) localStorage.setItem("permissions", JSON.stringify(permissions));
 
     // Gắn token mặc định cho các request sau
     api.defaults.headers.Authorization = `Bearer ${accessToken}`;
 
-    return { accessToken, refreshToken, role, technicianType, permissions };
+    return { accessToken, refreshToken, role, fullName, technicianType, permissions };
   } catch (error: any) {
     const message =
       error?.response?.data?.message || "Đăng nhập thất bại, vui lòng thử lại";
