@@ -32,9 +32,19 @@ const MapEvents = ({ onChange }: { onChange: (lat: number, lng: number) => void 
 // Search field using leaflet-geosearch
 const SearchField = ({ onChange }: { onChange: (lat: number, lng: number) => void }) => {
     const map = useMap();
+    const onChangeRef = React.useRef(onChange);
 
     useEffect(() => {
-        const provider = new OpenStreetMapProvider();
+        onChangeRef.current = onChange;
+    }, [onChange]);
+
+    useEffect(() => {
+        const provider = new OpenStreetMapProvider({
+            params: {
+                'accept-language': 'vi',
+                countrycodes: 'vn', // Chỉ tìm kiếm tại Việt Nam
+            },
+        });
 
         const searchControl = new (GeoSearchControl as any)({
             provider: provider,
@@ -43,16 +53,20 @@ const SearchField = ({ onChange }: { onChange: (lat: number, lng: number) => voi
             showPopup: false,
             autoClose: true,
             retainZoomLevel: false,
-            animateZoom: true,
+            animateZoom: false,
             keepResult: false,
-            searchLabel: 'Nhập địa chỉ, tên đường (vd: Phố đi bộ)',
+            searchLabel: 'Tìm kiếm địa điểm tại Việt Nam...',
         });
 
         map.addControl(searchControl);
 
         const handleLocation = (e: any) => {
             if (e.location && e.location.y !== undefined && e.location.x !== undefined) {
-                onChange(e.location.y, e.location.x);
+                onChangeRef.current(e.location.y, e.location.x);
+                // Sử dụng flyTo với thời gian ngắn để đảm bảo dịch chuyển mượt và chính xác
+                map.flyTo([e.location.y, e.location.x], 16, {
+                    duration: 0.5
+                });
             }
         };
 
@@ -62,7 +76,7 @@ const SearchField = ({ onChange }: { onChange: (lat: number, lng: number) => voi
             map.removeControl(searchControl);
             map.off('geosearch/showlocation', handleLocation);
         };
-    }, [map, onChange]);
+    }, [map]); // Chỉ phụ thuộc vào map
 
     return null;
 };
@@ -70,7 +84,11 @@ const SearchField = ({ onChange }: { onChange: (lat: number, lng: number) => voi
 const RecenterMap = ({ lat, lng }: { lat: number; lng: number }) => {
     const map = useMap();
     useEffect(() => {
-        map.setView([lat, lng], map.getZoom());
+        const currentCenter = map.getCenter();
+        // Chỉ setView nếu vị trí mới khác biệt đáng kể (tránh loop hoặc lag)
+        if (Math.abs(currentCenter.lat - lat) > 0.0001 || Math.abs(currentCenter.lng - lng) > 0.0001) {
+            map.setView([lat, lng], map.getZoom());
+        }
     }, [lat, lng, map]);
     return null;
 };

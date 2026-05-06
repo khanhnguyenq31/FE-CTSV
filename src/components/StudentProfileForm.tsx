@@ -407,7 +407,7 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
 
                         <Table
                             columns={decisionColumns}
-                            dataSource={decisions}
+                            dataSource={decisions?.filter(d => d.loai === 'Quyết định kỷ luật')}
                             rowKey={(_, idx) => String(idx)}
                             pagination={{ pageSize: 10 }}
                             locale={{ emptyText: 'Chưa có quyết định kỷ luật nào' }}

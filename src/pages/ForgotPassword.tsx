@@ -84,7 +84,7 @@ export default function ForgotPassword({ messageApi }: { messageApi: any }) {
               Quên mật khẩu
             </Title>
             <Paragraph className="!mt-0 text-gray-600">
-             Vui lòng nhập **Email** bạn đã dùng để đăng ký tài khoản. Chúng tôi sẽ gửi một mã gồm 6 số khôi phục mật khẩu đến địa chỉ này để bạn đặt lại mật khẩu một cách nhanh chóng và an toàn.
+             Vui lòng nhập <Text strong>Email</Text> bạn đã dùng để đăng ký tài khoản. Chúng tôi sẽ gửi một mã gồm 6 số khôi phục mật khẩu đến địa chỉ này để bạn đặt lại mật khẩu một cách nhanh chóng và an toàn.
             </Paragraph>
 
             <Form

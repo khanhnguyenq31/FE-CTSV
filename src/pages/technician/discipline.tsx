@@ -251,7 +251,6 @@ function DisciplineConfigTab() {
     };
 
     const columns = [
-        { title: 'ID', dataIndex: 'id', key: 'id' },
         { title: 'Tên bộ cấu hình', dataIndex: 'tenCauHinh', key: 'tenCauHinh' },
         { title: 'Tình trạng', dataIndex: 'trangThai', key: 'trangThai', render: (val: boolean) => val ? <Tag color="green">Kích hoạt</Tag> : <Tag color="gray">Tạm ngưng</Tag> },
         { title: 'Số Rule GPA', dataIndex: 'gpaRules', key: 'gpaRules', render: (dk: any[]) => dk?.length || 0 },

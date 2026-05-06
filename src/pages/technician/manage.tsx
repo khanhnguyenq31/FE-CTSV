@@ -489,6 +489,7 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
     { title: "Họ và tên", dataIndex: "fullName", key: "fullName", width: 180 },
     { title: "Khóa", dataIndex: "className", key: "className", width: 100 },
     { title: "Ngành", dataIndex: "major", key: "major", width: 180 },
+    { title: "Email", dataIndex: "emailPersonal", key: "emailPersonal", width: 220 },
     {
       title: "Người duyệt",
       key: "admissionApprovedBy",

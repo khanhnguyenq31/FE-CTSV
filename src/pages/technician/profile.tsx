@@ -46,7 +46,7 @@ type RowData = {
   major: string;
   course: string;
   gpa: number;
-  trainingScore: number;
+  trainingScore: number | null;
   status: "Đang học" | "Đã tốt nghiệp" | "Bảo lưu";
   faculty?: string; // Thêm trường faculty cho đúng dữ liệu API
 };
@@ -58,6 +58,26 @@ interface Period {
   endDate: string;
   isActive: boolean;
 }
+
+// Hàm helper xếp loại GPA (Thang 4)
+const getGPALabel = (gpa: number) => {
+  if (gpa >= 3.6) return { label: "Xuất sắc", color: "#722ed1" };
+  if (gpa >= 3.2) return { label: "Giỏi", color: "#52c41a" };
+  if (gpa >= 2.5) return { label: "Khá", color: "#1890ff" };
+  if (gpa >= 2.0) return { label: "Trung bình", color: "#faad14" };
+  return { label: "Yếu", color: "#f5222d" };
+};
+
+// Hàm helper xếp loại Điểm rèn luyện (Thang 100)
+const getTrainingLabel = (score: number | null) => {
+  if (score === null || score === undefined || score <= 0) return null; // Không xếp loại nếu bằng 0 hoặc không có
+  if (score >= 90) return { label: "Xuất sắc", color: "#722ed1" };
+  if (score >= 80) return { label: "Tốt", color: "#52c41a" };
+  if (score >= 65) return { label: "Khá", color: "#1890ff" };
+  if (score >= 50) return { label: "Trung bình", color: "#faad14" };
+  if (score >= 35) return { label: "Yếu", color: "#fa8c16" };
+  return { label: "Kém", color: "#f5222d" };
+};
 
 export default function ProfilePage({ }: { messageApi: any }) {
   const navigate = useNavigate();
@@ -103,8 +123,8 @@ export default function ProfilePage({ }: { messageApi: any }) {
               classId: "Chưa xếp lớp",
               major: s.major || "",
               course: s.className || s.studentCode || "", // Khóa
-              gpa: Number(s.gpaTotal) || 0,
-              trainingScore: "NaN" as any,
+              gpa: (s.gpaTotal !== null && s.gpaTotal !== undefined) ? Number(s.gpaTotal) : 0,
+              trainingScore: (s.trainingScore === null || s.trainingScore === undefined) ? null : Number(s.trainingScore), // Dùng dữ liệu thực tế hoặc null nếu không có
               status: s.graduationType || "Đang học",
               faculty: s.faculty || s.nganhTrungTuyen?.khoa?.khoaName || "", // Chỉ dùng cho xem chi tiết
             })
@@ -142,7 +162,7 @@ export default function ProfilePage({ }: { messageApi: any }) {
     ? (data.reduce((sum, s) => sum + s.gpa, 0) / data.length).toFixed(2)
     : "0.00";
   const avgTraining = data.length
-    ? (data.reduce((sum, s) => sum + s.trainingScore, 0) / data.length).toFixed(
+    ? (data.reduce((sum, s) => sum + (s.trainingScore || 0), 0) / data.length).toFixed(
       1
     )
     : "0.0";
@@ -220,7 +240,7 @@ export default function ProfilePage({ }: { messageApi: any }) {
       key: "trainingScore",
       width: 90,
       responsive: ["md"] as any,
-      render: (v: number) => <Text>{v}</Text>,
+      render: (v: number | null) => <Text>{v === null ? "NaN" : v}</Text>,
       align: "center",
     },
     {
@@ -542,17 +562,7 @@ export default function ProfilePage({ }: { messageApi: any }) {
         </Col>
 
         <Col>
-          <Space>
-            {/* Nút Thêm sinh viên */}
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              style={{ borderRadius: 8, fontWeight: 600 }}
-              onClick={() => alert("Chức năng thêm sinh viên")}
-            >
-              Thêm sinh viên
-            </Button>
-          </Space>
+          {/* Nút Thêm sinh viên đã bị loại bỏ theo yêu cầu */}
         </Col>
       </Row>
 
@@ -804,15 +814,21 @@ export default function ProfilePage({ }: { messageApi: any }) {
                     <Card
                       title="GPA Tích lũy"
                       bordered={false}
-                      style={{ borderRadius: 8 }}
+                      style={{ borderRadius: 8, marginBottom: 16 }}
                       headStyle={{ borderBottom: "none" }}
                       size="small"
                     >
-                      <Title level={2} style={{ margin: 0, color: "#1677ff" }}>
+                      <Title level={2} style={{ margin: 0, color: getGPALabel(selectedStudent.gpa).color }}>
                         {selectedStudent.gpa.toFixed(2)}
                       </Title>
                       <Text type="secondary">
-                        Xếp loại: Tốt (Cần thêm logic xếp loại)
+                        Xếp loại: {getGPALabel(selectedStudent.gpa) ? (
+                          <Text strong style={{ color: getGPALabel(selectedStudent.gpa)?.color }}>
+                            {getGPALabel(selectedStudent.gpa)?.label}
+                          </Text>
+                        ) : (
+                          <Text type="secondary" italic>Chưa có dữ liệu</Text>
+                        )}
                       </Text>
                     </Card>
                   </Col>
@@ -825,10 +841,18 @@ export default function ProfilePage({ }: { messageApi: any }) {
                       headStyle={{ borderBottom: "none" }}
                       size="small"
                     >
-                      <Title level={2} style={{ margin: 0, color: "#faad14" }}>
-                        NaN
+                      <Title level={2} style={{ margin: 0, color: getTrainingLabel(selectedStudent.trainingScore)?.color || "#bfbfbf" }}>
+                        {selectedStudent.trainingScore === null ? "NaN" : selectedStudent.trainingScore}
                       </Title>
-                      <Text type="secondary">Xếp loại: NaN</Text>
+                      <Text type="secondary">
+                        Xếp loại: {getTrainingLabel(selectedStudent.trainingScore) ? (
+                          <Text strong style={{ color: getTrainingLabel(selectedStudent.trainingScore)?.color }}>
+                            {getTrainingLabel(selectedStudent.trainingScore)?.label}
+                          </Text>
+                        ) : (
+                          <Text type="secondary" italic>Chưa có dữ liệu</Text>
+                        )}
+                      </Text>
                     </Card>
                   </Col>
                 </Row>

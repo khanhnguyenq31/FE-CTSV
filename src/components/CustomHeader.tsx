@@ -10,6 +10,10 @@ import {
   MenuOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useMutation } from '@tanstack/react-query';
+import { logoutApi } from '../api/auth';
+import { useAuthStore } from '../store/auth';
+import { message } from 'antd';
 
 const { Header } = Layout;
 const { useBreakpoint } = Grid;
@@ -53,6 +57,19 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({ showBackButton = false, tit
   const handleBack = () => {
     navigate(-1);
   };
+
+  const logout = useAuthStore((s) => s.logout);
+  const mutation = useMutation({
+    mutationFn: logoutApi,
+    onSuccess: () => {
+      message.success("Đăng xuất thành công!");
+      logout();
+      navigate("/login");
+    },
+    onError: (err: any) => {
+      message.error(err?.message || "Đăng xuất thất bại!");
+    },
+  });
 
   return (
     <Header
@@ -161,7 +178,7 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({ showBackButton = false, tit
               <Menu.Item key="change-password" onClick={() => navigate('/change-password')}>
                 Đổi mật khẩu
               </Menu.Item>
-              <Menu.Item key="logout">
+              <Menu.Item key="logout" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
                 Đăng xuất
               </Menu.Item>
             </Menu>

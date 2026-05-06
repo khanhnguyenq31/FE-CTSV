@@ -316,6 +316,31 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
                                                 setSelectedQuyetDinh(qd);
                                                 setIsDetailModalOpen(true);
                                             }} />
+                                        </Tooltip>,
+                                        <Tooltip title="Xóa Quyết định">
+                                            <Button 
+                                                type="text" 
+                                                danger 
+                                                icon={<PlusOutlined style={{ transform: 'rotate(45deg)' }} />} 
+                                                onClick={() => {
+                                                    Modal.confirm({
+                                                        title: 'Xác nhận xóa quyết định?',
+                                                        content: 'Các vi phạm trong quyết định này sẽ được trả về trạng thái "Chờ xử lý". Thao tác này không thể hoàn tác.',
+                                                        okText: 'Xóa',
+                                                        okType: 'danger',
+                                                        cancelText: 'Hủy',
+                                                        onOk: async () => {
+                                                            try {
+                                                                await deleteQuyetDinh(qd.id);
+                                                                if (messageApi) messageApi.success('Đã xóa quyết định thành công');
+                                                                loadData();
+                                                            } catch (error) {
+                                                                if (messageApi) messageApi.error('Lỗi khi xóa quyết định');
+                                                            }
+                                                        }
+                                                    });
+                                                }} 
+                                            />
                                         </Tooltip>
                                     ]}
                                 >

@@ -59,6 +59,11 @@ export const banHanhQuyetDinh = async (data: any) => {
     return res.data;
 };
 
+export const deleteQuyetDinh = async (id: number | string) => {
+    const res = await api.delete(`/quy-che/quyet-dinh/${id}`);
+    return res.data;
+};
+
 export const getQuyetDinh = async () => {
     const res = await api.get('/quy-che/quyet-dinh');
     return res.data;
