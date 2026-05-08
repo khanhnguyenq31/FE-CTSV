@@ -142,22 +142,25 @@ export default function StudentSidebar({ messageApi, isMobile = false, onClose }
   };
 
   const content = (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#001529' }}>
+    <div className="premium-sidebar" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div
+        className="logo-container"
+        onClick={() => navigate("/student/home")}
         style={{
           color: "#fff",
           textAlign: "center",
-          padding: "20px 0",
-          fontSize: 20,
-          fontWeight: 600,
+          padding: "24px 0",
+          fontSize: 22,
+          fontWeight: 700,
           borderBottom: "1px solid rgba(255,255,255,0.1)",
-          display: "flex",  // Thêm để làm flex container
-          alignItems: "center",  // Căn giữa theo chiều dọc
-          justifyContent: "center",  // Căn giữa theo chiều ngang 
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           flexShrink: 0,
+          letterSpacing: '1px'
         }}
       >
-        <img src="/src/assets/logo.svg" alt="Logo" style={{ width: 24, height: 24, marginRight: 8, backgroundColor: 'white', borderRadius: '4px', padding: '2px' }} />
+        <img src="/src/assets/logo.svg" alt="Logo" style={{ width: 28, height: 28, marginRight: 10, backgroundColor: 'white', borderRadius: '6px', padding: '3px' }} />
         SMS BK - STUDENT
       </div>
 
@@ -165,14 +168,15 @@ export default function StudentSidebar({ messageApi, isMobile = false, onClose }
         {renderMenuItems()}
       </div>
 
-      <div style={{ padding: "20px 24px", flexShrink: 0 }}>
+      <div style={{ padding: "24px", flexShrink: 0 }}>
         <Button
           type="primary"
           danger
           icon={<LogoutOutlined />}
           onClick={handleLogout}
           loading={(mutation as any).isPending}
-          style={{ width: "100%" }}
+          className="premium-button"
+          style={{ width: "100%", height: 45, fontSize: 16, fontWeight: 600 }}
         >
           Đăng xuất
         </Button>
@@ -185,7 +189,7 @@ export default function StudentSidebar({ messageApi, isMobile = false, onClose }
   }
 
   return (
-    <Sider width={250} theme="dark">
+    <Sider width={260} className="premium-sidebar">
       {content}
     </Sider>
   );

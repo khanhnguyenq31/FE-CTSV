@@ -218,43 +218,37 @@ export default function HomePage({ }: { messageApi: any }) {
   return (
     <div style={{ padding: 0 }}>
       {/* Khối đầu: Chào + Lịch */}
-      <Row gutter={16}>
-
-        <Col xs={24} lg={16} style={{ display: "flex", height: "100%" }}>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={16} style={{ display: "flex" }}>
           <Card
-            style={{
-              borderRadius: 16,
-              flex: 1,
-            }}
-
+            className="premium-card"
+            style={{ borderRadius: 16, flex: 1 }}
             bodyStyle={{
-              padding: 24,
+              padding: 32,
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              height: 429,
+              height: 400,
             }}
           >
-            {/* 1. Phần Văn bản (Nằm bên trái) */}
             <div>
-              <Title level={2} style={{ marginBottom: 4 }}>
+              <Title level={1} style={{ marginBottom: 8, fontSize: 48 }}>
                 Hey {fullName}.
               </Title>
-              <Text type="secondary">
+              <Text type="secondary" style={{ fontSize: 18 }}>
                 Chào mừng bạn đến với hệ thống quản lý công tác sinh viên.
               </Text>
             </div>
-
-            {/* 2. Phần Ảnh (Nằm bên phải) */}
             <div>
               <img
                 src={adminImg}
                 alt="admin"
                 style={{
-                  height: 180,
+                  height: 220,
                   width: 'auto',
-                  borderRadius: "8px",
+                  borderRadius: "12px",
                   objectFit: "cover",
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
                 }}
               />
             </div>
@@ -262,7 +256,7 @@ export default function HomePage({ }: { messageApi: any }) {
         </Col>
 
         <Col xs={24} lg={8}>
-          <div style={{ transform: "scale(0.9)", transformOrigin: "top center" }}>
+          <div style={{ height: '100%' }}>
             <CustomCalendar />
           </div>
         </Col>
@@ -273,27 +267,27 @@ export default function HomePage({ }: { messageApi: any }) {
         {stats.map((item, idx) => (
           <Col xs={12} md={8} lg={6} key={idx}>
             <Card
-              style={{ borderRadius: 16, height: 110 }}
-              bodyStyle={{ padding: 16 }}
+              className="premium-card"
+              style={{ borderRadius: 16, height: 120 }}
+              bodyStyle={{ padding: 24 }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: 'center' }}>
                 <div>
-                  <Text type="secondary">{item.title}</Text>
-                  <Title level={4} style={{ margin: 0 }}>
+                  <Text type="secondary" style={{ fontSize: 14 }}>{item.title}</Text>
+                  <Title level={2} style={{ margin: 0 }}>
                     {item.value}
                   </Title>
-                  {item.diff && (
-                    <Text style={{ color: "green", fontSize: 12 }}>
-                      {item.diff}
-                    </Text>
-                  )}
                 </div>
                 <div
                   style={{
-                    fontSize: 24,
-                    background: "#f5f5f5",
+                    fontSize: 28,
+                    background: '#f0f5ff',
+                    color: '#1890ff',
                     borderRadius: 12,
-                    padding: 10,
+                    padding: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                 >
                   {item.icon}
@@ -305,51 +299,62 @@ export default function HomePage({ }: { messageApi: any }) {
       </Row>
 
       {/* Dòng 2: Sự kiện + Thao tác nhanh */}
-      <Row gutter={16} style={{ marginTop: 24 }}>
-        <Col xs={24} lg={12}>
+      <Row gutter={24} style={{ marginTop: 24 }}>
+        <Col xs={24} lg={14}>
           <Card
+            className="premium-card"
             title={renderCardTitle("Sự kiện sắp diễn ra", "Các hoạt động và sự kiện trong tháng")}
-            extra={<a>Xem tất cả</a>}
+            extra={<Button type="link">Xem tất cả</Button>}
             style={{ borderRadius: 16 }}
           >
             <List
               dataSource={events}
               renderItem={(item) => (
-                <List.Item>
+                <List.Item style={{ padding: '16px 0' }}>
                   <List.Item.Meta
-                    title={<b>{item.title}</b>}
+                    avatar={
+                      <div style={{ background: '#e6f7ff', padding: 10, borderRadius: 8, color: '#1890ff' }}>
+                        <CalendarOutlined style={{ fontSize: 20 }} />
+                      </div>
+                    }
+                    title={<b style={{ fontSize: 16 }}>{item.title}</b>}
                     description={
-                      <>
+                      <div style={{ marginTop: 4 }}>
                         <Text type="secondary">{item.date}</Text>
-                        <br />
-                        <Text style={{ color: "green", fontWeight: 500 }}>{item.reward}</Text>
-                      </>
+                        <Tag color="green" style={{ marginLeft: 8, borderRadius: 4 }}>{item.reward}</Tag>
+                      </div>
                     }
                   />
-
                 </List.Item>
               )}
             />
           </Card>
         </Col>
-        <Col xs={24} lg={12}>
+        <Col xs={24} lg={10}>
           <Card
+            className="premium-card"
             title={renderCardTitle("Thao tác nhanh", "Các chức năng thường dùng")}
             style={{ borderRadius: 16 }}
-            bodyStyle={{ padding: 12 }}
+            bodyStyle={{ padding: 24 }}
           >
-            <Row gutter={[8, 8]}>
+            <Row gutter={[12, 12]}>
               {quickActions.map((act, i) => (
                 <Col xs={24} key={i}>
                   <Button
                     block
                     icon={act.icon}
                     onClick={() => navigate(act.path)}
+                    className="premium-button"
                     style={{
                       textAlign: "left",
                       borderRadius: 12,
-                      height: 45,
-                      fontWeight: 500,
+                      height: 54,
+                      fontWeight: 600,
+                      fontSize: 15,
+                      display: 'flex',
+                      alignItems: 'center',
+                      border: '1px solid #f0f0f0',
+                      padding: '0 20px'
                     }}
                   >
                     {act.label}

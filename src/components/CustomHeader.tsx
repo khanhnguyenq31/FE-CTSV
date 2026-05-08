@@ -7,7 +7,8 @@ import {
   UserOutlined,
   LeftOutlined,
   MessageOutlined,
-  MenuOutlined
+  MenuOutlined,
+  LogoutOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
@@ -74,17 +75,17 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({ showBackButton = false, tit
   return (
     <Header
       style={{
-        padding: '0 16px',
+        padding: '0 24px',
         backgroundColor: '#fff',
         height: 70,
         lineHeight: '70px',
-        borderBottom: '1px solid #f0f0f0',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         position: 'sticky',
         top: 0,
-        zIndex: 10,
+        zIndex: 100,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -94,8 +95,9 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({ showBackButton = false, tit
             type="text"
             icon={<MenuOutlined style={{ fontSize: 20 }} />}
             onClick={onMenuClick}
+            className="header-icon-btn"
             style={{
-              marginRight: 10,
+              marginRight: 16,
               width: 40,
               height: 40,
               borderRadius: '50%',
@@ -112,8 +114,9 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({ showBackButton = false, tit
             type="text"
             icon={<LeftOutlined style={{ fontSize: 20 }} />}
             onClick={handleBack}
+            className="header-icon-btn"
             style={{
-              marginRight: 10,
+              marginRight: 16,
               width: 40,
               height: 40,
               borderRadius: '50%',
@@ -124,41 +127,53 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({ showBackButton = false, tit
           />
         )}
         {displayTitle && (
-          <span style={{ fontWeight: 700, fontSize: xs ? '18px' : '22px', marginRight: 24, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: screens.sm ? '300px' : '150px' }}>{displayTitle}</span>
+          <span style={{ 
+            fontWeight: 700, 
+            fontSize: !screens.sm ? '18px' : '24px', 
+            marginRight: 32, 
+            whiteSpace: 'nowrap', 
+            overflow: 'hidden', 
+            textOverflow: 'ellipsis', 
+            maxWidth: screens.sm ? '400px' : '150px',
+            color: '#001529'
+          }}>{displayTitle}</span>
         )}
 
         {/* Thanh Tìm kiếm - Ẩn trên màn hình nhỏ */}
         {screens.md && (
           <Input
-            placeholder="Tìm kiếm"
-            prefix={<SearchOutlined style={{ color: '#aaa', fontSize: 18 }} />}
+            placeholder="Tìm kiếm nhanh..."
+            prefix={<SearchOutlined style={{ color: '#8c8c8c', fontSize: 18 }} />}
+            className="premium-search-input"
             style={{
-              width: 300,
-              borderRadius: 10,
-              height: 40,
+              width: 320,
+              borderRadius: 12,
+              height: 44,
               backgroundColor: '#f5f5f5',
-              border: 'none',
-              marginLeft: title ? 0 : 16
+              border: '1px solid #f0f0f0',
+              marginLeft: title ? 0 : 8
             }}
           />
         )}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
 
         {/* Các biểu tượng */}
         <Button
           type="text"
-          icon={<BellOutlined style={{ fontSize: 20, color: '#000' }} />}
-          style={{ width: 40, height: 40, borderRadius: '50%' }}
+          icon={<BellOutlined style={{ fontSize: 22, color: '#595959' }} />}
+          className="header-icon-btn"
+          style={{ width: 44, height: 44, borderRadius: '50%' }}
         />
 
-        {/* ICON TIN NHẮN - Ẩn trên mobile nhỏ nếu cần không gian */}
+        {/* ICON TIN NHẮN */}
         {screens.sm && (
           <Button
             type="text"
-            icon={<MessageOutlined style={{ fontSize: 20, color: '#000' }} />}
-            style={{ width: 40, height: 40, borderRadius: '50%' }}
+            icon={<MessageOutlined style={{ fontSize: 22, color: '#595959' }} />}
+            className="header-icon-btn"
+            style={{ width: 44, height: 44, borderRadius: '50%' }}
           />
         )}
 
@@ -166,19 +181,23 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({ showBackButton = false, tit
         {screens.md && (
           <Button
             type="text"
-            icon={<SettingOutlined style={{ fontSize: 20, color: '#000' }} />}
-            style={{ width: 40, height: 40, borderRadius: '50%' }}
+            icon={<SettingOutlined style={{ fontSize: 22, color: '#595959' }} />}
+            className="header-icon-btn"
+            style={{ width: 44, height: 44, borderRadius: '50%' }}
           />
         )}
+
+        <div style={{ width: '1px', height: '24px', background: '#f0f0f0', margin: '0 8px' }} />
 
         {/* Avatar với Dropdown */}
         <Dropdown
           overlay={
-            <Menu>
-              <Menu.Item key="change-password" onClick={() => navigate('/change-password')}>
+            <Menu className="premium-dropdown">
+              <Menu.Item key="change-password" icon={<SettingOutlined />} onClick={() => navigate('/change-password')}>
                 Đổi mật khẩu
               </Menu.Item>
-              <Menu.Item key="logout" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+              <Menu.Divider />
+              <Menu.Item key="logout" danger icon={<LogoutOutlined />} onClick={() => mutation.mutate()} disabled={mutation.isPending}>
                 Đăng xuất
               </Menu.Item>
             </Menu>
@@ -186,17 +205,22 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({ showBackButton = false, tit
           placement="bottomRight"
           trigger={["click"]}
         >
-          <Avatar
-            size={screens.md ? 40 : 32}
-            icon={<UserOutlined />}
-            style={{ marginLeft: 5, cursor: 'pointer', backgroundColor: '#000', color: '#fff' }}
-          />
+          <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', gap: 10 }} className="logo-container">
+            <Avatar
+              size={screens.md ? 44 : 36}
+              icon={<UserOutlined />}
+              style={{ backgroundColor: '#001529', color: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
+            />
+            {screens.lg && (
+              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: '1.2' }}>
+                <span style={{ fontWeight: 600, color: '#262626' }}>Tài khoản</span>
+                <span style={{ fontSize: 12, color: '#8c8c8c' }}>Trực tuyến</span>
+              </div>
+            )}
+          </div>
         </Dropdown>
       </div>
     </Header>
   );
 };
-// Helper để lấy screens
-const xs = typeof window !== 'undefined' ? window.innerWidth < 576 : false;
-
 export default CustomHeader;

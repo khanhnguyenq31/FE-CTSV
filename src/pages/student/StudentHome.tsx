@@ -28,31 +28,63 @@ export default function StudentHome() {
 
     if (isLoading) return <div style={{ textAlign: 'center', marginTop: 50 }}><Spin size="large" /></div>;
 
-    return (
-        <div style={{ padding: 24, background: '#f0f2f5' }}>
-            <Title level={2} style={{ color: '#0052cc' }}>
-                <span role="img" aria-label="welcome">👋</span> Chào mừng, {profile.fullName || 'Sinh viên'}!
-            </Title>
-            <Paragraph>Đây là trang tổng quan cá nhân của bạn. Trạng thái hiện tại: <Text strong style={{ color: profile.graduationType === 'Đang học' ? 'green' : 'orange' }}>{profile.graduationType || 'Chưa cập nhật'}</Text></Paragraph>
+  return (
+    <div style={{ padding: 0 }}>
+      <div style={{ marginBottom: 32 }}>
+        <Title level={1} style={{ marginBottom: 8, fontSize: 36 }}>
+          Chào mừng, {profile.fullName || 'Sinh viên'}! 👋
+        </Title>
+        <Paragraph style={{ fontSize: 18, color: '#595959' }}>
+          Đây là trang tổng quan cá nhân của bạn. Trạng thái hiện tại: 
+          <Tag 
+            color={profile.graduationType === 'Đang học' ? 'green' : 'gold'} 
+            style={{ marginLeft: 12, padding: '4px 12px', borderRadius: 6, fontSize: 14 }}
+          >
+            {profile.graduationType || 'Chưa cập nhật'}
+          </Tag>
+        </Paragraph>
+      </div>
 
-            {/* Sử dụng Row và Col với props responsive */}
-            <Row gutter={[16, 16]}>
-                
-                <Col {...responsiveColProps}>
-                    <Card 
-                        title="Thông tin cơ bản 👤" 
-                        bordered={false} 
-                        hoverable
-                        style={{ height: '100%' }}
-                    >
-                        <Space direction="vertical">
-                            <Text><strong>MSSV:</strong> {profile.studentId || 'N/A'}</Text>
-                            <Text><strong>Khóa:</strong> {profile.className || 'N/A'}</Text>
-                            <Text><strong>Ngành:</strong> {profile.major || 'N/A'}</Text>
-                        </Space>
-                    </Card>
-                </Col>
-            </Row>
-        </div>
-    );
+      <Row gutter={[24, 24]}>
+        <Col {...responsiveColProps}>
+          <Card 
+            title={<span style={{ fontSize: 18 }}>Thông tin cơ bản 👤</span>}
+            className="premium-card"
+            style={{ borderRadius: 16, height: '100%' }}
+            bodyStyle={{ padding: 24 }}
+          >
+            <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Text type="secondary">MSSV:</Text>
+                <Text strong>{profile.studentId || 'N/A'}</Text>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Text type="secondary">Khóa:</Text>
+                <Text strong>{profile.className || 'N/A'}</Text>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Text type="secondary">Ngành:</Text>
+                <Text strong>{profile.major || 'N/A'}</Text>
+              </div>
+            </Space>
+          </Card>
+        </Col>
+
+        {/* Thêm một số card giả lập cho chuyên nghiệp */}
+        <Col {...responsiveColProps}>
+          <Card 
+            title={<span style={{ fontSize: 18 }}>Kết quả học tập 📚</span>}
+            className="premium-card"
+            style={{ borderRadius: 16, height: '100%' }}
+            bodyStyle={{ padding: 24 }}
+          >
+             <Text type="secondary">Xem chi tiết kết quả học tập và điểm rèn luyện tại menu bên trái.</Text>
+             <div style={{ marginTop: 24 }}>
+                <Button type="primary" ghost block className="premium-button">Xem bảng điểm</Button>
+             </div>
+          </Card>
+        </Col>
+      </Row>
+    </div>
+  );
 }

@@ -1,0 +1,97 @@
+/* Premium UI Design Tokens & Utilities */
+
+:root {
+  --primary-gradient: linear-gradient(135deg, #001529 0%, #00334e 100%);
+  --active-glow: 0 0 15px rgba(24, 144, 255, 0.5);
+  --hover-lift: translateY(-2px);
+  --transition-speed: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Sidebar Enhancements */
+.premium-sidebar {
+  background: var(--primary-gradient) !important;
+  box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.premium-sidebar .ant-menu {
+  background: transparent !important;
+}
+
+.premium-sidebar .ant-menu-item-selected {
+  background: rgba(24, 144, 255, 0.1) !important;
+  position: relative;
+}
+
+.premium-sidebar .ant-menu-item-selected::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 15%;
+  height: 70%;
+  width: 4px;
+  background: #1890ff;
+  border-radius: 0 4px 4px 0;
+  box-shadow: var(--active-glow);
+}
+
+.premium-sidebar .ant-menu-item, 
+.premium-sidebar .ant-menu-submenu-title {
+  transition: all var(--transition-speed) !important;
+}
+
+.premium-sidebar .ant-menu-item:hover, 
+.premium-sidebar .ant-menu-submenu-title:hover {
+  color: #1890ff !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Logo Area Hover */
+.logo-container {
+  transition: transform var(--transition-speed);
+  cursor: pointer;
+}
+
+.logo-container:hover {
+  transform: scale(1.02);
+}
+
+/* Button & Card Premium Effects */
+.premium-button {
+  transition: all var(--transition-speed) !important;
+  border-radius: 8px !important;
+}
+
+.premium-button:hover {
+  transform: var(--hover-lift);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.premium-card {
+  transition: all var(--transition-speed) !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+}
+
+.premium-card:hover {
+  transform: var(--hover-lift);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Header Enhancements */
+.header-icon-btn {
+  transition: all var(--transition-speed) !important;
+}
+
+.header-icon-btn:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+  transform: scale(1.1);
+}
+
+.premium-search-input {
+  transition: all var(--transition-speed) !important;
+}
+
+.premium-search-input:focus-within {
+  width: 350px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
