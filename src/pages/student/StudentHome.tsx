@@ -1,4 +1,5 @@
-import { Typography, Card, Space, Row, Col, Spin } from 'antd';
+import { Typography, Card, Space, Row, Col, Spin, Tag, Button } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import type { ColProps } from 'antd'; // Import kiểu ColProps
 import { useQuery } from '@tanstack/react-query';
 import { getStudentProfileApi } from '../../api/student';
@@ -6,6 +7,7 @@ import { getStudentProfileApi } from '../../api/student';
 const { Title, Paragraph, Text } = Typography;
 
 export default function StudentHome() {
+    const navigate = useNavigate();
 
     // Định nghĩa props responsive cho mỗi cột (chia 24 phần)
     const responsiveColProps: ColProps = {
@@ -80,7 +82,15 @@ export default function StudentHome() {
           >
              <Text type="secondary">Xem chi tiết kết quả học tập và điểm rèn luyện tại menu bên trái.</Text>
              <div style={{ marginTop: 24 }}>
-                <Button type="primary" ghost block className="premium-button">Xem bảng điểm</Button>
+                <Button 
+                    type="primary" 
+                    ghost 
+                    block 
+                    className="premium-button"
+                    onClick={() => navigate('/student/course')}
+                >
+                    Xem bảng điểm
+                </Button>
              </div>
           </Card>
         </Col>

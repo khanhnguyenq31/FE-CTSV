@@ -73,13 +73,13 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
 
     // Thường trú
     const [isVn, setIsVn] = useState(true);
-    const [districts, setDistricts] = useState<any[]>([]);
     const [wards, setWards] = useState<any[]>([]);
+    const [loadingWards, setLoadingWards] = useState(false);
 
     // Tạm trú
     const [isContactVn, setIsContactVn] = useState(true);
-    const [contactDistricts, setContactDistricts] = useState<any[]>([]);
     const [contactWards, setContactWards] = useState<any[]>([]);
+    const [loadingContactWards, setLoadingContactWards] = useState(false);
 
     useEffect(() => {
         fetch('http://localhost:3000/address/provinces')
@@ -94,68 +94,66 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
 
         if (initialValues?.province && provinces.length > 0) {
             const p = provinces.find(x => x.name === initialValues.province);
-            if (p) fetch(`http://localhost:3000/address/districts?province_code=${p.code}`).then(r => r.json()).then(d => {
-                setDistricts(d.districts || []);
-                if (initialValues?.district && d.districts) {
-                    const dist = d.districts.find((x: any) => x.name === initialValues.district);
-                    if (dist) fetch(`http://localhost:3000/address/wards?district_code=${dist.code}`).then(r => r.json()).then(w => setWards(w.wards || []));
-                }
-            });
+            if (p) {
+                setLoadingWards(true);
+                fetch(`http://localhost:3000/address/wards?province_code=${p.code}`)
+                    .then(r => r.json())
+                    .then(w => setWards(w.wards || []))
+                    .finally(() => setLoadingWards(false));
+            }
         }
         if (initialValues?.contactProvince && provinces.length > 0) {
             const p = provinces.find(x => x.name === initialValues.contactProvince);
-            if (p) fetch(`http://localhost:3000/address/districts?province_code=${p.code}`).then(r => r.json()).then(d => {
-                setContactDistricts(d.districts || []);
-                if (initialValues?.contactDistrict && d.districts) {
-                    const dist = d.districts.find((x: any) => x.name === initialValues.contactDistrict);
-                    if (dist) fetch(`http://localhost:3000/address/wards?district_code=${dist.code}`).then(r => r.json()).then(w => setContactWards(w.wards || []));
-                }
-            });
+            if (p) {
+                setLoadingContactWards(true);
+                fetch(`http://localhost:3000/address/wards?province_code=${p.code}`)
+                    .then(r => r.json())
+                    .then(w => setContactWards(w.wards || []))
+                    .finally(() => setLoadingContactWards(false));
+            }
         }
     }, [initialValues, provinces]);
 
     const onNationalityChange = (val: string) => {
         setIsVn(val === 'VN');
         if (val !== 'VN') {
-            form.setFieldsValue({ province: null, district: null, ward: null });
-            setDistricts([]); setWards([]);
+            form.setFieldsValue({ province: null, ward: null });
+            setWards([]);
         }
     };
 
     const onProvinceChange = (val: string) => {
-        form.setFieldsValue({ district: null, ward: null });
-        setDistricts([]); setWards([]);
-        const p = provinces.find(x => x.name === val);
-        if (p) fetch(`http://localhost:3000/address/districts?province_code=${p.code}`).then(r => r.json()).then(d => setDistricts(d.districts || []));
-    };
-
-    const onDistrictChange = (val: string) => {
         form.setFieldsValue({ ward: null });
         setWards([]);
-        const d = districts.find(x => x.name === val);
-        if (d) fetch(`http://localhost:3000/address/wards?district_code=${d.code}`).then(r => r.json()).then(w => setWards(w.wards || []));
+        const p = provinces.find(x => x.name === val);
+        if (p) {
+            setLoadingWards(true);
+            fetch(`http://localhost:3000/address/wards?province_code=${p.code}`)
+                .then(r => r.json())
+                .then(w => setWards(w.wards || []))
+                .finally(() => setLoadingWards(false));
+        }
     };
 
     const onContactNationalityChange = (val: string) => {
         setIsContactVn(val === 'VN');
         if (val !== 'VN') {
-            form.setFieldsValue({ contactProvince: null, contactDistrict: null, contactWard: null });
-            setContactDistricts([]); setContactWards([]);
+            form.setFieldsValue({ contactProvince: null, contactWard: null });
+            setContactWards([]);
         }
     };
 
     const onContactProvinceChange = (val: string) => {
-        form.setFieldsValue({ contactDistrict: null, contactWard: null });
-        setContactDistricts([]); setContactWards([]);
-        const p = provinces.find(x => x.name === val);
-        if (p) fetch(`http://localhost:3000/address/districts?province_code=${p.code}`).then(r => r.json()).then(d => setContactDistricts(d.districts || []));
-    };
-
-    const onContactDistrictChange = (val: string) => {
         form.setFieldsValue({ contactWard: null });
         setContactWards([]);
-        const d = contactDistricts.find(x => x.name === val);
-        if (d) fetch(`http://localhost:3000/address/wards?district_code=${d.code}`).then(r => r.json()).then(w => setContactWards(w.wards || []));
+        const p = provinces.find(x => x.name === val);
+        if (p) {
+            setLoadingContactWards(true);
+            fetch(`http://localhost:3000/address/wards?province_code=${p.code}`)
+                .then(r => r.json())
+                .then(w => setContactWards(w.wards || []))
+                .finally(() => setLoadingContactWards(false));
+        }
     };
 
     // Update form when initialValues change
@@ -200,10 +198,19 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
         </Col>
     );
 
-    const renderSelect = (label: string, name: string | number, options: OptionType[], placeholder: string = "Chọn...", colProps: ColProps = defaultColProps, disabled: boolean = false, onChange?: (val: any) => void) => (
+    const renderSelect = (label: string, name: string | number, options: OptionType[], placeholder: string = "Chọn...", colProps: ColProps = defaultColProps, disabled: boolean = false, onChange?: (val: any) => void, loading: boolean = false) => (
         <Col {...colProps}>
             <Form.Item label={label} name={name}>
-                <Select placeholder={placeholder} disabled={disabled} onChange={onChange}>
+                <Select 
+                    placeholder={placeholder} 
+                    disabled={disabled} 
+                    onChange={onChange}
+                    loading={loading}
+                    showSearch
+                    filterOption={(input, option) =>
+                        (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                    }
+                >
                     {options.map(opt => <Option key={opt.value} value={opt.value}>{opt.label}</Option>)}
                 </Select>
             </Form.Item>
@@ -323,8 +330,7 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
                         <Row gutter={[16, 16]}>
                             {renderSelect("Quốc gia", "nationality", nationalityOptions, "Chọn quốc gia", colProps4, false, onNationalityChange)}
                             {renderSelect("Tỉnh/Thành phố", "province", provinces.map((p: any) => ({ label: p.name, value: p.name })), "Chọn Tỉnh/Thành phố", colProps4, !isVn, onProvinceChange)}
-                            {renderSelect("Quận/Huyện", "district", districts.map((p: any) => ({ label: p.name, value: p.name })), "Chọn Quận/Huyện", colProps4, !isVn, onDistrictChange)}
-                            {renderSelect("Phường/Xã", "ward", wards.map((p: any) => ({ label: p.name, value: p.name })), "Chọn Phường/Xã", colProps4, !isVn)}
+                            {renderSelect("Phường/Xã", "ward", wards.map((p: any) => ({ label: p.name, value: p.name })), "Chọn Phường/Xã", colProps4, !isVn || loadingWards, undefined, loadingWards)}
                             {renderInput("Số nhà/Đường", "street", false, colProps4)}
                         </Row>
 
@@ -332,8 +338,7 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
                         <Row gutter={[16, 16]}>
                             {renderSelect("Quốc gia", "contactNationality", nationalityOptions, "Chọn quốc gia", colProps4, false, onContactNationalityChange)}
                             {renderSelect("Tỉnh/Thành phố", "contactProvince", provinces.map((p: any) => ({ label: p.name, value: p.name })), "Chọn Tỉnh/Thành phố", colProps4, !isContactVn, onContactProvinceChange)}
-                            {renderSelect("Quận/Huyện", "contactDistrict", contactDistricts.map((p: any) => ({ label: p.name, value: p.name })), "Chọn Quận/Huyện", colProps4, !isContactVn, onContactDistrictChange)}
-                            {renderSelect("Phường/Xã", "contactWard", contactWards.map((p: any) => ({ label: p.name, value: p.name })), "Chọn Phường/Xã", colProps4, !isContactVn)}
+                            {renderSelect("Phường/Xã", "contactWard", contactWards.map((p: any) => ({ label: p.name, value: p.name })), "Chọn Phường/Xã", colProps4, !isContactVn || loadingContactWards, undefined, loadingContactWards)}
                             {renderInput("Số nhà/Đường", "contactStreet", false, colProps4)}
                         </Row>
                     </Card>

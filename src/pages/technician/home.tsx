@@ -9,6 +9,7 @@ import {
   Typography,
   List,
   Tag,
+  Space,
 } from "antd";
 import {
   UserOutlined,
@@ -31,7 +32,7 @@ import { useAuthStore } from "../../store/auth";
 
 import adminImg from "../../assets/logo2.png";
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 
 
 function CustomCalendar() {
@@ -48,114 +49,137 @@ function CustomCalendar() {
   const startWeekDay = firstOfMonth.getDay();
   const totalDays = new Date(year, month + 1, 0).getDate();
 
-
   const cells: (number | null)[] = [];
   for (let i = 0; i < startWeekDay; i++) cells.push(null);
   for (let d = 1; d <= totalDays; d++) cells.push(d);
-
-
   while (cells.length % 7 !== 0) cells.push(null);
 
   const monthNames = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
   ];
-
-  const weekdays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+  const weekdays = ["S", "M", "T", "W", "T", "F", "S"];
 
   const prevMonth = () => setCurrent(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrent(new Date(year, month + 1, 1));
 
   const isSelected = (d: number | null) => {
     if (!d || !selected) return false;
-    return selected.getFullYear() === year
-      && selected.getMonth() === month
-      && selected.getDate() === d;
+    return selected.getFullYear() === year && selected.getMonth() === month && selected.getDate() === d;
+  };
+
+  const isToday = (d: number | null) => {
+    if (!d) return false;
+    const now = new Date();
+    return now.getFullYear() === year && now.getMonth() === month && now.getDate() === d;
   };
 
   return (
-    <Card style={{ borderRadius: 16, height: "100%" }} bodyStyle={{ padding: 18 }}>
+    <Card 
+      className="premium-card" 
+      style={{ borderRadius: 24, height: "100%", border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }} 
+      bodyStyle={{ padding: 24 }}
+    >
       <div style={{
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        marginBottom: 12,
+        marginBottom: 24,
       }}>
-        <LeftOutlined onClick={prevMonth} style={{ cursor: "pointer", fontSize: 16 }} />
-        <div style={{ textAlign: "center", fontWeight: 700, fontSize: 20 }}>
-          {monthNames[month]} {year}
+        <div style={{ fontWeight: 800, fontSize: 22, color: '#1a1a1a' }}>
+          {monthNames[month]} <span style={{ color: '#1890ff' }}>{year}</span>
         </div>
-        <RightOutlined onClick={nextMonth} style={{ cursor: "pointer", fontSize: 16 }} />
+        <Space>
+          <Button 
+            shape="circle" 
+            icon={<LeftOutlined />} 
+            onClick={prevMonth} 
+            size="small" 
+            style={{ border: 'none', background: '#f5f5f5' }}
+          />
+          <Button 
+            shape="circle" 
+            icon={<RightOutlined />} 
+            onClick={nextMonth} 
+            size="small" 
+            style={{ border: 'none', background: '#f5f5f5' }}
+          />
+        </Space>
       </div>
 
       <div style={{
-        border: "2px dotted rgba(100,100,150,0.15)",
-        padding: 18,
-        borderRadius: 8,
-        background: "#fff"
+        display: "grid",
+        gridTemplateColumns: "repeat(7, 1fr)",
+        gap: 4,
+        marginBottom: 12,
       }}>
-        {/* Weekday labels */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(7, 1fr)",
-          gap: 8,
-          marginBottom: 12,
-          textTransform: "uppercase",
-          letterSpacing: 2,
-          color: "rgba(0,0,0,0.45)",
-          fontSize: 13,
-          padding: "8px 6px"
-        }}>
-          {weekdays.map((w) => (
-            <div key={w} style={{ textAlign: "center", fontWeight: 600 }}>{w}</div>
-          ))}
-        </div>
+        {weekdays.map((w, idx) => (
+          <div key={idx} style={{ 
+            textAlign: "center", 
+            fontWeight: 700, 
+            fontSize: 12, 
+            color: '#bfbfbf',
+            paddingBottom: 8
+          }}>
+            {w}
+          </div>
+        ))}
+      </div>
 
-        {/* Dates grid */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(7, 1fr)",
-          gap: 18,
-          padding: "8px 6px"
-        }}>
-          {cells.map((d, idx) => {
-            const selectedDay = isSelected(d ?? null);
-            return (
-              <div
-                key={idx}
-                onClick={() => { if (d) setSelected(new Date(year, month, d)); }}
-                style={{
-                  minHeight: 44,
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(7, 1fr)",
+        gap: "8px 4px",
+      }}>
+        {cells.map((d, idx) => {
+          const active = isSelected(d);
+          const today = isToday(d);
+          
+          return (
+            <div
+              key={idx}
+              onClick={() => { if (d) setSelected(new Date(year, month, d)); }}
+              style={{
+                aspectRatio: "1 / 1",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: d ? "pointer" : "default",
+                position: 'relative'
+              }}
+            >
+              {d && (
+                <div style={{
+                  width: '100%',
+                  maxWidth: 36,
+                  height: '100%',
+                  maxHeight: 36,
+                  borderRadius: '50%',
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: 20,
-                  fontWeight: 600,
-                  color: d ? "rgba(0,0,0,0.75)" : "transparent",
-                }}
-              >
-                {d ? (
-                  <div style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 34,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    background: selectedDay ? "#f04f23" : "transparent",
-                    color: selectedDay ? "#fff" : "inherit",
-                    boxShadow: selectedDay ? "0 6px 0 rgba(240,79,35,0.12)" : "none",
-                    transition: "all .15s",
-                    cursor: "pointer"
-                  }}>
-                    {d}
-                  </div>
-                ) : (
-                  <div style={{ width: 34, height: 34 }} />
-                )}
-              </div>
-            );
-          })}
+                  fontSize: 15,
+                  fontWeight: active || today ? 700 : 500,
+                  background: active ? "#1890ff" : (today ? "#e6f7ff" : "transparent"),
+                  color: active ? "#fff" : (today ? "#1890ff" : "#434343"),
+                  transition: "all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1)",
+                  boxShadow: active ? "0 4px 12px rgba(24,144,255,0.35)" : "none",
+                  border: today && !active ? '1px solid #91d5ff' : 'none'
+                }}>
+                  {d}
+                  {/* Subtle dot for events could be added here */}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      
+      <div style={{ marginTop: 24, padding: '12px 16px', background: '#fafafa', borderRadius: 12 }}>
+        <Text strong style={{ fontSize: 13, color: '#8c8c8c' }}>Schedule for today</Text>
+        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center' }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#52c41a', marginRight: 8 }} />
+          <Text style={{ fontSize: 14 }}>No events scheduled</Text>
         </div>
       </div>
     </Card>
@@ -222,33 +246,36 @@ export default function HomePage({ }: { messageApi: any }) {
         <Col xs={24} lg={16} style={{ display: "flex" }}>
           <Card
             className="premium-card"
-            style={{ borderRadius: 16, flex: 1 }}
+            style={{ borderRadius: 24, flex: 1, border: 'none', overflow: 'hidden' }}
             bodyStyle={{
-              padding: 32,
+              padding: 0,
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
               height: 400,
+              background: 'linear-gradient(135deg, #f0f5ff 0%, #ffffff 100%)'
             }}
           >
-            <div>
-              <Title level={1} style={{ marginBottom: 8, fontSize: 48 }}>
-                Hey {fullName}.
+            <div style={{ padding: '0 48px' }}>
+              <Tag color="blue" style={{ marginBottom: 16, borderRadius: 100, padding: '2px 12px' }}>Welcome Back</Tag>
+              <Title level={1} style={{ marginBottom: 16, fontSize: 56, fontWeight: 900, letterSpacing: -1 }}>
+                Hey {fullName.split(' ').pop()}.
               </Title>
-              <Text type="secondary" style={{ fontSize: 18 }}>
-                Chào mừng bạn đến với hệ thống quản lý công tác sinh viên.
-              </Text>
+              <Paragraph style={{ fontSize: 18, color: '#595959', maxWidth: 400, lineHeight: 1.6 }}>
+                Chào mừng bạn đến với hệ thống quản lý công tác sinh viên. Chúc bạn một ngày làm việc hiệu quả!
+              </Paragraph>
+              <Button type="primary" size="large" shape="round" icon={<RightOutlined />} style={{ marginTop: 12, height: 48, padding: '0 24px', fontWeight: 600 }}>
+                Bắt đầu công việc
+              </Button>
             </div>
-            <div>
+            <div style={{ height: '100%', display: 'flex', alignItems: 'flex-end', paddingRight: 24 }}>
               <img
                 src={adminImg}
                 alt="admin"
                 style={{
-                  height: 220,
+                  height: '90%',
                   width: 'auto',
-                  borderRadius: "12px",
-                  objectFit: "cover",
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
+                  objectFit: "contain",
                 }}
               />
             </div>
