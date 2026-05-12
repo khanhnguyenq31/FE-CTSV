@@ -1,3 +1,4 @@
+import useDocumentTitle from '../../hooks/useDocumentTitle';
 import React, { useState } from 'react';
 import { Tabs, Table, Button, Modal, Form, Input, InputNumber, notification, Select, Space, Popconfirm, Switch, Drawer, Card, Row, Col, Typography, Tag, Divider, Tooltip, DatePicker } from 'antd';
 import {
@@ -17,11 +18,13 @@ import {
 } from '../../api/discipline';
 import { getAdmissionPeriods } from '../../api/admission';
 import type { DisciplineForm, DisciplineConfig, DisciplineCondition } from '../../api/discipline';
+import AppLoading from '../../components/AppLoading';
 
 const { TabPane } = Tabs;
 const { Title, Text } = Typography;
 
 export default function DisciplinePage() {
+  useDocumentTitle("Kỷ luật Học vụ");
     return (
         <div>
             <h2 style={{ marginBottom: 20 }}>Quản lý Kỷ luật sinh viên (Nâng cao)</h2>
@@ -131,7 +134,9 @@ function DisciplineFormTab() {
                     Thêm hình thức kỷ luật
                 </Button>
             </div>
-            <Table rowKey="id" columns={columns} dataSource={forms} loading={isLoading} />
+            <AppLoading loading={isLoading} tip="Đang tải danh sách hình thức kỷ luật...">
+                <Table rowKey="id" columns={columns} dataSource={forms} pagination={false} />
+            </AppLoading>
             <Modal
                 title={editingId ? 'Sửa hình thức kỷ luật' : 'Thêm hình thức kỷ luật'}
                 open={isModalOpen} onCancel={() => setIsModalOpen(false)} onOk={() => form.submit()}
@@ -282,7 +287,9 @@ function DisciplineConfigTab() {
                     Tạo Bộ Cấu Hình Mới
                 </Button>
             </div>
-            <Table rowKey="id" columns={columns} dataSource={configs} loading={isLoading} />
+            <AppLoading loading={isLoading} tip="Đang tải cấu hình kỷ luật...">
+                <Table rowKey="id" columns={columns} dataSource={configs} pagination={false} />
+            </AppLoading>
 
             {/* Modal Sửa Tên Cấu Hình */}
             <Modal
@@ -531,7 +538,9 @@ function EvaluateDisciplineTab() {
                     title={`Danh sách Sinh viên vi phạm (Số lượng: ${evalResults.length})`}
                     extra={<Button type="primary" danger icon={<SaveOutlined />} onClick={handleSaveList} loading={mutationSaveEvaluation.isPending} style={{ borderRadius: 8 }}>Ghim & Lưu Lịch Sử Nhắc Nhở</Button>}
                 >
-                    <Table rowKey="studentEmail" columns={columns} dataSource={evalResults} pagination={{ pageSize: 15 }} />
+                    <AppLoading loading={mutationEvaluate.isPending} tip="Đang chạy thuật toán xét kỷ luật...">
+                        <Table rowKey="studentEmail" columns={columns} dataSource={evalResults} pagination={{ pageSize: 15 }} />
+                    </AppLoading>
                 </Card>
             )}
         </div>
@@ -620,9 +629,13 @@ function EvaluationHistoryTab() {
                     <Button type="primary" danger icon={<ClearOutlined />} loading={mutationClear.isPending} style={{ borderRadius: 8 }}>Xóa trắng lịch sử (Reset DB)</Button>
                 </Popconfirm>
             </div>
-            <Table loading={isLoading} columns={columns} dataSource={history as any[]} rowKey="id" />
+            <AppLoading loading={isLoading} tip="Đang tải lịch sử đợt xét...">
+                <Table columns={columns} dataSource={history as any[]} rowKey="id" />
+            </AppLoading>
             <Drawer title="Chi tiết sinh viên trong đợt xét" width={800} open={!!detailId} onClose={() => setDetailId(null)}>
-                <Table loading={isLoadingDetails} columns={detColumns} dataSource={details as any[]} rowKey="id" pagination={{ pageSize: 15 }} />
+                <AppLoading loading={isLoadingDetails} tip="Đang tải chi tiết danh sách...">
+                    <Table columns={detColumns} dataSource={details as any[]} rowKey="id" pagination={{ pageSize: 15 }} />
+                </AppLoading>
             </Drawer>
         </div>
     );
@@ -661,7 +674,7 @@ function EvaluationDraftsTab() {
         }
     });
 
-    if (isLoadingDrafts || (activeDraft && isLoadingDetails)) return <div style={{ padding: 50, textAlign: 'center' }}>Đang tải dữ liệu...</div>;
+    if (isLoadingDrafts || (activeDraft && isLoadingDetails)) return <div style={{ padding: 50, textAlign: 'center' }}><AppLoading loading tip="Đang tải dữ liệu danh sách dự kiến..." /></div>;
     if (!activeDraft) return <div style={{ padding: 50, textAlign: 'center' }}>Không có danh sách dự kiến nào đang hoạt động.</div>;
 
     const dsKytLuat = (details as any[])?.filter(d => !d.isCuuXet) || [];

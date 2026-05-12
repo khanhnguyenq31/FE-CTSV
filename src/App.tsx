@@ -234,12 +234,14 @@ function App() {
               </Route>
               <Route path="manage" element={<ProtectedRoute allowedRoles={["technician"]} requiredPermission="ADMISSION" />}>
                 <Route index element={<ManagePage messageApi={messageApi} />} />
+                <Route path=":id" element={<ManagePage messageApi={messageApi} />} />
               </Route>
               <Route path="profile" element={<ProtectedRoute allowedRoles={["technician"]} requiredPermission="STUDENT_LIST" />}>
                 <Route index element={<ProfilePage messageApi={messageApi} />} />
               </Route>
               <Route path="event" element={<ProtectedRoute allowedRoles={["technician"]} requiredPermission="EVENT_ACTIVITY" />}>
                 <Route index element={<EventPage messageApi={messageApi} />} />
+                <Route path=":id" element={<EventPage messageApi={messageApi} />} />
               </Route>
               <Route path="discipline" element={<ProtectedRoute allowedRoles={["technician"]} requiredPermission="REWARD_DISCIPLINE" />}>
                 <Route index element={<DisciplinePage />} />

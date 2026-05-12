@@ -8,6 +8,7 @@ import {
   CheckCircleOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import AppLoading from "../components/AppLoading";
 
 
 const registerApi = async (data: any) => {
@@ -110,113 +111,112 @@ export default function Register({ messageApi }: { messageApi: any }) {
               Vui lòng nhập các thông tin cần thiết để tạo tài khoản mới.
             </Paragraph>
 
-            <Form
-              form={form}
-              layout="vertical"
-              onFinish={onFinish}
-              className="mt-4"
-              initialValues={{ fullName: "", email: "", password: "", confirm: "" }}
-            >
-              {/* Họ và tên */}
-              <Form.Item
-                label="Họ và tên"
-                name="fullName"
-                rules={[{ required: true, message: "Vui lòng nhập Họ và tên!" }]}
+            <AppLoading loading={mutation.isPending} tip="Đang tạo tài khoản...">
+              <Form
+                form={form}
+                layout="vertical"
+                onFinish={onFinish}
+                className="mt-4"
+                initialValues={{ fullName: "", email: "", password: "", confirm: "" }}
               >
-                <Input
-                  size="large"
-                  placeholder="Nhập họ và tên của bạn"
-                  prefix={<UserOutlined className="text-gray-400" />}
-                />
-              </Form.Item>
-
-              {/* Email */}
-              <Form.Item
-                label="Email"
-                name="email"
-                rules={[
-                  { required: true, message: "Vui lòng nhập email!" },
-                  { type: "email", message: "Email không hợp lệ!" },
-                ]}
-              >
-                <Input
-                  size="large"
-                  placeholder="Nhập email"
-                  prefix={<MailOutlined className="text-gray-400" />} 
-                />
-              </Form.Item>
-
-              
-              <Form.Item
-                label="Mật khẩu"
-                name="password"
-                rules={[{ required: true, message: "Vui lòng nhập mật khẩu!" }]}
-                hasFeedback
-              >
-                <Input.Password
-                  size="large"
-                  placeholder="Mật khẩu"
-                  prefix={<LockOutlined className="text-gray-400" />}
-                />
-              </Form.Item>
-
-              
-              <Form.Item
-                label="Xác nhận mật khẩu"
-                name="confirm"
-                dependencies={["password"]} 
-                hasFeedback
-                rules={[
-                  {
-                    required: true,
-                    message: "Vui lòng xác nhận mật khẩu!",
-                  },
-                  ({ getFieldValue }) => ({
-                    validator(_, value) {
-                      if (!value || getFieldValue("password") === value) {
-                        return Promise.resolve();
-                      }
-                      return Promise.reject(
-                        new Error("Hai mật khẩu bạn nhập không khớp!")
-                      );
-                    },
-                  }),
-                ]}
-              >
-                <Input.Password
-                  size="large"
-                  placeholder="Xác nhận mật khẩu"
-                  prefix={<CheckCircleOutlined className="text-gray-400" />}
-                />
-              </Form.Item>
-
-              <Form.Item>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  loading={
-                    (mutation as any).isPending || (mutation as any).isLoading
-                  }
-                  className="w-full hover:bg-gray-800 hover:border-gray-800 hover:scale-[1.02] transition duration-200"
-                  size="large"
-                  style={{ backgroundColor: "#000", borderColor: "#000" }}
+                {/* Họ và tên */}
+                <Form.Item
+                  label="Họ và tên"
+                  name="fullName"
+                  rules={[{ required: true, message: "Vui lòng nhập Họ và tên!" }]}
                 >
-                  Đăng ký
-                </Button>
-              </Form.Item>
+                  <Input
+                    size="large"
+                    placeholder="Nhập họ và tên của bạn"
+                    prefix={<UserOutlined className="text-gray-400" />}
+                  />
+                </Form.Item>
 
-              <div className="flex justify-center items-center text-sm mt-2">
-                <Text type="secondary">
-                  Đã có tài khoản?{" "}
-                  <a
-                    className="text-black underline hover:opacity-80 font-medium"
-                    onClick={() => navigate("/login")}
+                {/* Email */}
+                <Form.Item
+                  label="Email"
+                  name="email"
+                  rules={[
+                    { required: true, message: "Vui lòng nhập email!" },
+                    { type: "email", message: "Email không hợp lệ!" },
+                  ]}
+                >
+                  <Input
+                    size="large"
+                    placeholder="Nhập email"
+                    prefix={<MailOutlined className="text-gray-400" />} 
+                  />
+                </Form.Item>
+
+                
+                <Form.Item
+                  label="Mật khẩu"
+                  name="password"
+                  rules={[{ required: true, message: "Vui lòng nhập mật khẩu!" }]}
+                  hasFeedback
+                >
+                  <Input.Password
+                    size="large"
+                    placeholder="Mật khẩu"
+                    prefix={<LockOutlined className="text-gray-400" />}
+                  />
+                </Form.Item>
+
+                
+                <Form.Item
+                  label="Xác nhận mật khẩu"
+                  name="confirm"
+                  dependencies={["password"]} 
+                  hasFeedback
+                  rules={[
+                    {
+                      required: true,
+                      message: "Vui lòng xác nhận mật khẩu!",
+                    },
+                    ({ getFieldValue }) => ({
+                      validator(_, value) {
+                        if (!value || getFieldValue("password") === value) {
+                          return Promise.resolve();
+                        }
+                        return Promise.reject(
+                          new Error("Hai mật khẩu bạn nhập không khớp!")
+                        );
+                      },
+                    }),
+                  ]}
+                >
+                  <Input.Password
+                    size="large"
+                    placeholder="Xác nhận mật khẩu"
+                    prefix={<CheckCircleOutlined className="text-gray-400" />}
+                  />
+                </Form.Item>
+
+                <Form.Item>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    className="w-full hover:bg-gray-800 hover:border-gray-800 hover:scale-[1.02] transition duration-200"
+                    size="large"
+                    style={{ backgroundColor: "#000", borderColor: "#000" }}
                   >
-                    Đăng nhập ngay
-                  </a>
-                </Text>
-              </div>
-            </Form>
+                    Đăng ký
+                  </Button>
+                </Form.Item>
+
+                <div className="flex justify-center items-center text-sm mt-2">
+                  <Text type="secondary">
+                    Đã có tài khoản?{" "}
+                    <a
+                      className="text-black underline hover:opacity-80 font-medium"
+                      onClick={() => navigate("/login")}
+                    >
+                      Đăng nhập ngay
+                    </a>
+                  </Text>
+                </div>
+              </Form>
+            </AppLoading>
           </Card>
 
           

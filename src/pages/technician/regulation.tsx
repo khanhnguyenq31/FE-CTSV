@@ -1,3 +1,4 @@
+import useDocumentTitle from '../../hooks/useDocumentTitle';
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
     getViPham, 
@@ -47,6 +48,7 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 export default function RegulationPage({ messageApi }: { messageApi: any }) {
+  useDocumentTitle("Kỷ luật Quy chế");
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('viPham');
     const [viPhams, setViPhams] = useState<any[]>([]);

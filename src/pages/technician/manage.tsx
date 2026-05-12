@@ -50,11 +50,16 @@ import {
   InfoCircleOutlined,
   SendOutlined,
   StopOutlined,
+  BarChartOutlined,
+  CalendarOutlined,
+  SyncOutlined,
 } from "@ant-design/icons";
 // import { Html5QrcodeScanner } from "html5-qrcode"; // Remove this
 import { Html5Qrcode } from "html5-qrcode";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import dayjs from "dayjs";
+import AppLoading from "../../components/AppLoading";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 import {
   BarChart,
   Bar,
@@ -167,10 +172,11 @@ const QRScanner: React.FC<ScannerProps> = ({ onScan, messageApi }) => {
 
 export default function ManagePage({ messageApi }: { messageApi: any }) {
   const navigate = useNavigate();
+  const { id: routeId } = useParams();
   const queryClient = useQueryClient();
 
-  // Navigation states
-  const [viewMode, setViewMode] = useState<"list" | "detail">("list");
+  // Navigation states - Derived from routeId
+  const viewMode = routeId ? "detail" : "list";
 
   // State cho Đợt nhập học
   const [periods, setPeriods] = useState<AdmissionPeriod[]>([]);
@@ -178,10 +184,15 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form] = Form.useForm();
 
-  // State cho Sinh viên trong đợt
-  const [selectedPeriod, setSelectedPeriod] = useState<AdmissionPeriod | null>(null);
+  // Derived state cho Đợt nhập học đang xem
+  const selectedPeriod = useMemo(() => {
+    if (!routeId || !periods.length) return null;
+    return periods.find((item: any) => item.id.toString() === routeId) || null;
+  }, [routeId, periods]);
   const [search, setSearch] = useState("");
   const [isNotifyLoading, setIsNotifyLoading] = useState(false);
+
+  useDocumentTitle(selectedPeriod ? `Nhập học: ${selectedPeriod.name}` : "Quản lý nhập học");
 
   // State cho Tab Công tác nhập học
   const [searchId, setSearchId] = useState("");
@@ -190,10 +201,15 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
   const [isCancelling, setIsCancelling] = useState(false);
 
   // React Query cho danh sách sinh viên
+  const [isCreatingPeriod, setIsCreatingPeriod] = useState(false);
+  const [isFinalizing, setIsFinalizing] = useState(false);
+  const [isTogglingDoc, setIsTogglingDoc] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
   const { data: studentsData, isLoading: studentLoading } = useQuery({
-    queryKey: ["admissionStudents", selectedPeriod?.id],
-    queryFn: () => getAdmissionStudents(selectedPeriod!.id),
-    enabled: !!selectedPeriod?.id && viewMode === "detail",
+    queryKey: ["admissionStudents", routeId],
+    queryFn: () => getAdmissionStudents(routeId!),
+    enabled: !!routeId && viewMode === "detail",
     refetchInterval: 3000, // 3s auto refresh
   });
 
@@ -205,25 +221,22 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
   const [statDateRange, setStatDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
 
   // React Query cho thống kê
-  const { data: statsData } = useQuery({
+  const { data: statsData, isFetching: isStatsFetching } = useQuery({
     queryKey: [
       "admissionStats",
-      selectedPeriod?.id,
+      routeId,
       statDateRange?.[0]?.format("YYYY-MM-DD"),
       statDateRange?.[1]?.format("YYYY-MM-DD")
     ],
     queryFn: () => getAdmissionStats(
-      selectedPeriod!.id,
+      routeId!,
       statDateRange?.[0]?.format("YYYY-MM-DD"),
       statDateRange?.[1]?.format("YYYY-MM-DD")
     ),
-    enabled: !!selectedPeriod?.id && viewMode === "detail",
-    refetchInterval: 3000,
+    enabled: !!routeId && viewMode === "detail",
   });
 
   const stats: AdmissionStats | null = statsData?.stats || null;
-
-  const [isFiltering, setIsFiltering] = useState(false);
 
   // Student Detail Modal
   const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
@@ -254,7 +267,8 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
     setPeriodLoading(true);
     try {
       const data = await getAdmissionPeriods();
-      setPeriods(Array.isArray(data) ? data : (data.periods || []));
+      const periodList = Array.isArray(data) ? data : (data.periods || []);
+      setPeriods(periodList);
     } catch (error) {
       console.error(error);
       if (messageApi) messageApi.error("Không thể lấy danh sách đợt nhập học");
@@ -264,6 +278,7 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
   };
 
   const handleCreatePeriod = async (values: any) => {
+    setIsCreatingPeriod(true);
     try {
       await createAdmissionPeriod({
         name: values.name,
@@ -277,6 +292,8 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
       fetchPeriods();
     } catch (error) {
       if (messageApi) messageApi.error("Tạo đợt nhập học thất bại");
+    } finally {
+      setIsCreatingPeriod(false);
     }
   };
 
@@ -286,9 +303,6 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
       await updatePeriodStatus(period.id, newStatus);
       if (messageApi) messageApi.success(`Đã ${newStatus === "locked" ? "khóa" : "mở"} đợt nhập học`);
       fetchPeriods();
-      if (selectedPeriod?.id === period.id) {
-        setSelectedPeriod({ ...period, status: newStatus });
-      }
     } catch (error) {
       if (messageApi) messageApi.error("Cập nhật trạng thái thất bại");
     }
@@ -319,18 +333,44 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
 
   const handleUpload = async (file: File) => {
     if (!selectedPeriod) return false;
+    setIsUploading(true);
     try {
-      await uploadAdmissionExcel(selectedPeriod.id, file);
-      if (messageApi) messageApi.success("Upload danh sách sinh viên thành công");
+      const res = await uploadAdmissionExcel(selectedPeriod.id, file);
+      const { results, message } = res;
+      
+      if (results.failed > 0) {
+        const errorSummary = results.errors.length > 3 
+          ? `${results.errors.slice(0, 3).join(", ")}... và ${results.errors.length - 3} lỗi khác.`
+          : results.errors.join(", ");
+
+        if (results.success > 0) {
+          messageApi.warning({
+            content: `Đã bổ sung ${results.success} sinh viên. Có ${results.failed} trường hợp bị trùng hoặc lỗi dữ liệu.`,
+            duration: 5
+          });
+        } else {
+          messageApi.error({
+            content: `Không thể bổ sung: Có ${results.failed} trường hợp bị trùng MSSV/Email hoặc lỗi định dạng.`,
+            duration: 5
+          });
+        }
+      } else {
+        messageApi.success("Bổ sung danh sách sinh viên thành công!");
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["admissionStudents", selectedPeriod.id] });
       queryClient.invalidateQueries({ queryKey: ["admissionStats", selectedPeriod.id] });
-    } catch (error) {
-      if (messageApi) messageApi.error("Upload thất bại. Vui lòng kiểm tra định dạng file Excel");
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || "Upload thất bại. Vui lòng kiểm tra định dạng file Excel.";
+      messageApi.error(errorMsg);
+    } finally {
+      setIsUploading(false);
     }
     return false;
   };
 
   const handleToggleDocStatus = async (studentId: string) => {
+    setIsTogglingDoc(true);
     try {
       await updateDocStatus(studentId);
       if (messageApi) messageApi.success("Cập nhật trạng thái hồ sơ giấy thành công");
@@ -342,10 +382,13 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
       queryClient.invalidateQueries({ queryKey: ["admissionStats", selectedPeriod?.id] });
     } catch (error) {
       if (messageApi) messageApi.error("Cập nhật thất bại");
+    } finally {
+      setIsTogglingDoc(false);
     }
   };
 
   const handleFinalize = async (studentId: string) => {
+    setIsFinalizing(true);
     try {
       await finalizeAdmission(studentId);
       if (messageApi) messageApi.success("Hoàn tất nhập học thành công. Sinh viên đã chuyển sang trạng thái Đang học.");
@@ -359,6 +402,8 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
     } catch (error: any) {
       const msg = error?.response?.data?.message || "Hoàn tất thất bại. Vui lòng kiểm tra điều kiện (Login, Export file, Hồ sơ giấy).";
       if (messageApi) messageApi.error(msg);
+    } finally {
+      setIsFinalizing(false);
     }
   };
 
@@ -445,8 +490,7 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
               ghost
               icon={<EyeOutlined />}
               onClick={() => {
-                setSelectedPeriod(record);
-                setViewMode("detail");
+                navigate(`/technician/manage/${record.id}`);
               }}
             />
           </Tooltip>
@@ -540,36 +584,56 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
     if (!stats) return null;
     return (
       <Space direction="vertical" style={{ width: '100%', marginBottom: 24 }} size="large">
-        <Card bordered={false} className="shadow-sm">
-          <Row gutter={[16, 16]} align="middle">
-            <Col xs={24} md={12}>
-              <Title level={4} style={{ margin: 0 }}>Thống kê nhập học</Title>
-              <Text type="secondary">Phân tích dữ liệu sinh viên trong đợt</Text>
+        <Card bordered={false} className="shadow-sm" style={{ borderRadius: 12, background: '#fafafa' }}>
+          <Row gutter={[16, 24]} align="middle">
+            <Col xs={24} md={8}>
+              <div>
+                <Title level={4} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <BarChartOutlined style={{ color: '#1890ff' }} />
+                  Báo cáo & Thống kê
+                </Title>
+                <Text type="secondary" style={{ fontSize: 13 }}>Phân tích tiến độ nhập học theo thời gian</Text>
+              </div>
             </Col>
-            <Col xs={24} md={12} style={{ textAlign: 'right' }}>
-              <Space wrap>
-                <DatePicker.RangePicker
-                  value={statDateRange}
-                  onChange={(val) => {
-                    setStatDateRange(val as any);
-                    setIsFiltering(true);
-                    setTimeout(() => setIsFiltering(false), 500);
-                  }}
-                  format="DD/MM/YYYY"
-                />
-                <Button icon={<FilterOutlined />} onClick={() => {
-                  setStatDateRange(null);
-                }}>Làm mới</Button>
-              </Space>
+            <Col xs={24} md={16}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <CalendarOutlined style={{ color: '#8c8c8c' }} />
+                  <Text strong style={{ fontSize: 13, color: '#595959' }}>Ngày tạo hồ sơ:</Text>
+                </div>
+                <Space wrap>
+                  <DatePicker.RangePicker
+                    value={statDateRange}
+                    onChange={(val) => {
+                      setStatDateRange(val as any);
+                    }}
+                    format="DD/MM/YYYY"
+                    placeholder={['Từ ngày', 'Đến ngày']}
+                    style={{ borderRadius: 6, width: 280 }}
+                    allowClear={false}
+                  />
+                  <Button 
+                    icon={<SyncOutlined />} 
+                    type="link"
+                    size="small"
+                    style={{ color: '#8c8c8c' }}
+                    onClick={() => {
+                      setStatDateRange(null);
+                    }}
+                  >
+                    Mặc định
+                  </Button>
+                </Space>
+              </div>
             </Col>
           </Row>
         </Card>
 
-        {isFiltering ? (
-          <Card bordered={false} style={{ textAlign: 'center', padding: '50px 0' }}><Spin tip="Đang lọc dữ liệu..." /></Card>
-        ) : (
-          <>
-            <Row gutter={[16, 16]}>
+        <Spin spinning={isStatsFetching} tip="Đang cập nhật thống kê...">
+          <div style={{ minHeight: '400px' }}>
+            {stats ? (
+              <>
+                <Row gutter={[16, 16]}>
               <Col xs={24} sm={8}>
                 <Card bordered={false} className="shadow-sm" style={{ height: '100%' }}>
                   <Statistic
@@ -651,10 +715,16 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
                     </ResponsiveContainer>
                   </div>
                 </Card>
-              </Col>
-            </Row>
-          </>
-        )}
+                  </Col>
+                </Row>
+              </>
+            ) : (
+              <div style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Text type="secondary">Chưa có dữ liệu thống kê cho khoảng thời gian này</Text>
+              </div>
+            )}
+          </div>
+        </Spin>
       </Space>
     );
   };
@@ -701,9 +771,9 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
           <Row align="middle" justify="space-between" style={{ marginBottom: 24 }}>
             <Col>
               <Space align="center" size="large">
-                <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => setViewMode("list")} style={{ fontSize: 18 }} />
+                <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate("/technician/manage")} style={{ fontSize: 18 }} />
                 <div>
-                  <Title level={3} style={{ margin: 0 }}>{selectedPeriod?.name}</Title>
+                  <Title level={3} style={{ margin: 0 }}>{selectedPeriod?.name || "Đang tải..."}</Title>
                   <Text type="secondary">Chi tiết tiến độ và quản lý sinh viên trong đợt</Text>
                 </div>
               </Space>
@@ -776,7 +846,7 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
                   </Button>
                 </Popover>
                 <Upload beforeUpload={handleUpload} showUploadList={false} accept=".xlsx,.xls">
-                  <Button icon={<UploadOutlined />}>Bổ sung sinh viên (Excel)</Button>
+                  <Button icon={<UploadOutlined />} loading={isUploading}>Bổ sung sinh viên (Excel)</Button>
                 </Upload>
                 <Popconfirm
                   title="Gửi thông báo?"
@@ -998,6 +1068,7 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
                                   onClick={() => handleToggleDocStatus(displaySearchedStudent.studentId)}
                                   type={displaySearchedStudent.isPhysicalDocSubmitted ? "default" : "primary"}
                                   disabled={displaySearchedStudent.graduationType === "Đang học"}
+                                  loading={isTogglingDoc}
                                 >
                                   {displaySearchedStudent.isPhysicalDocSubmitted ? "Hủy nhận hồ sơ giấy" : "Xác nhận hồ sơ giấy"}
                                 </Button>
@@ -1008,6 +1079,7 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
                                     title="Xác nhận hoàn tất nhập học?"
                                     onConfirm={() => handleFinalize(displaySearchedStudent.studentId)}
                                     disabled={!displaySearchedStudent.isPhysicalDocSubmitted}
+                                    okButtonProps={{ loading: isFinalizing }}
                                   >
                                     <Button
                                       block
@@ -1085,7 +1157,7 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
           <Form.Item style={{ marginBottom: 0, textAlign: "right" }}>
             <Space>
               <Button onClick={() => setIsModalOpen(false)}>Hủy</Button>
-              <Button type="primary" htmlType="submit">Xác nhận</Button>
+              <Button type="primary" htmlType="submit" loading={isCreatingPeriod}>Xác nhận</Button>
             </Space>
           </Form.Item>
         </Form>

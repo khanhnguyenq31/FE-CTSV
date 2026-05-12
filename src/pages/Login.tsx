@@ -4,6 +4,8 @@ import { loginApi } from "../api/auth";
 import { useAuthStore } from "../store/auth";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import AppLoading from "../components/AppLoading";
+import useDocumentTitle from "../hooks/useDocumentTitle";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -11,6 +13,8 @@ export default function Login({ messageApi }: { messageApi: any }) {
   const login = useAuthStore((s) => s.login);
   const [form] = Form.useForm();
   const navigate = useNavigate();
+
+  useDocumentTitle("Đăng nhập");
 
   const mutation = useMutation({
     mutationFn: ({ email, password }: { email: string; password: string }) =>
@@ -89,67 +93,68 @@ export default function Login({ messageApi }: { messageApi: any }) {
               Vui lòng nhập thông tin tài khoản của bạn để sử dụng hệ thống quản lý công tác sinh viên.
             </Paragraph>
 
-            <Form
-              form={form}
-              layout="vertical"
-              onFinish={onFinish}
-              className="mt-4"
-              initialValues={{ email: "", password: "" }}
-            >
-              {/* Email */}
-              <Form.Item
-                label="Email"
-                name="email"
-                rules={[
-                  { required: true, message: "Vui lòng nhập email!" },
-                  { type: "email", message: "Email không hợp lệ!" },
-                ]}
+            <AppLoading loading={mutation.isPending} tip="Đang xác thực thông tin...">
+              <Form
+                form={form}
+                layout="vertical"
+                onFinish={onFinish}
+                className="mt-4"
+                initialValues={{ email: "", password: "" }}
               >
-                <Input
-                  size="large"
-                  placeholder="Nhập email"
-                  prefix={<UserOutlined className="text-gray-400" />}
-                />
-              </Form.Item>
-
-              {/* Password */}
-              <Form.Item
-                label="Mật khẩu"
-                name="password"
-                rules={[{ required: true, message: "Nhập mật khẩu!" }]}
-              >
-                <Input.Password
-                  size="large"
-                  placeholder="Mật khẩu"
-                  prefix={<LockOutlined className="text-gray-400" />}
-                />
-              </Form.Item>
-
-              <Form.Item>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  loading={(mutation as any).isPending || (mutation as any).isLoading}
-                  className="w-full hover:bg-gray-800 hover:border-gray-800 hover:scale-[1.02] transition duration-200"
-                  size="large"
-                  style={{ backgroundColor: "#000", borderColor: "#000" }}
+                {/* Email */}
+                <Form.Item
+                  label="Email"
+                  name="email"
+                  rules={[
+                    { required: true, message: "Vui lòng nhập email!" },
+                    { type: "email", message: "Email không hợp lệ!" },
+                  ]}
                 >
-                  Đăng nhập
-                </Button>
-              </Form.Item>
+                  <Input
+                    size="large"
+                    placeholder="Nhập email"
+                    prefix={<UserOutlined className="text-gray-400" />}
+                  />
+                </Form.Item>
 
-              {/* PHẦN ĐÃ CHỈNH SỬA: Đưa "Quên mật khẩu?" vào giữa và loại bỏ "Đăng ký tài khoản" */}
-              <div className="flex justify-center items-center text-sm mt-2">
-                <a
-                  className="text-black underline hover:opacity-80"
-                  onClick={() => navigate("/forgot-password")}
+                {/* Password */}
+                <Form.Item
+                  label="Mật khẩu"
+                  name="password"
+                  rules={[{ required: true, message: "Nhập mật khẩu!" }]}
                 >
-                  Quên mật khẩu?
-                </a>
-              </div>
-              {/* KẾT THÚC PHẦN CHỈNH SỬA */}
+                  <Input.Password
+                    size="large"
+                    placeholder="Mật khẩu"
+                    prefix={<LockOutlined className="text-gray-400" />}
+                  />
+                </Form.Item>
 
-            </Form>
+                <Form.Item>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    className="w-full hover:bg-gray-800 hover:border-gray-800 hover:scale-[1.02] transition duration-200"
+                    size="large"
+                    style={{ backgroundColor: "#000", borderColor: "#000" }}
+                  >
+                    Đăng nhập
+                  </Button>
+                </Form.Item>
+
+                {/* PHẦN ĐÃ CHỈNH SỬA: Đưa "Quên mật khẩu?" vào giữa và loại bỏ "Đăng ký tài khoản" */}
+                <div className="flex justify-center items-center text-sm mt-2">
+                  <a
+                    className="text-black underline hover:opacity-80"
+                    onClick={() => navigate("/forgot-password")}
+                  >
+                    Quên mật khẩu?
+                  </a>
+                </div>
+                {/* KẾT THÚC PHẦN CHỈNH SỬA */}
+
+              </Form>
+            </AppLoading>
           </Card>
 
           {/* Right: Full image section */}

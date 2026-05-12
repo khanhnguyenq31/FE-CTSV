@@ -1,3 +1,4 @@
+import useDocumentTitle from '../../hooks/useDocumentTitle';
 import { Typography, Card, Space, Row, Col, Spin, Tag, Button } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import type { ColProps } from 'antd'; // Import kiểu ColProps
@@ -7,6 +8,7 @@ import { getStudentProfileApi } from '../../api/student';
 const { Title, Paragraph, Text } = Typography;
 
 export default function StudentHome() {
+  useDocumentTitle("Trang chủ Sinh viên");
     const navigate = useNavigate();
 
     // Định nghĩa props responsive cho mỗi cột (chia 24 phần)

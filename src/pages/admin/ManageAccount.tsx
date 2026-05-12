@@ -2,6 +2,7 @@ import { Button, Table, Modal, Form, Input, Select, Tag, Space, Card, Tooltip, P
 import { PlusOutlined, EditOutlined, LockOutlined, UnlockOutlined, DeleteOutlined, SearchOutlined, UserOutlined, ToolOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
 import { createStudentApi, createTechnicianApi } from '../../api/auth';
+import useDocumentTitle from '../../hooks/useDocumentTitle';
 
 interface UserData {
   key: string;
@@ -15,6 +16,8 @@ interface UserData {
 }
 
 export default function ManageAccounts({ messageApi }: { messageApi: any }) {
+  useDocumentTitle("Quản lý tài khoản");
+
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserData | null>(null);

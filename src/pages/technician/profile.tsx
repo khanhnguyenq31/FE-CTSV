@@ -1,3 +1,4 @@
+import useDocumentTitle from '../../hooks/useDocumentTitle';
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -80,6 +81,7 @@ const getTrainingLabel = (score: number | null) => {
 };
 
 export default function ProfilePage({ }: { messageApi: any }) {
+  useDocumentTitle("Hồ sơ Sinh viên");
   const navigate = useNavigate();
   const [data, setData] = useState<RowData[]>([]);
   const [search, setSearch] = useState("");

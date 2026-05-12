@@ -1,3 +1,4 @@
+import useDocumentTitle from '../../hooks/useDocumentTitle';
 import React, { useEffect, useState } from 'react';
 import { Typography, message, Spin, Alert } from 'antd';
 import dayjs from 'dayjs';

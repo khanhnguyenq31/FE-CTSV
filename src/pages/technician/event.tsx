@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import useDocumentTitle from '../../hooks/useDocumentTitle';
+import { useEffect, useMemo, useState } from "react";
 import type { ColumnsType } from "antd/es/table";
 import MapPicker from "../../components/MapPicker";
 import ReactQuill from "react-quill-new";
@@ -45,8 +46,9 @@ import {
   UnlockOutlined,
   RollbackOutlined,
 } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient, useQueries } from "@tanstack/react-query";
+import AppLoading from "../../components/AppLoading";
 import { InboxOutlined, EnvironmentOutlined, AimOutlined } from "@ant-design/icons";
 import {
   getActivitiesApi,
@@ -92,7 +94,9 @@ const quillModules = {
 };
 
 export default function EventPage({ messageApi }: { messageApi: any }) {
+  useDocumentTitle("Quản lý Sự kiện");
   const navigate = useNavigate();
+  const { id: routeId } = useParams();
   const queryClient = useQueryClient();
   const { technicianType, userEmail } = useAuthStore();
 
@@ -135,6 +139,17 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
     queryKey: ["activities"],
     queryFn: getActivitiesApi,
   });
+
+  // Tự động tìm event khi có routeId
+  useEffect(() => {
+    if (routeId && activities.length > 0) {
+      const event = activities.find((a: any) => a.id === Number(routeId));
+      if (event) {
+        setSelectedEvent(event);
+        setIsDetailModalOpen(true);
+      }
+    }
+  }, [routeId, activities]);
 
   // Fetch registrations for a specific event
   const { data: registrations = [], isLoading: isLoadingRegs } = useQuery({
@@ -393,8 +408,7 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
         <div
           style={{ cursor: "pointer" }}
           onClick={() => {
-            setSelectedEvent(record);
-            setIsDetailModalOpen(true);
+            navigate(`/technician/event/${record.id}`);
           }}
         >
           <div style={{ fontWeight: 600, color: "#1677ff" }}>{v}</div>
@@ -594,7 +608,7 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
         <Table
           columns={columns}
           dataSource={paged}
-          loading={isLoading}
+          loading={isLoading ? { indicator: <AppLoading loading /> } : false}
           pagination={false}
           rowKey="id"
           scroll={{ x: 1000 }}
@@ -909,9 +923,17 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
       <Modal
         title={<Title level={4} className="!m-0">{selectedEvent?.title}</Title>}
         open={isDetailModalOpen}
-        onCancel={() => setIsDetailModalOpen(false)}
+        onCancel={() => {
+          setIsDetailModalOpen(false);
+          setSelectedEvent(null);
+          navigate("/technician/event");
+        }}
         footer={[
-          <Button key="close" onClick={() => setIsDetailModalOpen(false)}>Đóng</Button>
+          <Button key="close" onClick={() => {
+            setIsDetailModalOpen(false);
+            setSelectedEvent(null);
+            navigate("/technician/event");
+          }}>Đóng</Button>
         ]}
         width={700}
         destroyOnClose

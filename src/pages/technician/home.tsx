@@ -1,3 +1,4 @@
+import useDocumentTitle from '../../hooks/useDocumentTitle';
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -187,6 +188,7 @@ function CustomCalendar() {
 }
 
 export default function HomePage({ }: { messageApi: any }) {
+  useDocumentTitle("Trang chủ Chuyên viên");
   const navigate = useNavigate();
   const technicianType = useAuthStore(s => s.technicianType);
 

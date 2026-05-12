@@ -1,3 +1,4 @@
+import useDocumentTitle from '../../hooks/useDocumentTitle';
 import { Typography, Calendar, Card, Badge, List, Button, Tag, Space } from 'antd';
 import dayjs, { Dayjs } from 'dayjs';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -10,6 +11,7 @@ import 'react-quill-new/dist/quill.snow.css';
 const { Title, Paragraph, Text } = Typography;
 
 export default function StudentEvent({ messageApi }: { messageApi: any }) {
+  useDocumentTitle("Hoạt động Sự kiện");
     const queryClient = useQueryClient();
     const navigate = useNavigate();
 

@@ -1,3 +1,4 @@
+import useDocumentTitle from '../../hooks/useDocumentTitle';
 import { Typography, Table } from 'antd';
 import type { ColumnsType } from 'antd/lib/table';
 
@@ -39,6 +40,7 @@ const columns: ColumnsType<SemesterGPA> = [
 ];
 
 export default function StudentCourse() {
+  useDocumentTitle("Tiến độ Học tập");
     return (
         <div style={{ padding: 24, background: '#f0f2f5' }}>
             <Title level={2} style={{ color: '#0052cc' }}>

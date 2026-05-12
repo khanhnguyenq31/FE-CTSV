@@ -1,3 +1,4 @@
+import useDocumentTitle from '../../hooks/useDocumentTitle';
 import { useEffect, useState, useRef } from "react";
 import {
     Typography,
@@ -45,6 +46,7 @@ const documentChecklist = [
 ];
 
 export default function EnrollmentRecords() {
+  useDocumentTitle("Hồ sơ Nhập học");
     const [form] = Form.useForm();
     const receiptForm = Form.useForm()[0];
     const [loading, setLoading] = useState(false);

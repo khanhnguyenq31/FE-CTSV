@@ -1,3 +1,4 @@
+import useDocumentTitle from '../../hooks/useDocumentTitle';
 import React, { useState, useEffect } from 'react';
 import { 
     getDanhMucHinhThuc, 
@@ -41,6 +42,7 @@ import { useNavigate } from 'react-router-dom';
 const { Title, Text } = Typography;
 
 export default function RegulationConfigPage({ messageApi }: { messageApi: any }) {
+  useDocumentTitle("Cấu hình Kỷ luật Quy chế");
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('hinhThuc');
     const [hinhThucs, setHinhThucs] = useState<any[]>([]);

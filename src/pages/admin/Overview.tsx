@@ -7,6 +7,7 @@ import {
   LockOutlined
 } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
+import useDocumentTitle from '../../hooks/useDocumentTitle';
 
 const { Title, Text } = Typography;
 
@@ -15,6 +16,8 @@ interface AdminOverviewProps {
 }
 
 export default function AdminOverview({ messageApi }: AdminOverviewProps) {
+  useDocumentTitle("Tổng quan hệ thống");
+
   const [adminStats, setAdminStats] = useState<any>({
     totalUsers: 0,
     totalStudents: 0,
