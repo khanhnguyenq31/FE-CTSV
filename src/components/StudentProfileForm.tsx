@@ -232,7 +232,7 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
         { title: 'Nội dung quyết định', dataIndex: 'noiDung', key: 'noiDung', ellipsis: true },
         { title: 'Ngày ký', dataIndex: 'ngayKy', key: 'ngayKy', width: 120, render: (v: string) => v ? new Date(v).toLocaleDateString('vi-VN') : '–' },
         { title: 'Cập nhật gần nhất', dataIndex: 'updatedAt', key: 'updatedAt', width: 140, render: (v: string) => v ? new Date(v).toLocaleDateString('vi-VN') : '–' },
-        { title: 'Loại', dataIndex: 'loai', key: 'loai', width: 160, render: (v: string) => <Tag color={v === 'Quyết định kỷ luật' ? 'red' : 'blue'}>{v}</Tag> },
+        { title: 'Loại', dataIndex: 'loai', key: 'loai', width: 160, render: (v: string) => <Tag color={v.includes('kỷ luật') ? 'red' : 'blue'}>{v}</Tag> },
     ];
 
     const tinhTrangColor = tinhTrang === 'Đang học' ? 'green' : tinhTrang === 'Tạm dừng' ? 'orange' : tinhTrang === 'Thôi học' ? 'red' : 'blue';
@@ -412,7 +412,7 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
 
                         <Table
                             columns={decisionColumns}
-                            dataSource={decisions?.filter(d => d.loai === 'Quyết định kỷ luật')}
+                            dataSource={decisions?.filter(d => d.loai.includes('Quyết định kỷ luật'))}
                             rowKey={(_, idx) => String(idx)}
                             pagination={{ pageSize: 10 }}
                             locale={{ emptyText: 'Chưa có quyết định kỷ luật nào' }}

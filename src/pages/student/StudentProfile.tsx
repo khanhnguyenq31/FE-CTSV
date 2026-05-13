@@ -1,12 +1,12 @@
 import useDocumentTitle from '../../hooks/useDocumentTitle';
 import React, { useEffect, useState } from 'react';
-import { Typography, message, Spin, Alert } from 'antd';
+import { Typography, Spin, Alert } from 'antd';
 import dayjs from 'dayjs';
 import StudentProfileForm from '../../components/StudentProfileForm';
 
 const { Title } = Typography;
 
-export default function DetailedStudentProfile() {
+export default function DetailedStudentProfile({ messageApi }: { messageApi: any }) {
     const [loading, setLoading] = useState(false);
     const [initialValues, setInitialValues] = useState<any>(null);
     const [canEdit, setCanEdit] = useState(false);
@@ -21,7 +21,7 @@ export default function DetailedStudentProfile() {
             try {
                 const token = localStorage.getItem('accessToken');
                 if (!token) {
-                    message.error('Vui lòng đăng nhập để xem hồ sơ');
+                    if (messageApi) messageApi.error('Vui lòng đăng nhập để xem hồ sơ');
                     return;
                 }
 
@@ -93,27 +93,35 @@ export default function DetailedStudentProfile() {
 
             } catch (e: any) {
                 console.error(e);
-                message.error(e.message || 'Có lỗi xảy ra khi tải hồ sơ');
+                if (messageApi) messageApi.error(e.message || 'Có lỗi xảy ra khi tải hồ sơ');
             } finally {
                 setLoading(false);
             }
         };
         fetchProfile();
-    }, []);
+    }, [messageApi]);
 
     const onFinish = async (values: any, avatarFile: File | null) => {
         setLoading(true);
         try {
             const token = localStorage.getItem('accessToken');
 
+            // Filter only top-level fields that are not objects (except dayjs)
+            const commonData: any = {};
+            Object.keys(values).forEach(key => {
+                const val = values[key];
+                if (typeof val !== 'object' || val === null || dayjs.isDayjs(val)) {
+                    commonData[key] = val;
+                }
+            });
+
             // Format dates
-            const commonData = {
-                ...values,
-                dateOfBirth: values.dateOfBirth ? values.dateOfBirth.format('YYYY-MM-DD') : null,
-                idCardIssueDate: values.idCardIssueDate ? values.idCardIssueDate.format('YYYY-MM-DD') : null,
-                enrollmentDate: values.enrollmentDate ? values.enrollmentDate.format('YYYY-MM-DD') : null,
-                activityDate: values.activityDate ? values.activityDate.format('YYYY-MM-DD') : null,
-            };
+            const dateFields = ['dateOfBirth', 'idCardIssueDate', 'enrollmentDate', 'activityDate'];
+            dateFields.forEach(field => {
+                if (commonData[field] && dayjs.isDayjs(commonData[field])) {
+                    commonData[field] = commonData[field].format('YYYY-MM-DD');
+                }
+            });
 
             let body: any;
             let headers: any = {
@@ -142,26 +150,29 @@ export default function DetailedStudentProfile() {
                 body: body,
             });
 
-            if (!res.ok) throw new Error('Cập nhật thất bại');
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.message || 'Cập nhật thất bại');
+            }
             const data = await res.json();
 
-            message.success('Cập nhật hồ sơ thành công');
+            if (messageApi) messageApi.success('Cập nhật hồ sơ thành công');
 
             // Update initial values
             const profile = data.profile;
-            const dateFields = [
+            const updateFields = [
                 'dateOfBirth',
                 'idCardIssueDate',
                 'enrollmentDate',
                 'activityDate',
             ];
-            dateFields.forEach(field => {
+            updateFields.forEach(field => {
                 if (profile[field]) profile[field] = dayjs(profile[field]);
             });
             setInitialValues(profile);
 
         } catch (e: any) {
-            message.error(e.message || 'Có lỗi xảy ra khi cập nhật');
+            if (messageApi) messageApi.error(e.message || 'Có lỗi xảy ra khi cập nhật');
         } finally {
             setLoading(false);
         }

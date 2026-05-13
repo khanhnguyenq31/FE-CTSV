@@ -47,10 +47,20 @@ export const getViPham = async () => {
 
 export const createViPham = async (formData: FormData) => {
     const res = await api.post('/quy-che/vi-pham', formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data',
-        },
+        headers: { 'Content-Type': 'multipart/form-data' },
     });
+    return res.data;
+};
+
+export const updateViPham = async (id: number, formData: FormData) => {
+    const res = await api.put(`/quy-che/vi-pham/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+};
+
+export const deleteViPham = async (id: number) => {
+    const res = await api.delete(`/quy-che/vi-pham/${id}`);
     return res.data;
 };
 

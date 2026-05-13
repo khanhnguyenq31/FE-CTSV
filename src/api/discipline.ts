@@ -155,3 +155,11 @@ export const getStudentDecisions = async (email: string) => {
     const res = await api.get(`/discipline/decisions/${encodeURIComponent(email)}`);
     return res.data;
 };
+export const getCohorts = async () => {
+    const res = await api.get('/discipline/cohorts');
+    return res.data;
+};
+export const getAcademicYears = async () => {
+    const res = await api.get('/discipline/academic-years');
+    return res.data;
+};

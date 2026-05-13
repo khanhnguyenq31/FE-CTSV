@@ -12,7 +12,6 @@ import {
     DatePicker,
     Select,
     Divider,
-    message,
     Spin,
     Upload,
 } from "antd";
@@ -45,7 +44,7 @@ const documentChecklist = [
     "Giấy chuyển sinh hoạt đoàn, Sổ đoàn viên",
 ];
 
-export default function EnrollmentRecords() {
+export default function EnrollmentRecords({ messageApi }: { messageApi: any }) {
   useDocumentTitle("Hồ sơ Nhập học");
     const [form] = Form.useForm();
     const receiptForm = Form.useForm()[0];
@@ -143,11 +142,11 @@ export default function EnrollmentRecords() {
             }
 
             pdf.save("So_yeu_ly_lich.pdf");
-            message.success("Xuất Sơ yếu lý lịch thành công!");
+            if (messageApi) messageApi.success("Xuất Sơ yếu lý lịch thành công!");
             await updateExportStatus();
         } catch (error) {
             console.error(error);
-            message.error("Có lỗi khi xuất PDF");
+            if (messageApi) messageApi.error("Có lỗi khi xuất PDF");
         } finally {
             setExporting(false);
         }
@@ -171,11 +170,11 @@ export default function EnrollmentRecords() {
 
             pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
             pdf.save("Bien_nhan_nhap_hoc.pdf");
-            message.success("Xuất Biên nhận thành công!");
+            if (messageApi) messageApi.success("Xuất Biên nhận thành công!");
             await updateExportStatus();
         } catch (error) {
             console.error(error);
-            message.error("Có lỗi khi xuất PDF");
+            if (messageApi) messageApi.error("Có lỗi khi xuất PDF");
         } finally {
             setExporting(false);
         }
@@ -186,10 +185,10 @@ export default function EnrollmentRecords() {
         try {
             const data = await uploadStudentAvatar(file);
             setAvatarUrl(data.avatarUrl);
-            message.success("Tải ảnh đại diện thành công!");
+            if (messageApi) messageApi.success("Tải ảnh đại diện thành công!");
         } catch (error) {
             console.error(error);
-            message.error("Tải ảnh thất bại. Vui lòng thử lại sau.");
+            if (messageApi) messageApi.error("Tải ảnh thất bại. Vui lòng thử lại sau.");
         } finally {
             setUploading(false);
         }

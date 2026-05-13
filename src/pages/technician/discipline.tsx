@@ -1,6 +1,6 @@
 import useDocumentTitle from '../../hooks/useDocumentTitle';
 import React, { useState } from 'react';
-import { Tabs, Table, Button, Modal, Form, Input, InputNumber, notification, Select, Space, Popconfirm, Switch, Drawer, Card, Row, Col, Typography, Tag, Divider, Tooltip, DatePicker } from 'antd';
+import { Tabs, Table, Button, Modal, Form, Input, InputNumber, Select, Space, Popconfirm, Switch, Drawer, Card, Row, Col, Typography, Tag, Divider, Tooltip, DatePicker } from 'antd';
 import {
     PlusOutlined, EditOutlined, DeleteOutlined, SettingOutlined,
     ArrowUpOutlined, ArrowDownOutlined, EyeOutlined, SaveOutlined,
@@ -14,7 +14,8 @@ import {
     getDisciplineForms, createDisciplineForm, updateDisciplineForm, deleteDisciplineForm,
     getDisciplineConfigs, createDisciplineConfig, updateDisciplineConfig, deleteDisciplineConfig,
     saveDisciplineConditions, evaluateDiscipline, saveEvaluation, getEvaluationHistory, getEvaluationDetails, clearEvaluationHistory,
-    getEvaluationDrafts, finalizeEvaluation, deleteDraftDetail, publishDraft, toggleAppeal, getFormalLists, applyDisciplineStatus, downloadDisciplinePdf
+    getEvaluationDrafts, finalizeEvaluation, toggleAppeal, getFormalLists, applyDisciplineStatus, downloadDisciplinePdf,
+    publishDraft, getCohorts, getAcademicYears
 } from '../../api/discipline';
 import { getAdmissionPeriods } from '../../api/admission';
 import type { DisciplineForm, DisciplineConfig, DisciplineCondition } from '../../api/discipline';
@@ -23,29 +24,29 @@ import AppLoading from '../../components/AppLoading';
 const { TabPane } = Tabs;
 const { Title, Text } = Typography;
 
-export default function DisciplinePage() {
+export default function DisciplinePage({ messageApi }: { messageApi: any }) {
   useDocumentTitle("Kỷ luật Học vụ");
     return (
         <div>
             <h2 style={{ marginBottom: 20 }}>Quản lý Kỷ luật sinh viên (Nâng cao)</h2>
             <Tabs defaultActiveKey="1" style={{ backgroundColor: '#fff', padding: 20, borderRadius: 8 }} destroyInactiveTabPane>
                 <TabPane tab="1. Hình thức kỷ luật" key="1">
-                    <DisciplineFormTab />
+                    <DisciplineFormTab messageApi={messageApi} />
                 </TabPane>
                 <TabPane tab="2. Cấu hình & Điều kiện" key="2">
-                    <DisciplineConfigTab />
+                    <DisciplineConfigTab messageApi={messageApi} />
                 </TabPane>
                 <TabPane tab="3. Xét kỷ luật" key="3">
-                    <EvaluateDisciplineTab />
+                    <EvaluateDisciplineTab messageApi={messageApi} />
                 </TabPane>
                 <TabPane tab="4. Lịch sử đợt xét" key="4">
-                    <EvaluationHistoryTab />
+                    <EvaluationHistoryTab messageApi={messageApi} />
                 </TabPane>
                 <TabPane tab="5. Danh sách kỷ luật (Dự kiến)" key="5">
-                    <EvaluationDraftsTab />
+                    <EvaluationDraftsTab messageApi={messageApi} />
                 </TabPane>
                 <TabPane tab="6. Danh sách chính thức" key="6">
-                    <FormalListTab />
+                    <FormalListTab messageApi={messageApi} />
                 </TabPane>
             </Tabs>
         </div>
@@ -55,7 +56,7 @@ export default function DisciplinePage() {
 // ==========================================
 // 1. HÌNH THỨC KỶ LUẬT
 // ==========================================
-function DisciplineFormTab() {
+function DisciplineFormTab({ messageApi }: { messageApi: any }) {
     const queryClient = useQueryClient();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
@@ -66,7 +67,7 @@ function DisciplineFormTab() {
     const mutationCreate = useMutation({
         mutationFn: createDisciplineForm,
         onSuccess: () => {
-            notification.success({ message: 'Thêm hình thức kỷ luật thành công' });
+            if (messageApi) messageApi.success('Thêm hình thức kỷ luật thành công');
             queryClient.invalidateQueries({ queryKey: ['disciplineForms'] });
             setIsModalOpen(false);
         }
@@ -75,7 +76,7 @@ function DisciplineFormTab() {
     const mutationUpdate = useMutation({
         mutationFn: ({ id, data }: { id: number, data: any }) => updateDisciplineForm(id, data),
         onSuccess: () => {
-            notification.success({ message: 'Cập nhật thành công' });
+            if (messageApi) messageApi.success('Cập nhật thành công');
             queryClient.invalidateQueries({ queryKey: ['disciplineForms'] });
             setIsModalOpen(false);
         }
@@ -84,7 +85,7 @@ function DisciplineFormTab() {
     const mutationDelete = useMutation({
         mutationFn: deleteDisciplineForm,
         onSuccess: () => {
-            notification.success({ message: 'Xóa thành công' });
+            if (messageApi) messageApi.success('Xóa thành công');
             queryClient.invalidateQueries({ queryKey: ['disciplineForms'] });
         }
     });
@@ -163,7 +164,7 @@ function DisciplineFormTab() {
 // ==========================================
 // 2. CẤU HÌNH & ĐIỀU KIỆN KỶ LUẬT
 // ==========================================
-function DisciplineConfigTab() {
+function DisciplineConfigTab({ messageApi }: { messageApi: any }) {
     const queryClient = useQueryClient();
     const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
     const [activeConfigId, setActiveConfigId] = useState<number | null>(null);
@@ -179,7 +180,7 @@ function DisciplineConfigTab() {
     const mutationCreateCfg = useMutation({
         mutationFn: createDisciplineConfig,
         onSuccess: () => {
-            notification.success({ message: 'Tạo cấu hình mới thành công' });
+            if (messageApi) messageApi.success('Tạo cấu hình mới thành công');
             queryClient.invalidateQueries({ queryKey: ['disciplineConfigs'] });
             setIsConfigModalOpen(false);
         }
@@ -188,7 +189,7 @@ function DisciplineConfigTab() {
     const mutationUpdateCfg = useMutation({
         mutationFn: ({ id, data }: { id: number, data: any }) => updateDisciplineConfig(id, data),
         onSuccess: () => {
-            notification.success({ message: 'Cập nhật cấu hình thành công' });
+            if (messageApi) messageApi.success('Cập nhật cấu hình thành công');
             queryClient.invalidateQueries({ queryKey: ['disciplineConfigs'] });
             setIsConfigModalOpen(false);
         }
@@ -197,7 +198,7 @@ function DisciplineConfigTab() {
     const mutationDeleteCfg = useMutation({
         mutationFn: deleteDisciplineConfig,
         onSuccess: () => {
-            notification.success({ message: 'Xóa cấu hình thành công' });
+            if (messageApi) messageApi.success('Xóa cấu hình thành công');
             queryClient.invalidateQueries({ queryKey: ['disciplineConfigs'] });
         }
     });
@@ -206,7 +207,7 @@ function DisciplineConfigTab() {
     const mutationSaveConditions = useMutation({
         mutationFn: ({ id, payload }: { id: number, payload: any }) => saveDisciplineConditions(id, payload),
         onSuccess: () => {
-            notification.success({ message: 'Lưu quy tắc điều kiện thành công' });
+            if (messageApi) messageApi.success('Lưu quy tắc điều kiện thành công');
             queryClient.invalidateQueries({ queryKey: ['disciplineConfigs'] });
             setIsDrawerOpen(false);
         }
@@ -444,27 +445,28 @@ function DisciplineConfigTab() {
 // ==========================================
 // 3. XÉT KỶ LUẬT (PREVIEW & SAVE)
 // ==========================================
-function EvaluateDisciplineTab() {
+function EvaluateDisciplineTab({ messageApi }: { messageApi: any }) {
     const [evalResults, setEvalResults] = useState<any[]>([]);
     const [hasTested, setHasTested] = useState(false);
     const [form] = Form.useForm();
 
     const { data: configs } = useQuery({ queryKey: ['disciplineConfigs'], queryFn: getDisciplineConfigs });
-    const { data: admissionPeriods, isLoading: isLoadingPeriods } = useQuery({ queryKey: ['admissionPeriods'], queryFn: getAdmissionPeriods });
+    const { data: cohorts, isLoading: isLoadingCohorts } = useQuery({ queryKey: ['cohorts'], queryFn: getCohorts });
+    const { data: academicYears, isLoading: isLoadingYears } = useQuery({ queryKey: ['academicYears'], queryFn: getAcademicYears });
 
     const mutationEvaluate = useMutation({
         mutationFn: evaluateDiscipline,
         onSuccess: (data: any) => {
             setEvalResults(data.results || []);
             setHasTested(true);
-            notification.success({ message: `Đã lọc ra ${data.results?.length || 0} sinh viên vi phạm.` });
+            if (messageApi) messageApi.success(`Đã lọc ra ${data.results?.length || 0} sinh viên vi phạm.`);
         }
     });
 
     const mutationSaveEvaluation = useMutation({
         mutationFn: saveEvaluation,
         onSuccess: () => {
-            notification.success({ message: 'Lưu kết quả xét kỷ luật thành công!' });
+            if (messageApi) messageApi.success('Lưu kết quả xét kỷ luật thành công!');
             setHasTested(false);
             setEvalResults([]);
         }
@@ -496,8 +498,12 @@ function EvaluateDisciplineTab() {
         <div>
             <Card title="Khung Filter & Xét Duyệt (Chạy Thử)" style={{ marginBottom: 20 }}>
                 <Form form={form} layout="inline" onFinish={onFinishEval}>
-                    <Form.Item name="namHoc" label="Năm học" rules={[{ required: true }]} initialValue="2025-2026">
-                        <Input placeholder="YYYY-YYYY" style={{ width: 120 }} />
+                    <Form.Item name="namHoc" label="Năm học" rules={[{ required: true }]}>
+                        <Select style={{ width: 150 }} placeholder="Chọn năm học" loading={isLoadingYears}>
+                            {academicYears?.map((y: string) => (
+                                <Select.Option key={y} value={y}>{y}</Select.Option>
+                            ))}
+                        </Select>
                     </Form.Item>
                     <Form.Item name="hocKy" label="Học kỳ" rules={[{ required: true }]} initialValue="1">
                         <Select style={{ width: 100 }}>
@@ -511,10 +517,10 @@ function EvaluateDisciplineTab() {
                             style={{ minWidth: 200 }}
                             placeholder="Chọn khóa sinh viên..."
                             allowClear
-                            loading={isLoadingPeriods}
+                            loading={isLoadingCohorts}
                         >
-                            {admissionPeriods?.periods?.filter((p: any) => /^Khóa 202[234]/.test(p.name)).map((p: any) => (
-                                <Select.Option key={p.id} value={p.id}>{p.name}</Select.Option>
+                            {cohorts?.map((c: string) => (
+                                <Select.Option key={c} value={c}>{c}</Select.Option>
                             ))}
                         </Select>
                     </Form.Item>
@@ -550,7 +556,7 @@ function EvaluateDisciplineTab() {
 // ==========================================
 // 4. LỊCH SỬ KỶ LUẬT (LOGS)
 // ==========================================
-function EvaluationHistoryTab() {
+function EvaluationHistoryTab({ messageApi }: { messageApi: any }) {
     const queryClient = useQueryClient();
     const { data: history, isLoading } = useQuery({ queryKey: ['evalHistory'], queryFn: getEvaluationHistory });
     const { data: admissionPeriods } = useQuery({ queryKey: ['admissionPeriods'], queryFn: getAdmissionPeriods });
@@ -564,7 +570,7 @@ function EvaluationHistoryTab() {
     const mutationClear = useMutation({
         mutationFn: clearEvaluationHistory,
         onSuccess: () => {
-            notification.success({ message: 'Đã xóa toàn bộ lịch sử kỷ luật' });
+            if (messageApi) messageApi.success('Đã xóa toàn bộ lịch sử kỷ luật');
             queryClient.invalidateQueries({ queryKey: ['evalHistory'] });
         }
     });
@@ -572,7 +578,7 @@ function EvaluationHistoryTab() {
     const mutationPublish = useMutation({
         mutationFn: publishDraft,
         onSuccess: () => {
-            notification.success({ message: 'Đã tạo danh sách dự kiến! Chuyển sang Tab 5 để xem và chỉnh sửa.' });
+            if (messageApi) messageApi.success('Đã tạo danh sách dự kiến! Chuyển sang Tab 5 để xem và chỉnh sửa.');
             queryClient.invalidateQueries({ queryKey: ['evalDrafts'] });
         }
     });
@@ -644,7 +650,7 @@ function EvaluationHistoryTab() {
 // ==========================================
 // 5. DANH SÁCH DỰ KIẾN (DRAFTS) & CỨU XÉT
 // ==========================================
-function EvaluationDraftsTab() {
+function EvaluationDraftsTab({ messageApi }: { messageApi: any }) {
     const queryClient = useQueryClient();
     const { data: drafts, isLoading: isLoadingDrafts } = useQuery({ queryKey: ['evalDrafts'], queryFn: getEvaluationDrafts });
 
@@ -660,7 +666,7 @@ function EvaluationDraftsTab() {
     const mutationToggle = useMutation({
         mutationFn: toggleAppeal,
         onSuccess: () => {
-            notification.success({ message: 'Đã cập nhật trạng thái cứu xét' });
+            if (messageApi) messageApi.success('Đã cập nhật trạng thái cứu xét');
             queryClient.invalidateQueries({ queryKey: ['evalDetails', activeDraft?.id] });
         }
     });
@@ -668,7 +674,7 @@ function EvaluationDraftsTab() {
     const mutationFinalize = useMutation({
         mutationFn: finalizeEvaluation,
         onSuccess: () => {
-            notification.success({ message: 'Đã tạo quyết định kỷ luật thành chính thức!' });
+            if (messageApi) messageApi.success('Đã tạo quyết định kỷ luật thành chính thức!');
             queryClient.invalidateQueries({ queryKey: ['evalDrafts'] });
             queryClient.invalidateQueries({ queryKey: ['formalLists'] });
         }
@@ -752,7 +758,7 @@ function EvaluationDraftsTab() {
 // ==========================================
 // 6. DANH SÁCH CHÍNH THỨC & ÁP DỤNG
 // ==========================================
-function FormalListTab() {
+function FormalListTab({ messageApi }: { messageApi: any }) {
     const queryClient = useQueryClient();
     const { data: formalLists, isLoading } = useQuery({ queryKey: ['formalLists'], queryFn: getFormalLists });
     const { data: admissionPeriods } = useQuery({ queryKey: ['admissionPeriods'], queryFn: getAdmissionPeriods });
@@ -770,7 +776,7 @@ function FormalListTab() {
     const mutationApply = useMutation({
         mutationFn: (params: { id: number; data: any }) => applyDisciplineStatus(params.id, params.data),
         onSuccess: async (result: any) => {
-            notification.success({ message: result.message });
+            if (messageApi) messageApi.success(result.message);
             queryClient.invalidateQueries({ queryKey: ['formalLists'] });
             setIsDecisionModalOpen(false);
             formDecision.resetFields();
@@ -778,14 +784,14 @@ function FormalListTab() {
             if (result.quyetDinhId && selectedFormalId) {
                 try {
                     await downloadDisciplinePdf(selectedFormalId, result.quyetDinhId);
-                    notification.info({ message: 'Đã tải file PDF quyết định kỷ luật' });
+                    if (messageApi) messageApi.info('Đã tải file PDF quyết định kỷ luật');
                 } catch (e) {
-                    notification.warning({ message: 'Không thể tải PDF tự động. Vui lòng tải lại sau.' });
+                    if (messageApi) messageApi.warning('Không thể tải PDF tự động. Vui lòng tải lại sau.');
                 }
             }
         },
         onError: (err: any) => {
-            notification.error({ message: err?.response?.data?.message || 'Lỗi khi áp dụng kỷ luật' });
+            if (messageApi) messageApi.error(err?.response?.data?.message || 'Lỗi khi áp dụng kỷ luật');
         }
     });
 

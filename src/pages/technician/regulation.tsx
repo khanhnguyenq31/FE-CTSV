@@ -1,10 +1,13 @@
 import useDocumentTitle from '../../hooks/useDocumentTitle';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
     getViPham, 
     createViPham, 
+    updateViPham,
+    deleteViPham,
     banHanhQuyetDinh, 
     getQuyetDinh, 
+    deleteQuyetDinh,
     getDanhMucQuyPham, 
     getDanhMucHinhThuc,
     downloadQuyChePdf
@@ -27,17 +30,18 @@ import {
     Row, 
     Col, 
     Tooltip,
-    Divider
+    Divider,
+    Popconfirm
 } from 'antd';
 import { 
     PlusOutlined, 
+    DeleteOutlined,
     CheckSquareOutlined, 
     FileTextOutlined, 
     UploadOutlined, 
     WarningOutlined,
     PrinterOutlined,
     ArrowLeftOutlined,
-    InfoCircleOutlined,
     EyeOutlined,
     EditOutlined
 } from '@ant-design/icons';
@@ -48,7 +52,7 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 export default function RegulationPage({ messageApi }: { messageApi: any }) {
-  useDocumentTitle("Kỷ luật Quy chế");
+    useDocumentTitle("Kỷ luật Quy chế");
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('viPham');
     const [viPhams, setViPhams] = useState<any[]>([]);
@@ -68,6 +72,7 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
     const [formQuyetDinh] = Form.useForm();
     const [file, setFile] = useState<File | null>(null);
     const [hinhThucApDungTuChinh, setHinhThucApDungTuChinh] = useState<Record<number, number>>({});
+    const [editingViPham, setEditingViPham] = useState<any>(null);
 
     const loadData = async () => {
         setLoading(true);
@@ -109,9 +114,16 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
                 formData.append('minhChung', file);
             }
 
-            await createViPham(formData);
-            if (messageApi) messageApi.success('Ghi nhận vi phạm thành công');
+            if (editingViPham) {
+                await updateViPham(editingViPham.id, formData);
+                if (messageApi) messageApi.success('Cập nhật vi phạm thành công');
+            } else {
+                await createViPham(formData);
+                if (messageApi) messageApi.success('Ghi nhận vi phạm thành công');
+            }
+
             setIsViPhamModalOpen(false);
+            setEditingViPham(null);
             setFile(null);
             setFoundStudent(null);
             formViPham.resetFields();
@@ -120,6 +132,17 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
             if (messageApi) messageApi.error(error.response?.data?.error || 'Lỗi khi lưu');
         } finally {
             setSubmitLoading(false);
+        }
+    };
+
+    const handleDeleteViPham = async (id: number) => {
+        try {
+            await deleteViPham(id);
+            if (messageApi) messageApi.success('Xóa vi phạm thành công');
+            loadData();
+        } catch (error: any) {
+            console.error('Delete error:', error);
+            if (messageApi) messageApi.error(error.response?.data?.message || 'Lỗi khi xóa vi phạm');
         }
     };
 
@@ -209,11 +232,34 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
         },
         {
             title: 'Minh chứng',
-            dataIndex: 'minhChungUrl',
             key: 'evidence',
-            render: (url: string) => url ? (
-                <Button type="link" icon={<FileTextOutlined />} href={url} target="_blank">Xem file</Button>
-            ) : <Text type="secondary" italic>Không có</Text>
+            render: (_: any, record: any) => {
+                const urlsJson = record.minhChungUrls;
+                const urlSingular = record.minhChungUrl;
+
+                if (urlsJson) {
+                    try {
+                        const urls = JSON.parse(urlsJson);
+                        if (Array.isArray(urls) && urls.length > 0) {
+                            return (
+                                <Space direction="vertical" size={0}>
+                                    {urls.map((url: string, index: number) => (
+                                        <Button key={index} type="link" size="small" icon={<FileTextOutlined />} href={url} target="_blank">
+                                            File {urls.length > 1 ? index + 1 : ''}
+                                        </Button>
+                                    ))}
+                                </Space>
+                            );
+                        }
+                    } catch (e) {}
+                }
+
+                if (urlSingular) {
+                    return <Button type="link" icon={<FileTextOutlined />} href={urlSingular} target="_blank">Xem file</Button>;
+                }
+
+                return <Text type="secondary" italic>Không có</Text>;
+            }
         },
         {
             title: 'Trạng thái',
@@ -227,20 +273,51 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
             title: 'Thao tác',
             key: 'action',
             align: 'center',
-            width: 80,
+            width: 100,
             render: (_: any, record: any) => (
-                <Tooltip title="Xem chi tiết">
-                    <Button 
-                        type="primary"
-                        shape="circle"
-                        ghost
-                        icon={<EyeOutlined />} 
-                        onClick={() => {
-                            // Logic xem chi tiết vi phạm nếu cần
-                            if (messageApi) messageApi.info('Tính năng đang phát triển');
-                        }}
-                    />
-                </Tooltip>
+                <Space size="middle">
+                    <Tooltip title="Chỉnh sửa biên bản">
+                        <Button 
+                            type="primary"
+                            shape="circle"
+                            ghost
+                            icon={<EditOutlined />} 
+                            disabled={record.trangThaiXuly !== 'Chờ xử lý'}
+                            onClick={() => {
+                                setEditingViPham(record);
+                                setFoundStudent(record.studentInfo);
+                                formViPham.setFieldsValue({
+                                    studentId: record.studentId,
+                                    quyPhamId: record.quyPhamId,
+                                    ngayViPham: dayjs(record.ngayViPham),
+                                    moTaChiTiet: record.moTaChiTiet
+                                });
+                                setIsViPhamModalOpen(true);
+                            }}
+                            style={{ border: '1px solid #1890ff' }}
+                        />
+                    </Tooltip>
+                    <Tooltip title="Xóa ghi nhận này">
+                        <Popconfirm
+                            title="Xác nhận xóa vi phạm?"
+                            description="Dữ liệu này sẽ bị xóa vĩnh viễn."
+                            onConfirm={() => handleDeleteViPham(record.id)}
+                            okText="Xóa"
+                            cancelText="Hủy"
+                            okButtonProps={{ danger: true }}
+                        >
+                            <Button 
+                                type="primary"
+                                danger
+                                shape="circle"
+                                ghost
+                                icon={<DeleteOutlined />} 
+                                disabled={record.trangThaiXuly !== 'Chờ xử lý'}
+                                style={{ border: '1px solid #ff4d4f' }}
+                            />
+                        </Popconfirm>
+                    </Tooltip>
+                </Space>
             )
         }
     ];
@@ -250,7 +327,7 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
             key: 'viPham',
             label: <><WarningOutlined /> Sổ Ghi nhận Vi phạm</>,
             children: (
-                <div animate-fade-in>
+                <div>
                     <Card bordered={false}>
                         <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Space>
@@ -258,7 +335,12 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
                                     type="primary" 
                                     danger 
                                     icon={<PlusOutlined />} 
-                                    onClick={() => setIsViPhamModalOpen(true)}
+                                    onClick={() => {
+                                        setEditingViPham(null);
+                                        setFoundStudent(null);
+                                        formViPham.resetFields();
+                                        setIsViPhamModalOpen(true);
+                                    }}
                                     style={{ borderRadius: 8 }}
                                 >
                                     Ghi nhận Vi phạm mới
@@ -297,7 +379,7 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
             key: 'quyetDinh',
             label: <><FileTextOutlined /> Quyết định Kỷ luật</>,
             children: (
-                <div animate-fade-in>
+                <div>
                     <Row gutter={[16, 16]}>
                         {quyetDinhs.map(qd => (
                             <Col xs={24} lg={12} key={qd.id}>
@@ -310,39 +392,37 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
                                         </div>
                                     }
                                     actions={[
-                                        <Tooltip title="In Quyết định">
-                                            <Button type="text" icon={<PrinterOutlined />} onClick={() => handlePrintQuyetDinh(qd)} />
+                                        <Tooltip title="Tải PDF Quyết định">
+                                            <Button type="link" icon={<PrinterOutlined />} onClick={() => handlePrintQuyetDinh(qd)}>In ấn</Button>
                                         </Tooltip>,
-                                        <Tooltip title="Xem chi tiết">
-                                            <Button type="text" icon={<InfoCircleOutlined />} onClick={() => {
+                                        <Tooltip title="Xem chi tiết & danh sách">
+                                            <Button type="link" icon={<EyeOutlined />} onClick={() => {
                                                 setSelectedQuyetDinh(qd);
                                                 setIsDetailModalOpen(true);
-                                            }} />
+                                            }}>Xem chi tiết</Button>
                                         </Tooltip>,
-                                        <Tooltip title="Xóa Quyết định">
-                                            <Button 
-                                                type="text" 
-                                                danger 
-                                                icon={<PlusOutlined style={{ transform: 'rotate(45deg)' }} />} 
-                                                onClick={() => {
-                                                    Modal.confirm({
-                                                        title: 'Xác nhận xóa quyết định?',
-                                                        content: 'Các vi phạm trong quyết định này sẽ được trả về trạng thái "Chờ xử lý". Thao tác này không thể hoàn tác.',
-                                                        okText: 'Xóa',
-                                                        okType: 'danger',
-                                                        cancelText: 'Hủy',
-                                                        onOk: async () => {
-                                                            try {
-                                                                await deleteQuyetDinh(qd.id);
-                                                                if (messageApi) messageApi.success('Đã xóa quyết định thành công');
-                                                                loadData();
-                                                            } catch (error) {
-                                                                if (messageApi) messageApi.error('Lỗi khi xóa quyết định');
-                                                            }
-                                                        }
+                                        <Tooltip title="Hủy bỏ & Xóa Quyết định">
+                                            <Popconfirm
+                                                title="Xác nhận xóa quyết định?"
+                                                description="Các vi phạm sẽ được trả về trạng thái 'Chờ xử lý'."
+                                                onConfirm={() => {
+                                                    deleteQuyetDinh(qd.id).then(() => {
+                                                        if (messageApi) messageApi.success('Đã xóa quyết định thành công');
+                                                        loadData();
+                                                    }).catch(() => {
+                                                        if (messageApi) messageApi.error('Lỗi khi xóa quyết định');
                                                     });
-                                                }} 
-                                            />
+                                                }}
+                                                okText="Xóa"
+                                                cancelText="Hủy"
+                                                okButtonProps={{ danger: true }}
+                                            >
+                                                <Button 
+                                                    type="link" 
+                                                    danger 
+                                                    icon={<DeleteOutlined />} 
+                                                >Hủy QĐ</Button>
+                                            </Popconfirm>
                                         </Tooltip>
                                     ]}
                                 >
@@ -410,9 +490,14 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
             {/* Modal Thêm Vi phạm */}
             <Modal
                 maskStyle={{ backgroundColor: 'transparent' }}
-                title={<Title level={4} style={{ margin: 0 }}><WarningOutlined style={{ color: '#ff4d4f' }} /> Ghi nhận Vi phạm mới</Title>}
+                title={<Title level={4} style={{ margin: 0 }}><WarningOutlined style={{ color: '#ff4d4f' }} /> {editingViPham ? 'Chỉnh sửa Vi phạm' : 'Ghi nhận Vi phạm mới'}</Title>}
                 open={isViPhamModalOpen}
-                onCancel={() => setIsViPhamModalOpen(false)}
+                onCancel={() => {
+                    setIsViPhamModalOpen(false);
+                    setEditingViPham(null);
+                    setFoundStudent(null);
+                    formViPham.resetFields();
+                }}
                 footer={null}
                 width={600}
             >
@@ -434,7 +519,7 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
                             </div>
                         )}
                     >
-                        <Input placeholder="Nhập MSSV để tìm kiếm..." onChange={(e) => handleStudentSearch(e.target.value)} />
+                        <Input placeholder="Nhập MSSV để tìm kiếm..." onChange={(e) => handleStudentSearch(e.target.value)} disabled={!!editingViPham} />
                     </Form.Item>
                     <Form.Item 
                         name="quyPhamId" 
@@ -465,15 +550,23 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
                         >
                             <Button icon={<UploadOutlined />}>Click để tải lên Biên bản</Button>
                         </Upload>
+                        {editingViPham && !file && editingViPham.minhChungUrls && (
+                            <div style={{ marginTop: 8 }}>
+                                <Text type="secondary" italic>Đã có file minh chứng. Tải lên file mới để thay thế.</Text>
+                            </div>
+                        )}
                     </Form.Item>
                     <div style={{ textAlign: 'right', marginTop: 24 }}>
                         <Space>
                             <Button onClick={() => {
                                 setIsViPhamModalOpen(false);
+                                setEditingViPham(null);
                                 setFoundStudent(null);
                                 formViPham.resetFields();
                             }}>Hủy</Button>
-                            <Button type="primary" danger htmlType="submit" loading={submitLoading}>Lưu Biên Bản</Button>
+                            <Button type="primary" danger htmlType="submit" loading={submitLoading}>
+                                {editingViPham ? 'Cập nhật' : 'Lưu Biên Bản'}
+                            </Button>
                         </Space>
                     </div>
                 </Form>

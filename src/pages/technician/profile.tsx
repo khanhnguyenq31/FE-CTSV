@@ -33,7 +33,6 @@ import { useNavigate } from "react-router-dom";
 
 import StudentProfileForm from "../../components/StudentProfileForm";
 import dayjs from "dayjs";
-import { message } from "antd";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -80,7 +79,7 @@ const getTrainingLabel = (score: number | null) => {
   return { label: "Kém", color: "#f5222d" };
 };
 
-export default function ProfilePage({ }: { messageApi: any }) {
+export default function ProfilePage({ messageApi }: { messageApi: any }) {
   useDocumentTitle("Hồ sơ Sinh viên");
   const navigate = useNavigate();
   const [data, setData] = useState<RowData[]>([]);
@@ -98,48 +97,49 @@ export default function ProfilePage({ }: { messageApi: any }) {
   const [editingStudent, setEditingStudent] = useState<any>(null);
   const [editLoading, setEditLoading] = useState(false);
 
+  const fetchStudents = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("accessToken");
+      const res = await fetch(`http://localhost:3000/student/list`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) throw new Error("Không thể lấy danh sách sinh viên");
+      const json = await res.json();
+      // Map dữ liệu API sang RowData
+      const rawStudents = Array.isArray(json) ? json : (json.students || []);
+      const students: RowData[] = rawStudents
+        .filter((s: any) => s.graduationType !== "Đang nhập học")
+        .map(
+          (s: any, idx: number) => ({
+            // Ensure key is unique by combining studentId and index
+            key: s.studentId ? `${s.studentId}_${idx}` : `student_${idx}`,
+            stt: idx + 1 < 10 ? `0${idx + 1}` : `${idx + 1}`,
+            name: s.fullName || "",
+            studentId: s.studentId || "",
+            classId: "Chưa xếp lớp",
+            major: s.major || "",
+            course: s.className || s.studentCode || "", // Khóa
+            gpa: (s.gpaTotal !== null && s.gpaTotal !== undefined) ? Number(s.gpaTotal) : 0,
+            trainingScore: (s.trainingScore === null || s.trainingScore === undefined) ? null : Number(s.trainingScore), // Dùng dữ liệu thực tế hoặc null nếu không có
+            status: s.graduationType || "Đang học",
+            faculty: s.faculty || s.nganhTrungTuyen?.khoa?.khoaName || "", // Chỉ dùng cho xem chi tiết
+          })
+        );
+      setData(students);
+    } catch (e) {
+      // Có thể show message lỗi ở đây
+      console.log(e);
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Fetch danh sách sinh viên từ API
   useEffect(() => {
-    const fetchStudents = async () => {
-      setLoading(true);
-      try {
-        const token = localStorage.getItem("accessToken");
-        const res = await fetch(`http://localhost:3000/student/list`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (!res.ok) throw new Error("Không thể lấy danh sách sinh viên");
-        const json = await res.json();
-        // Map dữ liệu API sang RowData
-        const rawStudents = Array.isArray(json) ? json : (json.students || []);
-        const students: RowData[] = rawStudents
-          .filter((s: any) => s.graduationType !== "Đang nhập học")
-          .map(
-            (s: any, idx: number) => ({
-              // Ensure key is unique by combining studentId and index
-              key: s.studentId ? `${s.studentId}_${idx}` : `student_${idx}`,
-              stt: idx + 1 < 10 ? `0${idx + 1}` : `${idx + 1}`,
-              name: s.fullName || "",
-              studentId: s.studentId || "",
-              classId: "Chưa xếp lớp",
-              major: s.major || "",
-              course: s.className || s.studentCode || "", // Khóa
-              gpa: (s.gpaTotal !== null && s.gpaTotal !== undefined) ? Number(s.gpaTotal) : 0,
-              trainingScore: (s.trainingScore === null || s.trainingScore === undefined) ? null : Number(s.trainingScore), // Dùng dữ liệu thực tế hoặc null nếu không có
-              status: s.graduationType || "Đang học",
-              faculty: s.faculty || s.nganhTrungTuyen?.khoa?.khoaName || "", // Chỉ dùng cho xem chi tiết
-            })
-          );
-        setData(students);
-      } catch (e) {
-        // Có thể show message lỗi ở đây
-        console.log(e);
-        setData([]);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchStudents();
   }, []);
 
@@ -332,7 +332,7 @@ export default function ProfilePage({ }: { messageApi: any }) {
 
     } catch (error) {
       console.error(error);
-      message.warning("Không thể tải đầy đủ thông tin, hiển thị thông tin cơ bản.");
+      messageApi.warning("Không thể tải đầy đủ thông tin, hiển thị thông tin cơ bản.");
       setEditingStudent({ ...selectedStudent, fullName: selectedStudent?.name });
     } finally {
       setEditLoading(false);
@@ -344,13 +344,22 @@ export default function ProfilePage({ }: { messageApi: any }) {
     setEditLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const commonData = {
-        ...values,
-        dateOfBirth: values.dateOfBirth ? values.dateOfBirth.format('YYYY-MM-DD') : null,
-        idCardIssueDate: values.idCardIssueDate ? values.idCardIssueDate.format('YYYY-MM-DD') : null,
-        enrollmentDate: values.enrollmentDate ? values.enrollmentDate.format('YYYY-MM-DD') : null,
-        activityDate: values.activityDate ? values.activityDate.format('YYYY-MM-DD') : null,
-      };
+      // Filter only top-level fields that are not objects (except dayjs)
+      const commonData: any = {};
+      Object.keys(values).forEach(key => {
+        const val = values[key];
+        if (typeof val !== 'object' || val === null || dayjs.isDayjs(val)) {
+          commonData[key] = val;
+        }
+      });
+
+      // Format dates
+      const dateFields = ['dateOfBirth', 'idCardIssueDate', 'enrollmentDate', 'activityDate'];
+      dateFields.forEach(field => {
+        if (commonData[field] && dayjs.isDayjs(commonData[field])) {
+          commonData[field] = commonData[field].format('YYYY-MM-DD');
+        }
+      });
 
       let body: any;
       let headers: any = { 'Authorization': `Bearer ${token}` };
@@ -375,17 +384,20 @@ export default function ProfilePage({ }: { messageApi: any }) {
         body: body,
       });
 
-      if (!res.ok) throw new Error('Cập nhật thất bại');
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || 'Cập nhật thất bại');
+      }
 
-      message.success('Cập nhật hồ sơ thành công');
+      if (messageApi) messageApi.success('Cập nhật hồ sơ thành công');
       setIsEditModalOpen(false);
       setEditingStudent(null);
 
       // Refresh list
-      // fetchStudents(); // Ta có thể tách fetchStudents ra khỏi useEffect để gọi lại ở đây
+      fetchStudents(); 
 
     } catch (e: any) {
-      message.error(e.message || 'Có lỗi xảy ra khi cập nhật');
+      if (messageApi) messageApi.error(e.message || 'Có lỗi xảy ra khi cập nhật');
     } finally {
       setEditLoading(false);
     }
@@ -464,12 +476,12 @@ export default function ProfilePage({ }: { messageApi: any }) {
 
       if (!res.ok) throw new Error("Failed to save period");
 
-      message.success(editingPeriod ? "Cập nhật đợt thành công" : "Tạo đợt mới thành công");
+      if (messageApi) messageApi.success(editingPeriod ? "Cập nhật đợt thành công" : "Tạo đợt mới thành công");
       setIsPeriodModalOpen(false);
       fetchPeriods();
 
     } catch (e) {
-      message.error("Có lỗi xảy ra");
+      if (messageApi) messageApi.error("Có lỗi xảy ra");
     } finally {
       setPeriodLoading(false);
     }
@@ -482,10 +494,10 @@ export default function ProfilePage({ }: { messageApi: any }) {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });
-      message.success("Đã xóa đợt");
+      if (messageApi) messageApi.success("Đã xóa đợt");
       fetchPeriods();
     } catch (e) {
-      message.error("Lỗi khi xóa");
+      if (messageApi) messageApi.error("Lỗi khi xóa");
     }
   };
 

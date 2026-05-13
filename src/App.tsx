@@ -244,7 +244,7 @@ function App() {
                 <Route path=":id" element={<EventPage messageApi={messageApi} />} />
               </Route>
               <Route path="discipline" element={<ProtectedRoute allowedRoles={["technician"]} requiredPermission="REWARD_DISCIPLINE" />}>
-                <Route index element={<DisciplinePage />} />
+                <Route index element={<DisciplinePage messageApi={messageApi} />} />
               </Route>
               <Route path="regulation-config" element={<ProtectedRoute allowedRoles={["technician"]} requiredPermission="REWARD_DISCIPLINE" />}>
                 <Route index element={<RegulationConfigPage messageApi={messageApi} />} />
@@ -258,13 +258,13 @@ function App() {
           {/* --- ROUTE CỦA SINH VIÊN (DÙNG StudentLayout) --- */}
           <Route path="/student" element={<ProtectedRoute allowedRoles={["student"]} />}>
             <Route element={<StudentLayout messageApi={messageApi} />}>
-              <Route index element={<StudentHome />} /> {/* /student */}
-              <Route path="home" element={<StudentHome />} />
-              <Route path="profile" element={<StudentProfile />} />
-              <Route path="course" element={<StudentCourse />} />
+              <Route index element={<StudentHome messageApi={messageApi} />} /> {/* /student */}
+              <Route path="home" element={<StudentHome messageApi={messageApi} />} />
+              <Route path="profile" element={<StudentProfile messageApi={messageApi} />} />
+              <Route path="course" element={<StudentCourse messageApi={messageApi} />} />
               <Route path="event" element={<StudentEvent messageApi={messageApi} />} />
               <Route path="event/:id" element={<StudentEventDetail messageApi={messageApi} />} />
-              <Route path="enrollment-records" element={<EnrollmentRecords />} />
+              <Route path="enrollment-records" element={<EnrollmentRecords messageApi={messageApi} />} />
             </Route>
           </Route>
 
