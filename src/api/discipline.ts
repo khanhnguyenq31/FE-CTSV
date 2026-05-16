@@ -151,6 +151,19 @@ export const downloadDisciplinePdf = async (formalId: number | string, quyetDinh
     window.URL.revokeObjectURL(url);
 };
 
+export const downloadPreliminaryPdf = async (draftId: number | string) => {
+    const res = await api.get(`/discipline/drafts/${draftId}/pdf`, {
+        responseType: 'blob'
+    });
+    const blob = new Blob([res.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `DanhSach_DuKien_KyLuat_${draftId}.pdf`;
+    link.click();
+    window.URL.revokeObjectURL(url);
+};
+
 export const getStudentDecisions = async (email: string) => {
     const res = await api.get(`/discipline/decisions/${encodeURIComponent(email)}`);
     return res.data;

@@ -15,6 +15,7 @@ import {
     getDisciplineConfigs, createDisciplineConfig, updateDisciplineConfig, deleteDisciplineConfig,
     saveDisciplineConditions, evaluateDiscipline, saveEvaluation, getEvaluationHistory, getEvaluationDetails, clearEvaluationHistory,
     getEvaluationDrafts, finalizeEvaluation, toggleAppeal, getFormalLists, applyDisciplineStatus, downloadDisciplinePdf,
+    downloadPreliminaryPdf,
     publishDraft, getCohorts, getAcademicYears
 } from '../../api/discipline';
 import { getAdmissionPeriods } from '../../api/admission';
@@ -487,6 +488,7 @@ function EvaluateDisciplineTab({ messageApi }: { messageApi: any }) {
     const columns = [
         { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName' },
         { title: 'MSSV', dataIndex: 'studentId', key: 'studentId' },
+        { title: 'Ngành', dataIndex: 'major', key: 'major' },
         { title: 'Tiến trình vi phạm', dataIndex: ['matchedRule', 'escalationPath'], key: 'escalationPath', render: (t: string) => <Text type="secondary">{t}</Text> },
         { title: 'Kết quả vòng GPA', dataIndex: ['matchedRule', 'gpaForm', 'tenHinhThuc'], key: 'gpaForm', render: (t: string) => <Tag color="blue">{t}</Tag> },
         { title: 'Kết quả vòng Lũy tiến', dataIndex: ['matchedRule', 'luyTienForm', 'tenHinhThuc'], key: 'luyTienForm', render: (t: string) => t ? <Tag color="orange">{t}</Tag> : <Text type="secondary">-</Text> },
@@ -624,6 +626,7 @@ function EvaluationHistoryTab({ messageApi }: { messageApi: any }) {
         { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName' },
         { title: 'MSSV', dataIndex: 'studentId', key: 'studentId' },
         { title: 'Lớp / Khóa', dataIndex: 'className', key: 'className' },
+        { title: 'Ngành', dataIndex: 'major', key: 'major' },
         { title: 'Hình phạt', dataIndex: 'hinhThuc', key: 'hinhThuc', render: (t: string) => <Tag color="red">{t}</Tag> },
         { title: 'Lý do', dataIndex: 'lyDo', key: 'lyDo' }
     ];
@@ -689,6 +692,7 @@ function EvaluationDraftsTab({ messageApi }: { messageApi: any }) {
     const columns = [
         { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName' },
         { title: 'MSSV', dataIndex: 'studentId', key: 'studentId' },
+        { title: 'Ngành', dataIndex: 'major', key: 'major' },
         { title: 'Lớp / Khóa', dataIndex: 'className', key: 'className' },
         { title: 'Bị phạt (vòng GPA)', dataIndex: 'hinhThucGpa', key: 'hinhThucGpa', render: (t: string) => <Tag color="blue">{t}</Tag> },
         { title: 'Hình phạt Dự kiến', dataIndex: 'hinhThuc', key: 'hinhThuc', render: (t: string) => <Tag color="red">{t}</Tag> },
@@ -733,14 +737,17 @@ function EvaluationDraftsTab({ messageApi }: { messageApi: any }) {
                     <h3>{activeDraft.tenDotXet}</h3>
                     <Text type="secondary">Danh sách này được dùng để tiếp nhận khiếu nại, cứu xét. Nếu sinh viên được khoan hồng, hãy bật công tắc "Cứu xét".</Text>
                 </div>
-                <Popconfirm
-                    title="Tạo quyết định kỷ luật?"
-                    description="Xác nhận chuyển danh sách kỷ luật dự kiến này thành Quyết định Chính thức?"
-                    onConfirm={() => mutationFinalize.mutate(activeDraft.id)}
-                    okText="Xác nhận" cancelText="Hủy" okButtonProps={{ danger: true }}
-                >
-                    <Button type="primary" size="large" danger icon={<ThunderboltOutlined />} style={{ borderRadius: 8, boxShadow: '0 2px 8px rgba(255, 77, 79, 0.2)' }}>Tạo Quyết Định Kỷ Luật</Button>
-                </Popconfirm>
+                <Space>
+                    <Button type="default" icon={<FileTextOutlined />} onClick={() => downloadPreliminaryPdf(activeDraft.id)} style={{ borderRadius: 8 }}>In danh sách dự kiến</Button>
+                    <Popconfirm
+                        title="Tạo quyết định kỷ luật?"
+                        description="Xác nhận chuyển danh sách kỷ luật dự kiến này thành Quyết định Chính thức?"
+                        onConfirm={() => mutationFinalize.mutate(activeDraft.id)}
+                        okText="Xác nhận" cancelText="Hủy" okButtonProps={{ danger: true }}
+                    >
+                        <Button type="primary" size="large" danger icon={<ThunderboltOutlined />} style={{ borderRadius: 8, boxShadow: '0 2px 8px rgba(255, 77, 79, 0.2)' }}>Tạo Quyết Định Kỷ Luật</Button>
+                    </Popconfirm>
+                </Space>
             </div>
 
             <Tabs defaultActiveKey="1" type="card">
@@ -827,6 +834,13 @@ function FormalListTab({ messageApi }: { messageApi: any }) {
         },
         { title: 'Năm học', dataIndex: 'namHoc', key: 'namHoc' },
         { title: 'Học kỳ', dataIndex: 'hocKy', key: 'hocKy' },
+        { 
+            title: 'Quyết định', key: 'quyetDinh', render: (_: any, r: any) => (
+                r.quyetDinhs && r.quyetDinhs.length > 0 
+                    ? <Tag color="success" icon={<CheckCircleOutlined />}>Đã ban hành ({r.quyetDinhs[0].soQuyetDinh})</Tag>
+                    : <Tag color="warning" icon={<ExclamationCircleOutlined />}>Chưa ban hành</Tag>
+            )
+        },
         { title: 'Thực hiện lúc', dataIndex: 'createdAt', key: 'createdAt', render: (t: string) => new Date(t).toLocaleString('vi-VN') },
         {
             title: 'Thao tác', key: 'action', align: 'center' as const, render: (_: any, r: any) => (
@@ -845,6 +859,7 @@ function FormalListTab({ messageApi }: { messageApi: any }) {
     const detColumns = [
         { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName' },
         { title: 'MSSV', dataIndex: 'studentId', key: 'studentId' },
+        { title: 'Ngành', dataIndex: 'major', key: 'major' },
         { title: 'Kết quả Cuối cùng', dataIndex: 'hinhThuc', key: 'hinhThuc', render: (t: string) => <Tag color="red">{t}</Tag> },
         { title: 'Trạng thái', dataIndex: 'isCuuXet', key: 'isCuuXet', render: (isCuuXet: boolean) => isCuuXet ? <Tag color="green">Được Cứu Xét / Khoan hồng</Tag> : <Tag color="red">Bị Kỷ Luật</Tag> },
     ];
