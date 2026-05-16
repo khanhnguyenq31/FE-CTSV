@@ -1,7 +1,7 @@
 import { Button, Table, Modal, Form, Input, Select, Tag, Space, Card, Tooltip, Popconfirm } from 'antd';
 import { PlusOutlined, EditOutlined, LockOutlined, UnlockOutlined, DeleteOutlined, SearchOutlined, UserOutlined, ToolOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
-import { createStudentApi, createTechnicianApi } from '../../api/auth';
+import { createStudentApi, createTechnicianApi, API_BASE_URL } from '../../api/auth';
 import useDocumentTitle from '../../hooks/useDocumentTitle';
 
 interface UserData {
@@ -31,7 +31,7 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
   const fetchPermissions = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch('http://localhost:3000/auth/permissions', {
+      const res = await fetch(`${API_BASE_URL}/auth/permissions`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('Không thể tải danh sách quyền');
@@ -50,7 +50,7 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
     setLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch('http://localhost:3000/auth/user-list', {
+      const res = await fetch(`${API_BASE_URL}/auth/user-list`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -85,7 +85,7 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
     setLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(`http://localhost:3000/auth/user/${email}`, {
+      const res = await fetch(`${API_BASE_URL}/auth/user/${email}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -111,7 +111,7 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
     const newStatus = currentStatus === 'locked' ? 'active' : 'locked';
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(`http://localhost:3000/auth/user/${email}/status`, {
+      const res = await fetch(`${API_BASE_URL}/auth/user/${email}/status`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -146,7 +146,7 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
     setLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(`http://localhost:3000/auth/user/${editingUser.email}/permissions`, {
+      const res = await fetch(`${API_BASE_URL}/auth/user/${editingUser.email}/permissions`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,

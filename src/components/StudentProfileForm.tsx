@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Typography, Form, Input, Button, Card, Row, Col, Select, DatePicker, Upload, Avatar, Tabs, Table, Tag } from 'antd';
 import { UploadOutlined, UserOutlined } from '@ant-design/icons';
 
+import { API_BASE_URL } from '../api/auth';
+
 import type { ColProps } from 'antd';
 import type { Rule } from 'antd/lib/form';
 
@@ -82,7 +84,7 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
     const [loadingContactWards, setLoadingContactWards] = useState(false);
 
     useEffect(() => {
-        fetch('http://localhost:3000/address/provinces')
+        fetch(`${API_BASE_URL}/address/provinces`)
             .then(r => r.json())
             .then(d => d.provinces && setProvinces(d.provinces))
             .catch(console.error);
@@ -96,7 +98,7 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
             const p = provinces.find(x => x.name === initialValues.province);
             if (p) {
                 setLoadingWards(true);
-                fetch(`http://localhost:3000/address/wards?province_code=${p.code}`)
+                fetch(`${API_BASE_URL}/address/wards?province_code=${p.code}`)
                     .then(r => r.json())
                     .then(w => setWards(w.wards || []))
                     .finally(() => setLoadingWards(false));
@@ -106,7 +108,7 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
             const p = provinces.find(x => x.name === initialValues.contactProvince);
             if (p) {
                 setLoadingContactWards(true);
-                fetch(`http://localhost:3000/address/wards?province_code=${p.code}`)
+                fetch(`${API_BASE_URL}/address/wards?province_code=${p.code}`)
                     .then(r => r.json())
                     .then(w => setContactWards(w.wards || []))
                     .finally(() => setLoadingContactWards(false));
@@ -128,7 +130,7 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
         const p = provinces.find(x => x.name === val);
         if (p) {
             setLoadingWards(true);
-            fetch(`http://localhost:3000/address/wards?province_code=${p.code}`)
+            fetch(`${API_BASE_URL}/address/wards?province_code=${p.code}`)
                 .then(r => r.json())
                 .then(w => setWards(w.wards || []))
                 .finally(() => setLoadingWards(false));
@@ -149,7 +151,7 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
         const p = provinces.find(x => x.name === val);
         if (p) {
             setLoadingContactWards(true);
-            fetch(`http://localhost:3000/address/wards?province_code=${p.code}`)
+            fetch(`${API_BASE_URL}/address/wards?province_code=${p.code}`)
                 .then(r => r.json())
                 .then(w => setContactWards(w.wards || []))
                 .finally(() => setLoadingContactWards(false));

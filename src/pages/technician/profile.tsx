@@ -33,6 +33,7 @@ import { useNavigate } from "react-router-dom";
 
 import StudentProfileForm from "../../components/StudentProfileForm";
 import dayjs from "dayjs";
+import { API_BASE_URL } from "../../api/auth";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -101,7 +102,7 @@ export default function ProfilePage({ messageApi }: { messageApi: any }) {
     setLoading(true);
     try {
       const token = localStorage.getItem("accessToken");
-      const res = await fetch(`http://localhost:3000/student/list`, {
+      const res = await fetch(`${API_BASE_URL}/student/list`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -303,7 +304,7 @@ export default function ProfilePage({ messageApi }: { messageApi: any }) {
     try {
       const token = localStorage.getItem("accessToken");
       // API lấy chi tiết sinh viên cho Technician
-      const res = await fetch(`http://localhost:3000/student/profile/${selectedStudent.studentId}`, {
+      const res = await fetch(`${API_BASE_URL}/student/profile/${selectedStudent.studentId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -378,7 +379,7 @@ export default function ProfilePage({ messageApi }: { messageApi: any }) {
         headers['Content-Type'] = 'application/json';
       }
 
-      const res = await fetch(`http://localhost:3000/student/profile/${editingStudent.studentId}`, {
+      const res = await fetch(`${API_BASE_URL}/student/profile/${editingStudent.studentId}`, {
         method: 'PUT',
         headers: headers,
         body: body,
@@ -414,7 +415,7 @@ export default function ProfilePage({ messageApi }: { messageApi: any }) {
     setPeriodLoading(true);
     try {
       const token = localStorage.getItem("accessToken");
-      const res = await fetch('http://localhost:3000/periods', {
+      const res = await fetch(`${API_BASE_URL}/periods`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -457,11 +458,11 @@ export default function ProfilePage({ messageApi }: { messageApi: any }) {
         isActive: values.isActive !== undefined ? values.isActive : true,
       };
 
-      let url = 'http://localhost:3000/periods';
+      let url = `${API_BASE_URL}/periods`;
       let method = 'POST';
 
       if (editingPeriod) {
-        url = `http://localhost:3000/periods/${editingPeriod.id}`;
+        url = `${API_BASE_URL}/periods/${editingPeriod.id}`;
         method = 'PUT';
       }
 
@@ -490,7 +491,7 @@ export default function ProfilePage({ messageApi }: { messageApi: any }) {
   const handleDeletePeriod = async (id: number) => {
     try {
       const token = localStorage.getItem("accessToken");
-      await fetch(`http://localhost:3000/periods/${id}`, {
+      await fetch(`${API_BASE_URL}/periods/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       });

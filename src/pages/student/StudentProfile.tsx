@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Typography, Spin, Alert } from 'antd';
 import dayjs from 'dayjs';
 import StudentProfileForm from '../../components/StudentProfileForm';
+import { API_BASE_URL } from '../../api/auth';
 
 const { Title } = Typography;
 
@@ -26,7 +27,7 @@ export default function DetailedStudentProfile({ messageApi }: { messageApi: any
                 }
 
                 // 1. Fetch Period Status
-                const periodRes = await fetch('http://localhost:3000/periods/status', {
+                const periodRes = await fetch(`${API_BASE_URL}/periods/status`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 if (periodRes.ok) {
@@ -41,7 +42,7 @@ export default function DetailedStudentProfile({ messageApi }: { messageApi: any
                 }
 
                 // 2. Fetch Profile
-                const res = await fetch('http://localhost:3000/student/profile', {
+                const res = await fetch(`${API_BASE_URL}/student/profile`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                     },
@@ -79,7 +80,7 @@ export default function DetailedStudentProfile({ messageApi }: { messageApi: any
                 try {
                     const email = profile.email || localStorage.getItem('email');
                     if (email) {
-                        const decRes = await fetch(`http://localhost:3000/discipline/decisions/${encodeURIComponent(email)}`, {
+                        const decRes = await fetch(`${API_BASE_URL}/discipline/decisions/${encodeURIComponent(email)}`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
                         if (decRes.ok) {
@@ -144,7 +145,7 @@ export default function DetailedStudentProfile({ messageApi }: { messageApi: any
                 headers['Content-Type'] = 'application/json';
             }
 
-            const res = await fetch('http://localhost:3000/student/profile', {
+            const res = await fetch(`${API_BASE_URL}/student/profile`, {
                 method: 'PUT',
                 headers: headers,
                 body: body,
