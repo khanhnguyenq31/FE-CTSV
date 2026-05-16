@@ -272,7 +272,7 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
         {
             title: 'Thao tác',
             key: 'action',
-            align: 'center',
+            align: 'center' as const,
             width: 100,
             render: (_: any, record: any) => (
                 <Space size="middle">
@@ -381,7 +381,7 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
             children: (
                 <div>
                     <Row gutter={[16, 16]}>
-                        {quyetDinhs.map(qd => (
+                        {quyetDinhs.map((qd: any) => (
                             <Col xs={24} lg={12} key={qd.id}>
                                 <Card 
                                     hoverable
@@ -427,7 +427,7 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
                                     ]}
                                 >
                                     <div style={{ marginBottom: 16 }}>
-                                        <Text type="secondary">Ngày ký: </Text>
+                                        <Text type="secondary" style={{ fontSize: '13px' }}>{/* placeholder */}</Text>
                                         <Text strong>{dayjs(qd.ngayKy).format('DD/MM/YYYY')}</Text>
                                         <br />
                                         <Text type="secondary">Người ký: </Text>
@@ -441,7 +441,7 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
                                                     <Text strong style={{ fontSize: '13px' }}>{vp.studentInfo?.fullName}</Text>
                                                     <Tag color="red" style={{ margin: 0 }}>{vp.hinhThucApDung?.tenHinhThuc}</Tag>
                                                 </div>
-                                                <Text type="secondary" style={{ fontSize: '12px' }}>{vp.studentEmail}</Text>
+                                                <Text type="secondary" style={{ fontSize: '13px' }}>Thời gian: {/* placeholder */}</Text>
                                                 <br />
                                                 <Text style={{ fontSize: '12px' }}>Lỗi: {vp.quyPham?.tenQuyPham}</Text>
                                             </div>

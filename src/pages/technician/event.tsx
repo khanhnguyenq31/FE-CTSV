@@ -125,7 +125,7 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
 
   const selectedActivity = useMemo(() => {
     if (!routeId) return null;
-    return activities.find(a => a.id.toString() === routeId);
+    return activities.find((a: any) => a.id.toString() === routeId);
   }, [activities, routeId]);
 
   const checkIsCreator = (record: any) => {
@@ -485,7 +485,7 @@ function ActivityListView({ activities, onAdd, queryClient }: any) {
       render: (v: string, record: any) => (
         <div className="cursor-pointer" onClick={() => navigate(`/technician/event/${record.id}`)}>
           <div className="font-semibold text-blue-600 hover:underline">{v}</div>
-          <Text type="secondary" size="small">{record.department?.khoaName || record.faculty}</Text>
+          <Text type="secondary" style={{ fontSize: '12px' }}>{record.department?.khoaName || record.faculty}</Text>
         </div>
       ),
     },
@@ -694,7 +694,7 @@ function ActivityDetailView({
                   )}
                   {!isCreator && (!isSenior || activity.isApproved) && (
                     <div className="text-center p-4 bg-gray-50 rounded-lg">
-                      <Text type="secondary" size="small italic">Bạn không có quyền quản lý hoạt động này.</Text>
+                      <Text type="secondary" style={{ fontSize: '12px', fontStyle: 'italic' }}>Bạn không có quyền quản lý hoạt động này.</Text>
                     </div>
                   )}
                 </Space>

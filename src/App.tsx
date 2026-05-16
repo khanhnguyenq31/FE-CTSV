@@ -258,10 +258,10 @@ function App() {
           {/* --- ROUTE CỦA SINH VIÊN (DÙNG StudentLayout) --- */}
           <Route path="/student" element={<ProtectedRoute allowedRoles={["student"]} />}>
             <Route element={<StudentLayout messageApi={messageApi} />}>
-              <Route index element={<StudentHome messageApi={messageApi} />} /> {/* /student */}
-              <Route path="home" element={<StudentHome messageApi={messageApi} />} />
+              <Route index element={<StudentHome />} /> {/* /student */}
+              <Route path="home" element={<StudentHome />} />
               <Route path="profile" element={<StudentProfile messageApi={messageApi} />} />
-              <Route path="course" element={<StudentCourse messageApi={messageApi} />} />
+              <Route path="course" element={<StudentCourse />} />
               <Route path="event" element={<StudentEvent messageApi={messageApi} />} />
               <Route path="event/:id" element={<StudentEventDetail messageApi={messageApi} />} />
               <Route path="enrollment-records" element={<EnrollmentRecords messageApi={messageApi} />} />
