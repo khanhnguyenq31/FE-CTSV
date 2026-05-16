@@ -210,7 +210,7 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
                     loading={loading}
                     showSearch
                     filterOption={(input, option) =>
-                        (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                        String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
                     }
                 >
                     {options.map(opt => <Option key={opt.value} value={opt.value}>{opt.label}</Option>)}
