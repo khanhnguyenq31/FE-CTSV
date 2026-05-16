@@ -1,6 +1,5 @@
 import { Input, Button, Form, Card, Typography } from "antd";
 import { useMutation } from "@tanstack/react-query";
-
 import {
   UserOutlined,
   LockOutlined,
@@ -9,7 +8,9 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import AppLoading from "../components/AppLoading";
-
+import umtImg from "../assets/umt.png";
+import logoImg from "../assets/logo.svg";
+import logo1Img from "../assets/logo1.png";
 
 const registerApi = async (data: any) => {
   console.log("Register data:", data);
@@ -78,7 +79,7 @@ export default function Register({ messageApi }: { messageApi: any }) {
 
   return (
     <>
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundImage: 'url(/src/assets/umt.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundImage: `url(${umtImg})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
         <div className="w-full max-w-5xl bg-transparent rounded-xl shadow-sm flex overflow-hidden">
           
           <Card
@@ -91,7 +92,7 @@ export default function Register({ messageApi }: { messageApi: any }) {
               <div className="w-12 h-12 rounded overflow-hidden flex items-center justify-center bg-white">
                 
                 <img
-                  src="/src/assets/logo.svg"
+                  src={logoImg}
                   alt="Logo"
                   className="w-full h-full object-contain"
                 />
@@ -223,7 +224,7 @@ export default function Register({ messageApi }: { messageApi: any }) {
           <div className="hidden md:flex md:w-1/2 rounded-r-xl overflow-hidden">
             
             <img
-              src="/src/assets/logo1.png"
+              src={logo1Img}
               alt="Logo1"
               className="w-full h-full object-contain"
             />

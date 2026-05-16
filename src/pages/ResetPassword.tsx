@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { LockOutlined } from '@ant-design/icons';
 import { resetPasswordApi } from '../api/auth';
 import { useMutation } from '@tanstack/react-query';
+import logo1Img from "../assets/logo1.png";
 
 const { Title, Text } = Typography;
 
@@ -113,7 +114,7 @@ export default function ResetPassword({ messageApi }: { messageApi: any }) {
           </Form>
         </Card>
         <div className="hidden md:flex md:w-1/2 rounded-r-xl overflow-hidden">
-          <img src="/src/assets/logo1.png" alt="Logo1" className="w-full h-full object-cover" />
+          <img src={logo1Img} alt="Logo1" className="w-full h-full object-cover" />
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { Menu, Layout, Button } from 'antd';
 import { UserOutlined, TeamOutlined, HomeOutlined, LogoutOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import logoImg from "../assets/logo.svg";
 
 const { Sider } = Layout;
 
@@ -38,7 +39,7 @@ export default function AdminSidebar({ isMobile = false, onClose }: SidebarProps
           letterSpacing: '1px'
         }}
       >
-        <img src="/src/assets/logo.svg" alt="Logo" style={{ width: 28, height: 28, marginRight: 10, backgroundColor: 'white', borderRadius: '6px', padding: '3px' }} />
+        <img src={logoImg} alt="Logo" style={{ width: 28, height: 28, marginRight: 10, backgroundColor: 'white', borderRadius: '6px', padding: '3px' }} />
         SMS BK - ADMIN
       </div>
       <div style={{ flex: 1, overflowY: 'auto', paddingTop: 16 }}>

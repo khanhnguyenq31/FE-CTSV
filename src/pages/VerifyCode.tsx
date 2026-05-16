@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { Input, Button, Card, Typography, Form, message } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { MailOutlined, LockOutlined } from '@ant-design/icons';
+import umtImg from "../assets/umt.png";
+import logoImg from "../assets/logo.svg";
+import logo1Img from "../assets/logo1.png";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -30,7 +33,7 @@ export default function VerifyCode({ messageApi }: { messageApi: any }) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundImage: 'url(/src/assets/umt.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundImage: `url(${umtImg})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
       <div className="w-full max-w-5xl bg-transparent rounded-xl shadow-sm flex overflow-hidden">
         <Card
           bordered={false}
@@ -40,7 +43,7 @@ export default function VerifyCode({ messageApi }: { messageApi: any }) {
         >
           <div className="flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded overflow-hidden flex items-center justify-center bg-white">
-              <img src="/src/assets/logo.svg" alt="Logo" className="w-full h-full object-contain" />
+              <img src={logoImg} alt="Logo" className="w-full h-full object-contain" />
             </div>
             <div>
               <Text strong>SMS BK</Text>
@@ -103,7 +106,7 @@ export default function VerifyCode({ messageApi }: { messageApi: any }) {
           </Form>
         </Card>
         <div className="hidden md:flex md:w-1/2 rounded-r-xl overflow-hidden">
-          <img src="/src/assets/logo1.png" alt="Logo1" className="w-full h-full object-cover" />
+          <img src={logo1Img} alt="Logo1" className="w-full h-full object-cover" />
         </div>
       </div>
     </div>

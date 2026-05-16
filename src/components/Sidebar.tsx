@@ -11,6 +11,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { logoutApi } from "../api/auth";
 import { useAuthStore } from "../store/auth";
+import logoImg from "../assets/logo.svg";
 
 const { Sider } = Layout;
 
@@ -156,7 +157,7 @@ export default function Sidebar({ messageApi, isMobile = false, onClose }: Sideb
           letterSpacing: '1px'
         }}
       >
-        <img src="/src/assets/logo.svg" alt="Logo" style={{ width: 28, height: 28, marginRight: 10, backgroundColor: 'white', borderRadius: '6px', padding: '3px' }} />
+        <img src={logoImg} alt="Logo" style={{ width: 28, height: 28, marginRight: 10, backgroundColor: 'white', borderRadius: '6px', padding: '3px' }} />
         SMS BK
       </div>
 

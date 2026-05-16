@@ -15,6 +15,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { logoutApi } from "../api/auth";
 import { useAuthStore } from "../store/auth";
 import { getStudentProfileApi } from "../api/student";
+import logoImg from "../assets/logo.svg";
 
 const { Sider } = Layout;
 
@@ -160,7 +161,7 @@ export default function StudentSidebar({ messageApi, isMobile = false, onClose }
           letterSpacing: '1px'
         }}
       >
-        <img src="/src/assets/logo.svg" alt="Logo" style={{ width: 28, height: 28, marginRight: 10, backgroundColor: 'white', borderRadius: '6px', padding: '3px' }} />
+        <img src={logoImg} alt="Logo" style={{ width: 28, height: 28, marginRight: 10, backgroundColor: 'white', borderRadius: '6px', padding: '3px' }} />
         SMS BK - STUDENT
       </div>
 
