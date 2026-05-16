@@ -154,7 +154,7 @@ export default function RegulationConfigPage({ messageApi }: { messageApi: any }
             title: 'Thao tác',
             key: 'action',
             width: 120,
-            align: 'center',
+            align: 'center' as any,
             render: (_: any, record: any) => (
                 <Space size="middle">
                     <Tooltip title="Chỉnh sửa">
@@ -217,7 +217,7 @@ export default function RegulationConfigPage({ messageApi }: { messageApi: any }
             title: 'Thao tác',
             key: 'action',
             width: 120,
-            align: 'center',
+            align: 'center' as any,
             render: (_: any, record: any) => (
                 <Space size="middle">
                     <Tooltip title="Chỉnh sửa">
@@ -371,7 +371,7 @@ export default function RegulationConfigPage({ messageApi }: { messageApi: any }
             {/* Modal Thêm Quy phạm */}
             <Modal
                 maskStyle={{ backgroundColor: 'transparent' }}
-                title={editingQuyPham ? "Sửa Quy Phạm" : "Thêm Quy Phạm (Lỗi vi phạm)"}
+                title={editingQuyPham ? "Sửa Quy Phá m" : "Thêm Quy Phạm (Lỗi vi phạm)"}
                 open={isQuyPhamModalOpen}
                 onCancel={() => {
                     setIsQuyPhamModalOpen(false);
