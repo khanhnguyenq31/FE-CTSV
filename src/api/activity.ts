@@ -7,6 +7,7 @@ export interface Activity {
     content: string;
     faculty: string;
     eventTime: string;
+    eventEndTime: string; // Ngày kết thúc — bằng eventTime nếu sự kiện 1 ngày
     tags: string;
     maxParticipants: number;
     registrationStartTime: string;
@@ -89,7 +90,7 @@ export async function scanAttendanceQRApi(id: string, code: string, latitude?: n
     return response.data;
 }
 
-export async function manualAttendanceApi(id: string, data: { studentId: string; type: 'in' | 'out' }) {
+export async function manualAttendanceApi(id: string, data: { studentId: string; type: 'in' | 'out'; date?: string }) {
     const response = await api.post(`/activities/${id}/attendance/manual`, data);
     return response.data;
 }
@@ -99,7 +100,13 @@ export async function toggleRegistrationLockApi(id: string) {
     return response.data;
 }
 
-export async function resetAttendanceApi(activityId: string, regId: number) {
-    const response = await api.post(`/activities/${activityId}/registrations/${regId}/reset-attendance`);
+export async function resetAttendanceApi(activityId: string, regId: number, date?: string) {
+    const response = await api.post(`/activities/${activityId}/registrations/${regId}/reset-attendance`, { date });
+    return response.data;
+}
+
+/** Lấy nhật ký điểm danh theo ngày cụ thể (chỉ chuyên viên) */
+export async function getAttendanceLogsApi(activityId: string, date: string) {
+    const response = await api.get(`/activities/${activityId}/attendance/logs`, { params: { date } });
     return response.data;
 }

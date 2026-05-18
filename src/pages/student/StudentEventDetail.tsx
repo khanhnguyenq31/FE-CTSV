@@ -374,40 +374,59 @@ export default function StudentEventDetail({ messageApi }: { messageApi: any }) 
                 />
             ) : (
                 <div className="max-w-lg mx-auto">
-                    {/* Attendance status */}
+                    {/* Lịch sử điểm danh theo từng ngày */}
                     <Card bordered={false} style={{ borderRadius: 16, marginBottom: 24, background: 'linear-gradient(135deg, #f0f5ff 0%, #e6f4ff 100%)' }}>
-                        <div className="text-center">
-                            <Text type="secondary" style={{ fontSize: 13 }}>Trạng thái điểm danh của bạn</Text>
-                            <Row gutter={24} className="mt-4">
-                                <Col span={12}>
-                                    <div style={{ background: '#fff', borderRadius: 12, padding: '16px 8px' }}>
-                                        <Text type="secondary" style={{ fontSize: 11, display: 'block' }}>ĐIỂM DANH VÀO</Text>
-                                        <Text strong style={{ fontSize: 24, color: myRegistration?.checkInTime ? '#389e0d' : '#bfbfbf' }}>
-                                            {myRegistration?.checkInTime ? dayjs(myRegistration.checkInTime).format('HH:mm') : '--:--'}
-                                        </Text>
-                                        {myRegistration?.checkInTime && (
-                                            <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>
-                                                {dayjs(myRegistration.checkInTime).format('DD/MM/YYYY')}
-                                            </Text>
-                                        )}
-                                    </div>
-                                </Col>
-                                <Col span={12}>
-                                    <div style={{ background: '#fff', borderRadius: 12, padding: '16px 8px' }}>
-                                        <Text type="secondary" style={{ fontSize: 11, display: 'block' }}>ĐIỂM DANH RA</Text>
-                                        <Text strong style={{ fontSize: 24, color: myRegistration?.checkOutTime ? '#389e0d' : '#bfbfbf' }}>
-                                            {myRegistration?.checkOutTime ? dayjs(myRegistration.checkOutTime).format('HH:mm') : '--:--'}
-                                        </Text>
-                                        {myRegistration?.checkOutTime && (
-                                            <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>
-                                                {dayjs(myRegistration.checkOutTime).format('DD/MM/YYYY')}
-                                            </Text>
-                                        )}
-                                    </div>
-                                </Col>
-                            </Row>
-                        </div>
+                        <Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 12 }}>
+                            Lịch sử điểm danh của bạn
+                        </Text>
+                        {myRegistration?.attendanceLogs && myRegistration.attendanceLogs.length > 0 ? (
+                            <Table
+                                dataSource={myRegistration.attendanceLogs}
+                                rowKey="id"
+                                size="small"
+                                pagination={false}
+                                style={{ background: 'transparent' }}
+                                columns={[
+                                    {
+                                        title: 'Ngày',
+                                        dataIndex: 'attendanceDate',
+                                        render: (v: string) => dayjs(v).format('DD/MM/YYYY'),
+                                        width: 110,
+                                    },
+                                    {
+                                        title: 'Vào',
+                                        dataIndex: 'checkInTime',
+                                        render: (v: string) => v
+                                            ? <Tag color="green">{dayjs(v).format('HH:mm')}</Tag>
+                                            : <Tag color="default">--:--</Tag>,
+                                        width: 80,
+                                    },
+                                    {
+                                        title: 'Ra',
+                                        dataIndex: 'checkOutTime',
+                                        render: (v: string) => v
+                                            ? <Tag color="blue">{dayjs(v).format('HH:mm')}</Tag>
+                                            : <Tag color="default">--:--</Tag>,
+                                        width: 80,
+                                    },
+                                    {
+                                        title: 'Trạng thái',
+                                        dataIndex: 'status',
+                                        render: (v: string) => {
+                                            if (v === 'attended') return <Badge status="success" text="Đầy đủ" />;
+                                            if (v === 'partial') return <Badge status="warning" text="Chưa ra" />;
+                                            return <Badge status="default" text="Vắng" />;
+                                        },
+                                    },
+                                ]}
+                            />
+                        ) : (
+                            <div className="text-center py-4">
+                                <Text type="secondary" style={{ fontSize: 13 }}>Chưa có dữ liệu điểm danh</Text>
+                            </div>
+                        )}
                     </Card>
+
 
                     {/* Input code */}
                     <Card bordered={false} style={{ borderRadius: 16 }}>

@@ -227,6 +227,7 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
       formData.append("maxParticipants", values.SoLuongToiDa.toString());
     }
     if (values.eventTime) formData.append("eventTime", values.eventTime.toISOString());
+    if (values.eventEndTime) formData.append("eventEndTime", values.eventEndTime.toISOString());
     if (values.registrationStartTime) formData.append("registrationStartTime", values.registrationStartTime.toISOString());
     if (values.registrationEndTime) formData.append("registrationEndTime", values.registrationEndTime.toISOString());
     if (values.latitude !== undefined && values.latitude !== null) formData.append("latitude", values.latitude.toString());
@@ -250,6 +251,7 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
     form.setFieldsValue({
       ...record,
       eventTime: dayjs(record.eventTime),
+      eventEndTime: record.eventEndTime ? dayjs(record.eventEndTime) : undefined,
       registrationStartTime: dayjs(record.registrationStartTime),
       registrationEndTime: dayjs(record.registrationEndTime),
       tagIds: record.activityTags?.map((t: any) => t.id) || [],
@@ -408,8 +410,17 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item label="Thời gian diễn ra" name="eventTime" rules={[{ required: true }]}>
-                <DatePicker showTime className="w-full" />
+              <Form.Item label="Ngày bắt đầu diễn ra" name="eventTime" rules={[{ required: true }]}>
+                <DatePicker showTime className="w-full" placeholder="Ngày bắt đầu" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                label="Ngày kết thúc diễn ra"
+                name="eventEndTime"
+                tooltip="Để trống nếu hoạt động chỉ diễn ra 1 ngày"
+              >
+                <DatePicker showTime className="w-full" placeholder="Mặc định = Ngày bắt đầu" />
               </Form.Item>
             </Col>
             <Col span={24}>
@@ -607,6 +618,7 @@ function ActivityDetailView({
   const [newStudentId, setNewStudentId] = useState("");
   const [attendanceType, setAttendanceType] = useState<'in' | 'out'>('in');
   const [attendanceCode, setAttendanceCode] = useState<string | null>(null);
+  const [manualDate, setManualDate] = useState<string | undefined>(undefined); // Ngày điểm danh thủ công
 
   const addStudentMutation = useMutation({
     mutationFn: (sid: string) => addStudentToActivityApi(activity.id, sid),
@@ -634,11 +646,13 @@ function ActivityDetailView({
   });
 
   const manualAttendanceMutation = useMutation({
-    mutationFn: (sid: string) => manualAttendanceApi(activity.id, { studentId: sid, type: attendanceType }),
+    mutationFn: ({ sid, date }: { sid: string; date?: string }) =>
+      manualAttendanceApi(activity.id, { studentId: sid, type: attendanceType, date }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["registrations", activity.id] });
       messageApi.success("Điểm danh thành công");
       setNewStudentId("");
+      setManualDate(undefined);
     },
     onError: (err: any) => messageApi.error(err.response?.data?.message || err.message || "Điểm danh thất bại"),
   });
@@ -655,8 +669,13 @@ function ActivityDetailView({
                 <img src={activity.image} alt="Banner" className="w-full h-64 object-cover rounded-xl mb-6 shadow-md" />
               )}
               <Title level={4}>Nội dung hoạt động</Title>
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 min-h-[200px]">
-                <div dangerouslySetInnerHTML={{ __html: activity.content }} />
+              <div className="rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+                <ReactQuill
+                  value={activity.content}
+                  readOnly={true}
+                  theme="snow"
+                  modules={{ toolbar: false }}
+                />
               </div>
             </Col>
             <Col xs={24} md={8}>
@@ -796,10 +815,30 @@ function ActivityDetailView({
             )}
 
             <Divider>Hoặc nhập MSSV thủ công</Divider>
-            <div className="w-full flex gap-2">
-              <Input placeholder="Nhập MSSV" value={newStudentId} onChange={(e) => setNewStudentId(e.target.value)} />
-              <Button onClick={() => newStudentId.trim() && manualAttendanceMutation.mutate(newStudentId.trim())} loading={manualAttendanceMutation.isPending}>
-                Điểm danh
+            <div className="w-full space-y-2">
+              <Input
+                placeholder="Nhập MSSV"
+                value={newStudentId}
+                onChange={(e) => setNewStudentId(e.target.value)}
+              />
+              {/* Date picker để chọn ngày điểm danh khi hoạt động nhiều ngày */}
+              <DatePicker
+                className="w-full"
+                placeholder="Chọn ngày điểm danh (mặc định: hôm nay)"
+                format="DD/MM/YYYY"
+                onChange={(d) => setManualDate(d ? d.format('YYYY-MM-DD') : undefined)}
+                disabledDate={(current) => {
+                  const start = dayjs(activity.eventTime).startOf('day');
+                  const end = dayjs(activity.eventEndTime ?? activity.eventTime).endOf('day');
+                  return current.isBefore(start) || current.isAfter(end);
+                }}
+              />
+              <Button
+                block
+                onClick={() => newStudentId.trim() && manualAttendanceMutation.mutate({ sid: newStudentId.trim(), date: manualDate })}
+                loading={manualAttendanceMutation.isPending}
+              >
+                Điểm danh thủ công
               </Button>
             </div>
           </div>
