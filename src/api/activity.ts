@@ -80,9 +80,9 @@ export async function removeStudentFromActivityApi(id: string, studentEmail: str
     return response.data;
 }
 
-export async function generateAttendanceCodeApi(id: string, type: 'in' | 'out') {
-    const response = await api.post(`/activities/${id}/attendance/generate`, { type });
-    return response.data;
+export async function generateAttendanceCodeApi(id: string, type: 'in' | 'out', session?: string) {
+    const response = await api.post(`/activities/${id}/attendance/generate`, { type, session });
+    return response.data; // { code, session }
 }
 
 export async function scanAttendanceQRApi(id: string, code: string, latitude?: number, longitude?: number) {
@@ -90,7 +90,7 @@ export async function scanAttendanceQRApi(id: string, code: string, latitude?: n
     return response.data;
 }
 
-export async function manualAttendanceApi(id: string, data: { studentId: string; type: 'in' | 'out'; date?: string }) {
+export async function manualAttendanceApi(id: string, data: { studentId: string; type: 'in' | 'out'; date?: string; session?: string }) {
     const response = await api.post(`/activities/${id}/attendance/manual`, data);
     return response.data;
 }

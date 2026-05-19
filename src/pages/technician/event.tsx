@@ -618,7 +618,10 @@ function ActivityDetailView({
   const [newStudentId, setNewStudentId] = useState("");
   const [attendanceType, setAttendanceType] = useState<'in' | 'out'>('in');
   const [attendanceCode, setAttendanceCode] = useState<string | null>(null);
-  const [manualDate, setManualDate] = useState<string | undefined>(undefined); // Ngày điểm danh thủ công
+  const [currentSession, setCurrentSession] = useState<string | null>(null); // Ca hiện tại của mã QR
+  const [sessionInput, setSessionInput] = useState(''); // Nhập tên ca khi tạo mã
+  const [manualDate, setManualDate] = useState<string | undefined>(undefined);
+  const [manualSession, setManualSession] = useState(''); // Tên ca khi điểm danh thủ công
 
   const addStudentMutation = useMutation({
     mutationFn: (sid: string) => addStudentToActivityApi(activity.id, sid),
@@ -640,14 +643,22 @@ function ActivityDetailView({
   });
 
   const generateCodeMutation = useMutation({
-    mutationFn: (type: 'in' | 'out') => generateAttendanceCodeApi(activity.id, type),
-    onSuccess: (data: any) => setAttendanceCode(data.code),
+    mutationFn: (type: 'in' | 'out') => generateAttendanceCodeApi(activity.id, type, sessionInput.trim() || undefined),
+    onSuccess: (data: any) => {
+      setAttendanceCode(data.code);
+      setCurrentSession(data.session);
+    },
     onError: (err: any) => messageApi.error(err.response?.data?.message || err.message || "Tạo mã thất bại"),
   });
 
   const manualAttendanceMutation = useMutation({
     mutationFn: ({ sid, date }: { sid: string; date?: string }) =>
-      manualAttendanceApi(activity.id, { studentId: sid, type: attendanceType, date }),
+      manualAttendanceApi(activity.id, {
+        studentId: sid,
+        type: attendanceType,
+        date,
+        session: manualSession.trim() || undefined
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["registrations", activity.id] });
       messageApi.success("Điểm danh thành công");
@@ -761,14 +772,69 @@ function ActivityDetailView({
             dataSource={registrations}
             loading={isLoadingRegs}
             rowKey="id"
+            expandable={{
+              expandedRowRender: (r: any) => {
+                const logs = r.attendanceLogs || [];
+                if (logs.length === 0) return <div className="pl-8 py-2 text-gray-400 text-sm">Chưa có dữ liệu điểm danh</div>;
+                // Nhóm theo ngày
+                const byDate: Record<string, any[]> = {};
+                logs.forEach((l: any) => {
+                  if (!byDate[l.attendanceDate]) byDate[l.attendanceDate] = [];
+                  byDate[l.attendanceDate].push(l);
+                });
+                return (
+                  <div className="pl-8 py-2 space-y-3">
+                    {Object.entries(byDate).map(([date, dayLogs]: [string, any[]]) => (
+                      <div key={date}>
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          📅 {dayjs(date).format('DD/MM/YYYY')} — {dayLogs.length} ca
+                        </Text>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {dayLogs.map((l: any) => (
+                            <Tag
+                              key={l.id}
+                              color={l.status === 'attended' ? 'green' : l.status === 'partial' ? 'orange' : 'default'}
+                            >
+                              {l.session ? `[${l.session}] ` : ''}
+                              {l.checkInTime ? dayjs(l.checkInTime).format('HH:mm') : '--:--'}
+                              {' → '}
+                              {l.checkOutTime ? dayjs(l.checkOutTime).format('HH:mm') : '--:--'}
+                            </Tag>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              },
+              rowExpandable: (r: any) => (r.attendanceLogs?.length || 0) > 0,
+            }}
             columns={[
-              { title: "MSSV", dataIndex: ["student", "profile", "studentId"], key: "studentId" },
+              { title: "MSSV", dataIndex: ["student", "profile", "studentId"], key: "studentId", width: 110 },
               { title: "Họ tên", dataIndex: ["student", "fullName"], key: "fullName" },
-              { title: "Vào", dataIndex: "checkInTime", render: (v) => v ? dayjs(v).format("HH:mm DD/MM") : "-" },
-              { title: "Ra", dataIndex: "checkOutTime", render: (v) => v ? dayjs(v).format("HH:mm DD/MM") : "-" },
+              {
+                title: "Tổng điểm danh",
+                key: "summary",
+                render: (_: any, r: any) => {
+                  const logs: any[] = r.attendanceLogs || [];
+                  if (logs.length === 0) return <Tag color="default">Chưa điểm danh</Tag>;
+                  // Đếm số ngày độc lập
+                  const days = new Set(logs.map((l: any) => l.attendanceDate)).size;
+                  const totalSessions = logs.length;
+                  const fullSessions = logs.filter((l: any) => l.status === 'attended').length;
+                  return (
+                    <Space size={4}>
+                      <Tag color="blue">{days} ngày</Tag>
+                      <Tag color={fullSessions === totalSessions ? 'green' : 'orange'}>
+                        {fullSessions}/{totalSessions} ca đầy đủ
+                      </Tag>
+                    </Space>
+                  );
+                }
+              },
               {
                 title: "Trạng thái",
-                render: (_, r: any) => {
+                render: (_: any, r: any) => {
                   if (r.status === "attended") return <Badge status="success" text="Đã tham gia" />;
                   if (r.status === "cancelled") return <Badge status="error" text="Đã hủy" />;
                   return <Badge status="processing" text="Đã đăng ký" />;
@@ -776,7 +842,7 @@ function ActivityDetailView({
               },
               {
                 title: "Thao tác",
-                render: (_, r: any) => (
+                render: (_: any, r: any) => (
                   <Popconfirm title="Xóa sinh viên khỏi hoạt động?" onConfirm={() => removeStudentMutation.mutate(r.studentEmail || r.email)} disabled={!isCreator}>
                     <Button type="text" danger icon={<DeleteOutlined />} disabled={!isCreator} />
                   </Popconfirm>
@@ -794,23 +860,44 @@ function ActivityDetailView({
       children: (
         <div className="py-10 flex flex-col items-center">
           <div className="max-w-md w-full bg-white p-8 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center">
-            <Title level={4} className="mb-6">Cổng điểm danh điện tử</Title>
+            <Title level={4} className="mb-4">Cổng điểm danh điện tử</Title>
+
             <Select
               value={attendanceType}
-              onChange={(v) => { setAttendanceType(v); setAttendanceCode(null); }}
-              className="w-full mb-4"
+              onChange={(v) => { setAttendanceType(v); setAttendanceCode(null); setCurrentSession(null); }}
+              className="w-full mb-3"
               size="large"
               options={[{ label: 'Điểm danh VÀO', value: 'in' }, { label: 'Điểm danh RA', value: 'out' }]}
             />
-            <Button type="primary" size="large" block icon={<SyncOutlined />} onClick={() => generateCodeMutation.mutate(attendanceType)} loading={generateCodeMutation.isPending}>
+
+            {/* Ô nhập tên ca — chỉ yêu cầu khi VÀO (RA dùng chung ca với VÀO) */}
+            {attendanceType === 'in' && (
+              <Input
+                placeholder="Tên ca (tùy chọn): Ca sáng, Ca chiều..."
+                value={sessionInput}
+                onChange={(e) => setSessionInput(e.target.value)}
+                className="w-full mb-3"
+                prefix={<span style={{ color: '#999', fontSize: 12 }}>📆 </span>}
+              />
+            )}
+
+            <Button type="primary" size="large" block icon={<SyncOutlined />}
+              onClick={() => generateCodeMutation.mutate(attendanceType)}
+              loading={generateCodeMutation.isPending}
+            >
               Tạo mã QR mới
             </Button>
 
             {attendanceCode && (
-              <div className="mt-8 flex flex-col items-center">
+              <div className="mt-6 flex flex-col items-center">
+                {currentSession && (
+                  <Tag color="blue" style={{ marginBottom: 8, fontSize: 13, padding: '2px 12px' }}>
+                    {currentSession}
+                  </Tag>
+                )}
                 <QRCode value={attendanceCode} size={220} bordered={false} />
                 <Text strong className="text-xl mt-4 tracking-widest">{attendanceCode}</Text>
-                <Text type="secondary">Mã có hiệu lực trong phiên làm việc hiện tại</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>Mã có hiệu lực trong phiên làm việc hiện tại</Text>
               </div>
             )}
 
@@ -821,7 +908,12 @@ function ActivityDetailView({
                 value={newStudentId}
                 onChange={(e) => setNewStudentId(e.target.value)}
               />
-              {/* Date picker để chọn ngày điểm danh khi hoạt động nhiều ngày */}
+              <Input
+                placeholder="Tên ca (tùy chọn): Ca sáng, Ca chiều..."
+                value={manualSession}
+                onChange={(e) => setManualSession(e.target.value)}
+                prefix={<span style={{ color: '#999', fontSize: 12 }}>📆 </span>}
+              />
               <DatePicker
                 className="w-full"
                 placeholder="Chọn ngày điểm danh (mặc định: hôm nay)"
