@@ -668,6 +668,16 @@ function ActivityDetailView({
     onError: (err: any) => messageApi.error(err.response?.data?.message || err.message || "Điểm danh thất bại"),
   });
 
+  const resetLogMutation = useMutation({
+    mutationFn: ({ regId, logId }: { regId: number; logId: number }) =>
+      resetAttendanceApi(activity.id, regId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["registrations", activity.id] });
+      messageApi.success("Đã xóa bản ghi điểm danh");
+    },
+    onError: (err: any) => messageApi.error(err.response?.data?.message || err.message || "Xóa thất bại"),
+  });
+
   const items = [
     {
       key: 'info',
@@ -776,7 +786,6 @@ function ActivityDetailView({
               expandedRowRender: (r: any) => {
                 const logs = r.attendanceLogs || [];
                 if (logs.length === 0) return <div className="pl-8 py-2 text-gray-400 text-sm">Chưa có dữ liệu điểm danh</div>;
-                // Nhóm theo ngày
                 const byDate: Record<string, any[]> = {};
                 logs.forEach((l: any) => {
                   if (!byDate[l.attendanceDate]) byDate[l.attendanceDate] = [];
@@ -789,17 +798,31 @@ function ActivityDetailView({
                         <Text type="secondary" style={{ fontSize: 12 }}>
                           📅 {dayjs(date).format('DD/MM/YYYY')} — {dayLogs.length} ca
                         </Text>
-                        <div className="flex flex-wrap gap-2 mt-1">
+                        <div className="flex flex-wrap gap-2 mt-1 items-center">
                           {dayLogs.map((l: any) => (
-                            <Tag
-                              key={l.id}
-                              color={l.status === 'attended' ? 'green' : l.status === 'partial' ? 'orange' : 'default'}
-                            >
-                              {l.session ? `[${l.session}] ` : ''}
-                              {l.checkInTime ? dayjs(l.checkInTime).format('HH:mm') : '--:--'}
-                              {' → '}
-                              {l.checkOutTime ? dayjs(l.checkOutTime).format('HH:mm') : '--:--'}
-                            </Tag>
+                            <Space key={l.id} size={4}>
+                              <Tag color={l.status === 'attended' ? 'green' : l.status === 'partial' ? 'orange' : 'default'}>
+                                {l.session ? `[${l.session}] ` : ''}
+                                {l.checkInTime ? dayjs(l.checkInTime).format('HH:mm') : '--:--'}
+                                {' → '}
+                                {l.checkOutTime ? dayjs(l.checkOutTime).format('HH:mm') : '--:--'}
+                              </Tag>
+                              {isCreator && (
+                                <Popconfirm
+                                  title="Xóa bản ghi điểm danh này?"
+                                  onConfirm={() => resetLogMutation.mutate({ regId: r.id, logId: l.id })}
+                                  okText="Xóa" cancelText="Hủy"
+                                  okButtonProps={{ danger: true }}
+                                >
+                                  <Button
+                                    type="text" danger size="small"
+                                    icon={<DeleteOutlined />}
+                                    style={{ fontSize: 11, padding: '0 4px', height: 20 }}
+                                    loading={resetLogMutation.isPending}
+                                  />
+                                </Popconfirm>
+                              )}
+                            </Space>
                           ))}
                         </div>
                       </div>
@@ -870,16 +893,14 @@ function ActivityDetailView({
               options={[{ label: 'Điểm danh VÀO', value: 'in' }, { label: 'Điểm danh RA', value: 'out' }]}
             />
 
-            {/* Ô nhập tên ca — chỉ yêu cầu khi VÀO (RA dùng chung ca với VÀO) */}
-            {attendanceType === 'in' && (
-              <Input
-                placeholder="Tên ca (tùy chọn): Ca sáng, Ca chiều..."
-                value={sessionInput}
-                onChange={(e) => setSessionInput(e.target.value)}
-                className="w-full mb-3"
-                prefix={<span style={{ color: '#999', fontSize: 12 }}>📆 </span>}
-              />
-            )}
+            {/* Ô nhập tên ca — hiện cho cả VÀO lẫn RA, mỗi mã lưu session riêng */}
+            <Input
+              placeholder="Tên ca (tùy chọn): Ca sáng, Ca chiều..."
+              value={sessionInput}
+              onChange={(e) => setSessionInput(e.target.value)}
+              className="w-full mb-3"
+              prefix={<span style={{ color: '#999', fontSize: 12 }}>📆&nbsp;</span>}
+            />
 
             <Button type="primary" size="large" block icon={<SyncOutlined />}
               onClick={() => generateCodeMutation.mutate(attendanceType)}
