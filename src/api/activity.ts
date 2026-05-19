@@ -110,3 +110,9 @@ export async function getAttendanceLogsApi(activityId: string, date: string) {
     const response = await api.get(`/activities/${activityId}/attendance/logs`, { params: { date } });
     return response.data;
 }
+
+/** Xóa 1 bản ghi điểm danh cụ thể theo logId */
+export async function deleteAttendanceLogApi(activityId: string, logId: number) {
+    const response = await api.delete(`/activities/${activityId}/attendance/logs/${logId}`);
+    return response.data;
+}

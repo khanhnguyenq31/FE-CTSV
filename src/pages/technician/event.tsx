@@ -70,7 +70,8 @@ import {
   generateAttendanceCodeApi,
   manualAttendanceApi,
   toggleRegistrationLockApi,
-  resetAttendanceApi
+  resetAttendanceApi,
+  deleteAttendanceLogApi
 } from "../../api/activity";
 import { getKhoasApi, getTagsApi, createTagApi } from "../../api/dm";
 import { useAuthStore } from "../../store/auth";
@@ -669,8 +670,7 @@ function ActivityDetailView({
   });
 
   const resetLogMutation = useMutation({
-    mutationFn: ({ regId, logId }: { regId: number; logId: number }) =>
-      resetAttendanceApi(activity.id, regId),
+    mutationFn: (logId: number) => deleteAttendanceLogApi(activity.id, logId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["registrations", activity.id] });
       messageApi.success("Đã xóa bản ghi điểm danh");
@@ -810,7 +810,7 @@ function ActivityDetailView({
                               {isCreator && (
                                 <Popconfirm
                                   title="Xóa bản ghi điểm danh này?"
-                                  onConfirm={() => resetLogMutation.mutate({ regId: r.id, logId: l.id })}
+                                  onConfirm={() => resetLogMutation.mutate(l.id)}
                                   okText="Xóa" cancelText="Hủy"
                                   okButtonProps={{ danger: true }}
                                 >
