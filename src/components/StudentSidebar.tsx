@@ -64,7 +64,7 @@ export default function StudentSidebar({ messageApi, isMobile = false, onClose }
   const { data, isLoading } = useQuery({
     queryKey: ["studentProfile"],
     queryFn: getStudentProfileApi,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 0, // No cache stale time so it triggers refetch on mount/focus
   });
 
   const graduationType = data?.profile?.graduationType || "";

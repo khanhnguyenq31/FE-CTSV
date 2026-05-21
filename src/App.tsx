@@ -85,7 +85,7 @@ const StudentLayout = ({ messageApi }: { messageApi: any }) => {
   const { data, isLoading } = useQuery({
     queryKey: ["studentProfile"],
     queryFn: getStudentProfileApi,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
     refetchInterval: (queryData: any) => queryData?.profile?.graduationType === "Đang nhập học" ? 5000 : false,
   });
 
