@@ -201,12 +201,13 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
         }
     };
 
-    const renderEmbeddedFile = (url: string) => {
+    const renderEmbeddedFile = (url: string, originalname?: string) => {
         if (!url) return null;
-        const lowercaseUrl = url.toLowerCase();
+        // Use originalname for type detection — Cloudinary raw URLs lack extension
+        const detectFrom = (originalname || url).toLowerCase();
         
         // Detect images
-        if (lowercaseUrl.match(/\.(jpeg|jpg|gif|png|webp|svg)$/)) {
+        if (detectFrom.match(/\.(jpeg|jpg|gif|png|webp|svg)(\?.*)?$/)) {
             return (
                 <div style={{ marginTop: 12, border: '1px solid #d9d9d9', borderRadius: '4px', padding: '8px', textAlign: 'center', backgroundColor: '#f9f9f9' }}>
                     <Text strong style={{ display: 'block', marginBottom: 8, color: '#fa8c16' }}>Ảnh đính kèm giải trình:</Text>
@@ -215,8 +216,10 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
             );
         }
         
-        const isPdf = lowercaseUrl.endsWith('.pdf');
-        const isWord = lowercaseUrl.endsWith('.doc') || lowercaseUrl.endsWith('.docx');
+        const isPdf = detectFrom.endsWith('.pdf');
+        const isWord = detectFrom.endsWith('.doc') || detectFrom.endsWith('.docx');
+        const displayName = originalname || 'Xem tệp giải trình';
+        const fileTypeName = isPdf ? 'PDF' : isWord ? 'Word' : 'Tệp tin';
         
         let embedUrl = url;
         if (isWord) {
@@ -226,21 +229,24 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
         return (
             <div style={{ marginTop: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <Text strong style={{ color: '#fa8c16' }}>Tệp giải trình ({isPdf ? 'PDF' : isWord ? 'Word' : 'Tệp tin'}):</Text>
+                    <Text strong style={{ color: '#fa8c16' }}>Tệp giải trình ({fileTypeName}):<span style={{ fontWeight: 400, color: '#595959', marginLeft: 6 }}>{displayName}</span></Text>
                     <a href={url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600, color: '#1890ff', display: 'inline-flex', alignItems: 'center' }}>
-                        <DownloadOutlined style={{ marginRight: 4 }} /> Tải xuống / Mở tab mới
+                        <DownloadOutlined style={{ marginRight: 4 }} /> Tải xuống
                     </a>
                 </div>
-                <div style={{ border: '1px solid #d9d9d9', borderRadius: '4px', overflow: 'hidden', height: '350px', backgroundColor: '#f0f2f5' }}>
-                    <iframe 
-                        src={embedUrl} 
-                        title="Embedded Explanation" 
-                        width="100%" 
-                        height="100%" 
-                        style={{ border: 'none' }}
-                        sandbox="allow-scripts allow-same-origin allow-popups"
-                    />
-                </div>
+                {isWord ? (
+                    <div style={{ border: '1px solid #d9d9d9', borderRadius: '4px', overflow: 'hidden', height: '400px', backgroundColor: '#f0f2f5' }}>
+                        <iframe src={embedUrl} title="Embedded Word" width="100%" height="100%" style={{ border: 'none' }} />
+                    </div>
+                ) : isPdf ? (
+                    <div style={{ border: '1px solid #d9d9d9', borderRadius: '4px', overflow: 'hidden', height: '400px', backgroundColor: '#f0f2f5' }}>
+                        <iframe src={`${url}#toolbar=1`} title="Embedded PDF" width="100%" height="100%" style={{ border: 'none' }} />
+                    </div>
+                ) : (
+                    <div style={{ padding: '12px', background: '#fffbe6', border: '1px dashed #ffe58f', borderRadius: '4px' }}>
+                        <Text type="secondary">Không thể xem trước loại tệp này. Vui lòng tải xuống để mở.</Text>
+                    </div>
+                )}
             </div>
         );
     };
@@ -629,7 +635,7 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
                                 </span>
                             </div>
                             {editingViPham.sinhVienGiaiTrinhUrl ? (
-                                renderEmbeddedFile(editingViPham.sinhVienGiaiTrinhUrl)
+                                renderEmbeddedFile(editingViPham.sinhVienGiaiTrinhUrl, editingViPham.sinhVienGiaiTrinhNguyenGoc)
                             ) : (
                                 <div style={{ marginTop: 12 }}>
                                     <Text type="secondary" italic>Sinh viên chưa đính kèm tệp giải trình.</Text>
