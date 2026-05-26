@@ -77,7 +77,8 @@ import {
   uploadStudentsToActivityApi,
   getActivitySessionsApi,
   createActivitySessionApi,
-  deleteActivitySessionApi
+  deleteActivitySessionApi,
+  updateActivitySessionApi
 } from "../../api/activity";
 import { getKhoasApi, getTagsApi, createTagApi } from "../../api/dm";
 import { useAuthStore } from "../../store/auth";
