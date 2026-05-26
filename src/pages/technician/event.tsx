@@ -1035,22 +1035,28 @@ function ActivityDetailView({
                     pagination={false}
                     columns={[
                       {
+                        title: 'Ngày',
+                        dataIndex: 'startTime',
+                        key: 'date',
+                        render: (v: string) => <span style={{ fontWeight: 600, color: '#333' }}>{dayjs(v).format('DD/MM/YYYY')}</span>,
+                      },
+                      {
                         title: 'Tên ca',
                         dataIndex: 'sessionName',
                         key: 'sessionName',
-                        render: (v: string) => <Text strong>{v}</Text>
+                        render: (v: string) => <Text strong style={{ color: '#1890ff' }}>{v}</Text>
                       },
                       {
-                        title: 'Bắt đầu',
+                        title: 'Giờ bắt đầu',
                         dataIndex: 'startTime',
                         key: 'startTime',
-                        render: (v: string) => dayjs(v).format('DD/MM/YYYY HH:mm'),
+                        render: (v: string) => <Tag color="blue">{dayjs(v).format('HH:mm')}</Tag>,
                       },
                       {
-                        title: 'Kết thúc',
+                        title: 'Giờ kết thúc',
                         dataIndex: 'endTime',
                         key: 'endTime',
-                        render: (v: string) => dayjs(v).format('DD/MM/YYYY HH:mm'),
+                        render: (v: string) => <Tag color="cyan">{dayjs(v).format('HH:mm')}</Tag>,
                       },
                       {
                         title: '',
@@ -1085,32 +1091,33 @@ function ActivityDetailView({
                   options={[{ label: 'Điểm danh VÀO', value: 'in' }, { label: 'Điểm danh RA', value: 'out' }]}
                 />
 
-                {/* Chọn ca từ danh sách hoặc nhập tự do */}
+                {/* Chọn ca điểm danh */}
                 {(sessions as any[]).length > 0 ? (
                   <Select
                     className="w-full mb-3"
                     size="large"
-                    placeholder="Chọn ca điểm danh (tùy chọn)"
-                    allowClear
+                    placeholder="Chọn ca để tạo mã QR (bắt buộc)"
                     value={sessionInput || undefined}
                     onChange={(v) => setSessionInput(v || '')}
                     options={(sessions as any[]).map((s: any) => ({
-                      label: `${s.sessionName} (${dayjs(s.startTime).format('DD/MM HH:mm')} – ${dayjs(s.endTime).format('HH:mm')})`,
+                      label: `${s.sessionName} (${dayjs(s.startTime).format('DD/MM/YYYY')} : ${dayjs(s.startTime).format('HH:mm')} – ${dayjs(s.endTime).format('HH:mm')})`,
                       value: s.sessionName
                     }))}
                   />
                 ) : (
-                  <Input
-                    placeholder="Tên ca (tùy chọn): Ca sáng, Ca chiều..."
-                    value={sessionInput}
-                    onChange={(e) => setSessionInput(e.target.value)}
-                    className="w-full mb-3"
-                    prefix={<span style={{ color: '#999', fontSize: 12 }}>📆&nbsp;</span>}
-                  />
+                  <div className="w-full text-center py-2 px-4 bg-blue-50 text-blue-700 rounded-lg text-sm mb-3 font-medium">
+                    📌 Điểm danh chung (Không phân ca)
+                  </div>
                 )}
 
                 <Button type="primary" size="large" block icon={<SyncOutlined />}
-                  onClick={() => generateCodeMutation.mutate(attendanceType)}
+                  onClick={() => {
+                    if ((sessions as any[]).length > 0 && !sessionInput) {
+                      messageApi.error("Vui lòng chọn ca điểm danh trước khi tạo mã QR");
+                      return;
+                    }
+                    generateCodeMutation.mutate(attendanceType);
+                  }}
                   loading={generateCodeMutation.isPending}
                 >
                   Tạo mã QR mới
@@ -1120,7 +1127,7 @@ function ActivityDetailView({
                   <div className="mt-6 flex flex-col items-center">
                     {currentSession && (
                       <Tag color="blue" style={{ marginBottom: 8, fontSize: 13, padding: '2px 12px' }}>
-                        {currentSession}
+                        Ca: {currentSession}
                       </Tag>
                     )}
                     <QRCode value={attendanceCode} size={220} bordered={false} />
@@ -1139,37 +1146,53 @@ function ActivityDetailView({
                   {(sessions as any[]).length > 0 ? (
                     <Select
                       className="w-full"
-                      placeholder="Chọn ca (tùy chọn)"
-                      allowClear
+                      placeholder="Chọn ca điểm danh (bắt buộc)"
                       value={manualSession || undefined}
-                      onChange={(v) => setManualSession(v || '')}
+                      onChange={(v) => {
+                        setManualSession(v || '');
+                        if (v) {
+                          const found = (sessions as any[]).find((s: any) => s.sessionName === v);
+                          if (found) {
+                            setManualDate(dayjs(found.startTime).format('YYYY-MM-DD'));
+                          }
+                        } else {
+                          setManualDate(undefined);
+                        }
+                      }}
                       options={(sessions as any[]).map((s: any) => ({
-                        label: `${s.sessionName} (${dayjs(s.startTime).format('DD/MM HH:mm')})`,
+                        label: `${s.sessionName} (${dayjs(s.startTime).format('DD/MM/YYYY')})`,
                         value: s.sessionName
                       }))}
                     />
-                  ) : (
-                    <Input
-                      placeholder="Tên ca (tùy chọn): Ca sáng, Ca chiều..."
-                      value={manualSession}
-                      onChange={(e) => setManualSession(e.target.value)}
-                      prefix={<span style={{ color: '#999', fontSize: 12 }}>📆 </span>}
-                    />
-                  )}
+                  ) : null}
+
                   <DatePicker
                     className="w-full"
-                    placeholder="Chọn ngày điểm danh (mặc định: hôm nay)"
+                    placeholder="Chọn ngày điểm danh"
                     format="DD/MM/YYYY"
+                    value={manualDate ? dayjs(manualDate, 'YYYY-MM-DD') : null}
                     onChange={(d) => setManualDate(d ? d.format('YYYY-MM-DD') : undefined)}
+                    disabled={(sessions as any[]).length > 0} // Vô hiệu hóa và tự động điền nếu đã chọn ca
                     disabledDate={(current) => {
                       const start = dayjs(activity.eventTime).startOf('day');
                       const end = dayjs(activity.eventEndTime ?? activity.eventTime).endOf('day');
                       return current.isBefore(start) || current.isAfter(end);
                     }}
                   />
+
                   <Button
                     block
-                    onClick={() => newStudentId.trim() && manualAttendanceMutation.mutate({ sid: newStudentId.trim(), date: manualDate })}
+                    onClick={() => {
+                      if (!newStudentId.trim()) {
+                        messageApi.error("Vui lòng nhập MSSV");
+                        return;
+                      }
+                      if ((sessions as any[]).length > 0 && !manualSession) {
+                        messageApi.error("Vui lòng chọn ca điểm danh");
+                        return;
+                      }
+                      manualAttendanceMutation.mutate({ sid: newStudentId.trim(), date: manualDate });
+                    }}
                     loading={manualAttendanceMutation.isPending}
                   >
                     Điểm danh thủ công
