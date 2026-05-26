@@ -144,3 +144,9 @@ export async function deleteActivitySessionApi(activityId: string, sessionId: nu
     const response = await api.delete(`/activities/${activityId}/sessions/${sessionId}`);
     return response.data;
 }
+
+/** Cập nhật ca điểm danh */
+export async function updateActivitySessionApi(activityId: string, sessionId: number, data: { sessionName: string; startTime: string; endTime: string }) {
+    const response = await api.put(`/activities/${activityId}/sessions/${sessionId}`, data);
+    return response.data;
+}

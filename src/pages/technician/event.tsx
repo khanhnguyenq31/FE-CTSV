@@ -744,6 +744,7 @@ function ActivityDetailView({
   });
 
   const [isSessionModalOpen, setIsSessionModalOpen] = useState(false);
+  const [editingSession, setEditingSession] = useState<any>(null);
   const [sessionForm] = Form.useForm();
 
   const createSessionMutation = useMutation({
@@ -755,6 +756,18 @@ function ActivityDetailView({
       sessionForm.resetFields();
     },
     onError: (err: any) => messageApi.error(err.response?.data?.message || err.message || "Tạo ca thất bại"),
+  });
+
+  const updateSessionMutation = useMutation({
+    mutationFn: (data: any) => updateActivitySessionApi(activity.id, editingSession.id, data),
+    onSuccess: () => {
+      refetchSessions();
+      messageApi.success("Cập nhật ca thành công");
+      setIsSessionModalOpen(false);
+      setEditingSession(null);
+      sessionForm.resetFields();
+    },
+    onError: (err: any) => messageApi.error(err.response?.data?.message || err.message || "Cập nhật ca thất bại"),
   });
 
   const deleteSessionMutation = useMutation({
@@ -1061,15 +1074,31 @@ function ActivityDetailView({
                       {
                         title: '',
                         key: 'action',
-                        width: 50,
+                        width: 80,
                         render: (_: any, r: any) => (
-                          <Popconfirm
-                            title="Xóa ca này?"
-                            onConfirm={() => deleteSessionMutation.mutate(r.id)}
-                            okButtonProps={{ danger: true }}
-                          >
-                            <Button type="text" danger size="small" icon={<DeleteOutlined />} loading={deleteSessionMutation.isPending} />
-                          </Popconfirm>
+                          <Space size={4}>
+                            <Button
+                              type="text"
+                              size="small"
+                              icon={<EditOutlined style={{ color: '#1890ff' }} />}
+                              onClick={() => {
+                                setEditingSession(r);
+                                setIsSessionModalOpen(true);
+                                sessionForm.setFieldsValue({
+                                  sessionName: r.sessionName,
+                                  startTime: dayjs(r.startTime),
+                                  endTime: dayjs(r.endTime),
+                                });
+                              }}
+                            />
+                            <Popconfirm
+                              title="Xóa ca này?"
+                              onConfirm={() => deleteSessionMutation.mutate(r.id)}
+                              okButtonProps={{ danger: true }}
+                            >
+                              <Button type="text" danger size="small" icon={<DeleteOutlined />} loading={deleteSessionMutation.isPending} />
+                            </Popconfirm>
+                          </Space>
                         )
                       }
                     ]}
@@ -1206,12 +1235,12 @@ function ActivityDetailView({
     }
   ];
 
-  // ── Modal Thêm Ca ─────────────────────────────────────────────────────────
+  // ── Modal Thêm/Sửa Ca ──────────────────────────────────────────────────────
   const sessionModal = (
     <Modal
-      title={<span><CalendarOutlined style={{ marginRight: 8 }} />Thêm ca điểm danh mới</span>}
+      title={<span><CalendarOutlined style={{ marginRight: 8 }} />{editingSession ? "Chỉnh sửa ca điểm danh" : "Thêm ca điểm danh mới"}</span>}
       open={isSessionModalOpen}
-      onCancel={() => { setIsSessionModalOpen(false); sessionForm.resetFields(); }}
+      onCancel={() => { setIsSessionModalOpen(false); setEditingSession(null); sessionForm.resetFields(); }}
       footer={null}
       width={480}
       destroyOnClose
@@ -1221,11 +1250,16 @@ function ActivityDetailView({
         layout="vertical"
         style={{ marginTop: 16 }}
         onFinish={(values) => {
-          createSessionMutation.mutate({
+          const payload = {
             sessionName: values.sessionName,
             startTime: values.startTime.toISOString(),
             endTime: values.endTime.toISOString(),
-          });
+          };
+          if (editingSession) {
+            updateSessionMutation.mutate(payload);
+          } else {
+            createSessionMutation.mutate(payload);
+          }
         }}
       >
         <Form.Item name="sessionName" label="Tên ca" rules={[{ required: true, message: 'Nhập tên ca' }]}>
@@ -1249,8 +1283,10 @@ function ActivityDetailView({
         </Form.Item>
         <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
           <Space>
-            <Button onClick={() => { setIsSessionModalOpen(false); sessionForm.resetFields(); }}>Hủy</Button>
-            <Button type="primary" htmlType="submit" loading={createSessionMutation.isPending}>Tạo ca</Button>
+            <Button onClick={() => { setIsSessionModalOpen(false); setEditingSession(null); sessionForm.resetFields(); }}>Hủy</Button>
+            <Button type="primary" htmlType="submit" loading={editingSession ? updateSessionMutation.isPending : createSessionMutation.isPending}>
+              {editingSession ? "Cập nhật" : "Tạo ca"}
+            </Button>
           </Space>
         </Form.Item>
       </Form>
