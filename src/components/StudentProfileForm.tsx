@@ -489,119 +489,121 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
 
                 {/* ========== TAB 3: TÌNH TRẠNG / QUYẾT ĐỊNH ========== */}
                 <Tabs.TabPane tab="Tình trạng/Quyết định" key="3">
-                    <Card style={{ marginBottom: 20 }} title={<span style={{ color: '#1890ff', fontWeight: 600 }}>Quyết định kỷ luật chính thức</span>}>
-                        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                            <Title level={4} style={{ marginBottom: 4 }}>
-                                Họ tên: {initialValues?.fullName || '–'} ({initialValues?.studentId || '–'})
-                            </Title>
-                            <div style={{ fontSize: 15 }}>
-                                Tình trạng hiện tại: <Tag color={tinhTrangColor} style={{ fontSize: 14, padding: '2px 12px' }}>{tinhTrang}</Tag>
+                    <Form disabled={false} component={false}>
+                        <Card style={{ marginBottom: 20 }} title={<span style={{ color: '#1890ff', fontWeight: 600 }}>Quyết định kỷ luật chính thức</span>}>
+                            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                                <Title level={4} style={{ marginBottom: 4 }}>
+                                    Họ tên: {initialValues?.fullName || '–'} ({initialValues?.studentId || '–'})
+                                </Title>
+                                <div style={{ fontSize: 15 }}>
+                                    Tình trạng hiện tại: <Tag color={tinhTrangColor} style={{ fontSize: 14, padding: '2px 12px' }}>{tinhTrang}</Tag>
+                                </div>
                             </div>
-                        </div>
 
-                        <Table
-                            columns={decisionColumns}
-                            dataSource={decisions?.filter(d => d.loai.includes('Quyết định kỷ luật'))}
-                            rowKey={(_, idx) => String(idx)}
-                            pagination={{ pageSize: 10 }}
-                            locale={{ emptyText: 'Chưa có quyết định kỷ luật nào' }}
-                            bordered
-                            size="small"
-                        />
-                    </Card>
-
-                    {localStorage.getItem('role') === 'student' && (
-                        <Card title={<span style={{ color: '#fa8c16', fontWeight: 600 }}><WarningOutlined /> Vi phạm Quy chế đang chờ xử lý & Giải trình</span>} style={{ marginBottom: 20 }}>
-                            <div style={{ marginBottom: 16 }}>
-                                <Tag color="warning" style={{ whiteSpace: 'normal', height: 'auto', padding: '8px 12px', fontSize: '13px', width: '100%' }}>
-                                    <strong>Lưu ý:</strong> Sinh viên có quyền nộp Bản giải trình/Ý kiến phản hồi đối với các ghi nhận vi phạm đang trong trạng thái "Chờ xử lý". Sau khi Quyết định chính thức được ban hành, thông tin giải trình sẽ không thể chỉnh sửa.
-                                </Tag>
-                            </div>
                             <Table
-                                loading={loadingPending}
-                                dataSource={pendingViolations}
-                                rowKey="id"
+                                columns={decisionColumns}
+                                dataSource={decisions?.filter(d => d.loai.includes('Quyết định kỷ luật'))}
+                                rowKey={(_, idx) => String(idx)}
+                                pagination={{ pageSize: 10 }}
+                                locale={{ emptyText: 'Chưa có quyết định kỷ luật nào' }}
                                 bordered
                                 size="small"
-                                pagination={false}
-                                locale={{ emptyText: 'Không có ghi nhận vi phạm nào đang chờ xử lý' }}
-                                columns={[
-                                    {
-                                        title: 'Lỗi vi phạm',
-                                        render: (_: any, r: any) => (
-                                            <div>
-                                                <Text strong type="danger">{r.quyPham?.tenQuyPham || 'Vi phạm quy chế'}</Text>
-                                                {r.moTaChiTiet && <div style={{ fontSize: '12px', color: '#8c8c8c', marginTop: 4 }}>Chi tiết: {r.moTaChiTiet}</div>}
-                                            </div>
-                                        )
-                                    },
-                                    {
-                                        title: 'Ngày ghi nhận',
-                                        dataIndex: 'ngayViPham',
-                                        width: 140,
-                                        render: (d: string) => d ? new Date(d).toLocaleDateString('vi-VN') : '–'
-                                    },
-                                    {
-                                        title: 'Bản giải trình của bạn',
-                                        key: 'giaiTrinh',
-                                        render: (_: any, r: any) => (
-                                            r.sinhVienGiaiTrinh ? (
-                                                <div style={{ padding: '6px 10px', background: '#fafafa', borderRadius: '4px', border: '1px dashed #d9d9d9' }}>
-                                                    <span style={{ whiteSpace: 'pre-wrap' }}>{r.sinhVienGiaiTrinh}</span>
-                                                </div>
-                                            ) : (
-                                                <span style={{ color: '#bfbfbf', fontStyle: 'italic' }}>Chưa nộp giải trình</span>
-                                            )
-                                        )
-                                    },
-                                    {
-                                        title: 'Thao tác',
-                                        key: 'action',
-                                        width: 150,
-                                        align: 'center' as const,
-                                        render: (_: any, r: any) => (
-                                            <Button 
-                                                type="primary" 
-                                                ghost 
-                                                icon={<EditOutlined />} 
-                                                size="small" 
-                                                onClick={() => handleOpenExplainModal(r.id, r.sinhVienGiaiTrinh)}
-                                                style={{ borderRadius: 4 }}
-                                            >
-                                                {r.sinhVienGiaiTrinh ? 'Cập nhật giải trình' : 'Nộp giải trình'}
-                                            </Button>
-                                        )
-                                    }
-                                ]}
                             />
                         </Card>
-                    )}
 
-                    {/* Modal Nộp giải trình cho Sinh viên */}
-                    <Modal
-                        maskStyle={{ backgroundColor: 'transparent' }}
-                        title={<span><FileTextOutlined style={{ color: '#fa8c16' }} /> Viết Bản Giải Trình Vi Phạm</span>}
-                        open={isExplainModalOpen}
-                        onCancel={() => setIsExplainModalOpen(false)}
-                        onOk={handleSubmitExplain}
-                        okText="Gửi giải trình"
-                        cancelText="Hủy"
-                        confirmLoading={submitExplainLoading}
-                        width={600}
-                    >
-                        <div style={{ marginBottom: 16, marginTop: 12 }}>
-                            <Text type="secondary">
-                                Hãy mô tả trung thực lý do, hoàn cảnh diễn ra sự việc hoặc các thông tin cứu xét liên quan đến hành vi vi phạm này để Hội đồng kỷ luật xem xét.
-                            </Text>
-                        </div>
-                        <TextArea
-                            rows={6}
-                            placeholder="Nhập nội dung giải trình chi tiết ở đây (Tối đa 1000 ký tự)..."
-                            value={explainText}
-                            onChange={(e) => setExplainText(e.target.value)}
-                            maxLength={1000}
-                        />
-                    </Modal>
+                        {localStorage.getItem('role') === 'student' && (
+                            <Card title={<span style={{ color: '#fa8c16', fontWeight: 600 }}><WarningOutlined /> Vi phạm Quy chế đang chờ xử lý & Giải trình</span>} style={{ marginBottom: 20 }}>
+                                <div style={{ marginBottom: 16 }}>
+                                    <Tag color="warning" style={{ whiteSpace: 'normal', height: 'auto', padding: '8px 12px', fontSize: '13px', width: '100%' }}>
+                                        <strong>Lưu ý:</strong> Sinh viên có quyền nộp Bản giải trình/Ý kiến phản hồi đối với các ghi nhận vi phạm đang trong trạng thái "Chờ xử lý". Sau khi Quyết định chính thức được ban hành, thông tin giải trình sẽ không thể chỉnh sửa.
+                                    </Tag>
+                                </div>
+                                <Table
+                                    loading={loadingPending}
+                                    dataSource={pendingViolations}
+                                    rowKey="id"
+                                    bordered
+                                    size="small"
+                                    pagination={false}
+                                    locale={{ emptyText: 'Không có ghi nhận vi phạm nào đang chờ xử lý' }}
+                                    columns={[
+                                        {
+                                            title: 'Lỗi vi phạm',
+                                            render: (_: any, r: any) => (
+                                                <div>
+                                                    <Text strong type="danger">{r.quyPham?.tenQuyPham || 'Vi phạm quy chế'}</Text>
+                                                    {r.moTaChiTiet && <div style={{ fontSize: '12px', color: '#8c8c8c', marginTop: 4 }}>Chi tiết: {r.moTaChiTiet}</div>}
+                                                </div>
+                                            )
+                                        },
+                                        {
+                                            title: 'Ngày ghi nhận',
+                                            dataIndex: 'ngayViPham',
+                                            width: 140,
+                                            render: (d: string) => d ? new Date(d).toLocaleDateString('vi-VN') : '–'
+                                        },
+                                        {
+                                            title: 'Bản giải trình của bạn',
+                                            key: 'giaiTrinh',
+                                            render: (_: any, r: any) => (
+                                                r.sinhVienGiaiTrinh ? (
+                                                    <div style={{ padding: '6px 10px', background: '#fafafa', borderRadius: '4px', border: '1px dashed #d9d9d9' }}>
+                                                        <span style={{ whiteSpace: 'pre-wrap' }}>{r.sinhVienGiaiTrinh}</span>
+                                                    </div>
+                                                ) : (
+                                                    <span style={{ color: '#bfbfbf', fontStyle: 'italic' }}>Chưa nộp giải trình</span>
+                                                )
+                                            )
+                                        },
+                                        {
+                                            title: 'Thao tác',
+                                            key: 'action',
+                                            width: 150,
+                                            align: 'center' as const,
+                                            render: (_: any, r: any) => (
+                                                <Button 
+                                                    type="primary" 
+                                                    ghost 
+                                                    icon={<EditOutlined />} 
+                                                    size="small" 
+                                                    onClick={() => handleOpenExplainModal(r.id, r.sinhVienGiaiTrinh)}
+                                                    style={{ borderRadius: 4 }}
+                                                >
+                                                    {r.sinhVienGiaiTrinh ? 'Cập nhật giải trình' : 'Nộp giải trình'}
+                                                </Button>
+                                            )
+                                        }
+                                    ]}
+                                />
+                            </Card>
+                        )}
+
+                        {/* Modal Nộp giải trình cho Sinh viên */}
+                        <Modal
+                            maskStyle={{ backgroundColor: 'transparent' }}
+                            title={<span><FileTextOutlined style={{ color: '#fa8c16' }} /> Viết Bản Giải Trình Vi Phạm</span>}
+                            open={isExplainModalOpen}
+                            onCancel={() => setIsExplainModalOpen(false)}
+                            onOk={handleSubmitExplain}
+                            okText="Gửi giải trình"
+                            cancelText="Hủy"
+                            confirmLoading={submitExplainLoading}
+                            width={600}
+                        >
+                            <div style={{ marginBottom: 16, marginTop: 12 }}>
+                                <Text type="secondary">
+                                    Hãy mô tả trung thực lý do, hoàn cảnh diễn ra sự việc hoặc các thông tin cứu xét liên quan đến hành vi vi phạm này để Hội đồng kỷ luật xem xét.
+                                </Text>
+                            </div>
+                            <TextArea
+                                rows={6}
+                                placeholder="Nhập nội dung giải trình chi tiết ở đây (Tối đa 1000 ký tự)..."
+                                value={explainText}
+                                onChange={(e) => setExplainText(e.target.value)}
+                                maxLength={1000}
+                            />
+                        </Modal>
+                    </Form>
                 </Tabs.TabPane>
             </Tabs>
         </Form>
