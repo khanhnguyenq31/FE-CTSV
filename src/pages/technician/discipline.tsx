@@ -571,7 +571,7 @@ function EvaluateDisciplineTab({ messageApi }: { messageApi: any }) {
 function EvaluationHistoryTab({ messageApi }: { messageApi: any }) {
     const queryClient = useQueryClient();
     const { data: history, isLoading } = useQuery({ queryKey: ['evalHistory'], queryFn: getEvaluationHistory });
-    const { data: admissionPeriods } = useQuery({ queryKey: ['admissionPeriods'], queryFn: getAdmissionPeriods });
+    const { data: cohorts } = useQuery({ queryKey: ['cohorts'], queryFn: getCohorts });
     const [detailId, setDetailId] = useState<number | null>(null);
     const { data: details, isLoading: isLoadingDetails } = useQuery({
         queryKey: ['evalDetails', detailId],
@@ -599,11 +599,13 @@ function EvaluationHistoryTab({ messageApi }: { messageApi: any }) {
         { title: 'Tên Đợt Xét', dataIndex: 'tenDotXet', key: 'tenDotXet' },
         {
             title: 'Khóa áp dụng', dataIndex: 'khoaSinhVien', key: 'khoaSinhVien', render: (val: string) => {
-                if (!val) return 'Tất cả';
-                if (!admissionPeriods?.periods) return val;
-                const ids = val.split(',').map(Number);
-                const matched = admissionPeriods.periods.filter((p: any) => ids.includes(p.id));
-                return matched.map((p: any) => p.name).join(', ');
+                if (val) {
+                    return val.split(',').join(', ');
+                }
+                if (cohorts && cohorts.length > 0) {
+                    return cohorts.join(', ');
+                }
+                return 'Tất cả';
             }
         },
         { title: 'Năm học', dataIndex: 'namHoc', key: 'namHoc' },
@@ -721,7 +723,7 @@ function EvaluationDraftsTab({ messageApi }: { messageApi: any }) {
     const handleExportExcel = async () => {
         try {
             messageApi.info('Đang tạo và xuất dữ liệu Excel...');
-            await downloadDraftExcel(activeDraft.id, selectedCohort, selectedMajor);
+            await downloadDraftExcel(activeDraft.id, selectedCohort, selectedMajor, activeDraft.tenDotXet);
             messageApi.success('Tải file Excel thành công!');
         } catch (e) {
             messageApi.error('Lỗi khi xuất file Excel');

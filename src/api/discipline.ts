@@ -179,7 +179,7 @@ export const getAcademicYears = async () => {
     return res.data;
 };
 
-export const downloadDraftExcel = async (draftId: number | string, khoa?: string, nganh?: string) => {
+export const downloadDraftExcel = async (draftId: number | string, khoa?: string, nganh?: string, dotName?: string) => {
     const params = new URLSearchParams();
     if (khoa) params.append('khoa', khoa);
     if (nganh) params.append('nganh', nganh);
@@ -188,13 +188,11 @@ export const downloadDraftExcel = async (draftId: number | string, khoa?: string
         responseType: 'blob'
     });
     
-    const disposition = res.headers['content-disposition'];
-    let filename = `DanhSach_KyLuat_Draft_${draftId}.xlsx`;
-    if (disposition && disposition.indexOf("filename*=UTF-8''") !== -1) {
-        filename = decodeURIComponent(disposition.split("filename*=UTF-8''")[1]);
-    } else if (disposition && disposition.indexOf('filename=') !== -1) {
-        filename = disposition.split('filename=')[1].replace(/["']/g, '');
-    }
+    // Tạo tên file chính xác theo điều kiện lọc
+    const suffixKhoa = khoa ? `_Khoa${khoa}` : '_KhoaTatCa';
+    const suffixNganh = nganh ? `_Nganh${nganh}` : '_NganhTatCa';
+    const tenDot = dotName ? dotName.replace(/\s+/g, '_') : draftId;
+    const filename = `DanhSach_KyLuat${suffixKhoa}${suffixNganh}_${tenDot}.xlsx`;
     
     const blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = window.URL.createObjectURL(blob);
