@@ -15,6 +15,8 @@ export interface DisciplineCondition {
     uuTien: number;
     diemTBHK_duoi: number | null;
     diemTBTL_duoi: number | null;
+    tinChiHocKyDuoi: number | null;
+    tinChiTichLuyDuoi: number | null;
     soLanCanhCaoLienTiep_Tu: number | null;
     soLanCanhCaoKhongLienTiep_Tu: number | null;
     hinhThuc?: DisciplineForm;
@@ -175,4 +177,30 @@ export const getCohorts = async () => {
 export const getAcademicYears = async () => {
     const res = await api.get('/discipline/academic-years');
     return res.data;
+};
+
+export const downloadDraftExcel = async (draftId: number | string, khoa?: string, nganh?: string) => {
+    const params = new URLSearchParams();
+    if (khoa) params.append('khoa', khoa);
+    if (nganh) params.append('nganh', nganh);
+
+    const res = await api.get(`/discipline/drafts/${draftId}/excel?${params.toString()}`, {
+        responseType: 'blob'
+    });
+    
+    const disposition = res.headers['content-disposition'];
+    let filename = `DanhSach_KyLuat_Draft_${draftId}.xlsx`;
+    if (disposition && disposition.indexOf("filename*=UTF-8''") !== -1) {
+        filename = decodeURIComponent(disposition.split("filename*=UTF-8''")[1]);
+    } else if (disposition && disposition.indexOf('filename=') !== -1) {
+        filename = disposition.split('filename=')[1].replace(/["']/g, '');
+    }
+    
+    const blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.click();
+    window.URL.revokeObjectURL(url);
 };

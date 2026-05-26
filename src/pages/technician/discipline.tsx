@@ -15,7 +15,7 @@ import {
     getDisciplineConfigs, createDisciplineConfig, updateDisciplineConfig, deleteDisciplineConfig,
     saveDisciplineConditions, evaluateDiscipline, saveEvaluation, getEvaluationHistory, getEvaluationDetails, clearEvaluationHistory,
     getEvaluationDrafts, finalizeEvaluation, toggleAppeal, getFormalLists, applyDisciplineStatus, downloadDisciplinePdf,
-    downloadPreliminaryPdf,
+    downloadPreliminaryPdf, downloadDraftExcel,
     publishDraft, getCohorts, getAcademicYears
 } from '../../api/discipline';
 import { getAdmissionPeriods } from '../../api/admission';
@@ -26,7 +26,7 @@ const { TabPane } = Tabs;
 const { Title, Text } = Typography;
 
 export default function DisciplinePage({ messageApi }: { messageApi: any }) {
-  useDocumentTitle("Kỷ luật Học vụ");
+    useDocumentTitle("Kỷ luật Học vụ");
     return (
         <div>
             <h2 style={{ marginBottom: 20 }}>Quản lý Kỷ luật sinh viên (Nâng cao)</h2>
@@ -318,7 +318,7 @@ function DisciplineConfigTab({ messageApi }: { messageApi: any }) {
                     <Form.List name="gpaRules">
                         {(fields, { add, remove, move }) => (
                             <>
-                                <h4>1. Quy tắc xét bằng GPA (Ưu tiên từ cao tới thấp)</h4>
+                                <h4>1. Vòng kết quả Học vụ (GPA / Tín chỉ) (Tất cả điều kiện áp dụng kiểu OR, dính 1 cái là dính án - Ưu tiên từ cao tới thấp)</h4>
                                 {fields.map(({ key, name, ...restField }, index) => (
                                     <Card size="small" key={key} style={{ marginBottom: 16 }}
                                         title={<Text strong>Độ ưu tiên: {index + 1}</Text>}
@@ -342,20 +342,30 @@ function DisciplineConfigTab({ messageApi }: { messageApi: any }) {
                                             </Col>
                                         </Row>
                                         <Row gutter={16}>
-                                            <Col span={12}>
-                                                <Form.Item {...restField} name={[name, 'gpaHocKyDuoi']} label="GPA Học kỳ dưới (VD: 2.5)">
-                                                    <InputNumber step={0.1} style={{ width: '100%' }} />
+                                            <Col span={6}>
+                                                <Form.Item {...restField} name={[name, 'gpaHocKyDuoi']} label="GPA Học kỳ dưới">
+                                                    <InputNumber step={0.1} min={0} max={4.0} style={{ width: '100%' }} placeholder="VD: 2.0" />
                                                 </Form.Item>
                                             </Col>
-                                            <Col span={12}>
-                                                <Form.Item {...restField} name={[name, 'gpaTichLuyDuoi']} label="GPA Tích lũy dưới (VD: 4.0)">
-                                                    <InputNumber step={0.1} style={{ width: '100%' }} />
+                                            <Col span={6}>
+                                                <Form.Item {...restField} name={[name, 'gpaTichLuyDuoi']} label="GPA Tích lũy dưới">
+                                                    <InputNumber step={0.1} min={0} max={4.0} style={{ width: '100%' }} placeholder="VD: 2.0" />
+                                                </Form.Item>
+                                            </Col>
+                                            <Col span={6}>
+                                                <Form.Item {...restField} name={[name, 'tinChiHocKyDuoi']} label="Tín chỉ Học kỳ dưới">
+                                                    <InputNumber step={1} min={0} max={150} style={{ width: '100%' }} placeholder="VD: 14" />
+                                                </Form.Item>
+                                            </Col>
+                                            <Col span={6}>
+                                                <Form.Item {...restField} name={[name, 'tinChiTichLuyDuoi']} label="Tín chỉ Tích lũy dưới">
+                                                    <InputNumber step={1} min={0} max={150} style={{ width: '100%' }} placeholder="VD: 50" />
                                                 </Form.Item>
                                             </Col>
                                         </Row>
                                     </Card>
                                 ))}
-                                <Button type="dashed" icon={<PlusOutlined />} onClick={() => add()} block style={{ marginTop: 10, marginBottom: 20, borderRadius: 8 }}>Thêm Rule GPA</Button>
+                                <Button type="dashed" icon={<PlusOutlined />} onClick={() => add()} block style={{ marginTop: 10, marginBottom: 20, borderRadius: 8 }}>Thêm Quy tắc Học vụ (GPA/Tín chỉ)</Button>
                             </>
                         )}
                     </Form.List>
@@ -490,10 +500,10 @@ function EvaluateDisciplineTab({ messageApi }: { messageApi: any }) {
         { title: 'MSSV', dataIndex: 'studentId', key: 'studentId' },
         { title: 'Ngành', dataIndex: 'major', key: 'major' },
         { title: 'Tiến trình vi phạm', dataIndex: ['matchedRule', 'escalationPath'], key: 'escalationPath', render: (t: string) => <Text type="secondary">{t}</Text> },
-        { title: 'Kết quả vòng GPA', dataIndex: ['matchedRule', 'gpaForm', 'tenHinhThuc'], key: 'gpaForm', render: (t: string) => <Tag color="blue">{t}</Tag> },
+        { title: 'Kết quả vòng Học vụ', dataIndex: ['matchedRule', 'gpaForm', 'tenHinhThuc'], key: 'gpaForm', render: (t: string) => <Tag color="blue">{t}</Tag> },
         { title: 'Kết quả vòng Lũy tiến', dataIndex: ['matchedRule', 'luyTienForm', 'tenHinhThuc'], key: 'luyTienForm', render: (t: string) => t ? <Tag color="orange">{t}</Tag> : <Text type="secondary">-</Text> },
         { title: 'Kết quả Cuối cùng', dataIndex: ['matchedRule', 'hinhThuc', 'tenHinhThuc'], key: 'hinhThuc', render: (t: string) => <Tag color="red">{t}</Tag> },
-        { title: 'GPA thực tế', key: 'actualGpa', render: (_: any, r: any) => `GPA HK: ${r.actualGpaSem?.toFixed(2)} | GPA TL: ${r.actualGpaTotal?.toFixed(2)}` }
+        { title: 'Kết quả thực tế', key: 'actualGpa', render: (_: any, r: any) => `GPA HK: ${r.actualGpaSem?.toFixed(2)} | GPA TL: ${r.actualGpaTotal?.toFixed(2)} | TC HK: ${r.actualCreditsSem || 0} | TC TL: ${r.actualCreditsTotal || 0}` }
     ];
 
     return (
@@ -513,7 +523,7 @@ function EvaluateDisciplineTab({ messageApi }: { messageApi: any }) {
                             <Select.Option value="2">HK 2</Select.Option>
                         </Select>
                     </Form.Item>
-                    <Form.Item name="khoaSinhVien" label="Khóa (Khóa trúng tuyển)">
+                    <Form.Item name="khoaSinhVien" label="Khóa">
                         <Select
                             mode="multiple"
                             style={{ minWidth: 200 }}
@@ -666,6 +676,12 @@ function EvaluationDraftsTab({ messageApi }: { messageApi: any }) {
         enabled: !!activeDraft
     });
 
+    const { data: cohorts } = useQuery({ queryKey: ['cohorts'], queryFn: getCohorts });
+
+    const [searchText, setSearchText] = useState('');
+    const [selectedCohort, setSelectedCohort] = useState<string | undefined>(undefined);
+    const [selectedMajor, setSelectedMajor] = useState<string | undefined>(undefined);
+
     const mutationToggle = useMutation({
         mutationFn: toggleAppeal,
         onSuccess: () => {
@@ -686,15 +702,38 @@ function EvaluationDraftsTab({ messageApi }: { messageApi: any }) {
     if (isLoadingDrafts || (activeDraft && isLoadingDetails)) return <div style={{ padding: 50, textAlign: 'center' }}><AppLoading loading tip="Đang tải dữ liệu danh sách dự kiến..." /></div>;
     if (!activeDraft) return <div style={{ padding: 50, textAlign: 'center' }}>Không có danh sách dự kiến nào đang hoạt động.</div>;
 
-    const dsKytLuat = (details as any[])?.filter(d => !d.isCuuXet) || [];
-    const dsCuuXet = (details as any[])?.filter(d => d.isCuuXet) || [];
+    // Lấy danh sách ngành học duy nhất từ chi tiết xét kỷ luật để lọc
+    const uniqueMajors = Array.from(new Set((details as any[])?.map(d => d.major).filter(Boolean))) as string[];
+
+    // Lọc phía Client side
+    const filteredDetails = (details as any[])?.filter(d => {
+        const matchesSearch = !searchText || 
+            d.fullName?.toLowerCase().includes(searchText.toLowerCase()) || 
+            d.studentId?.toLowerCase().includes(searchText.toLowerCase());
+        const matchesCohort = !selectedCohort || d.className === selectedCohort;
+        const matchesMajor = !selectedMajor || d.major === selectedMajor;
+        return matchesSearch && matchesCohort && matchesMajor;
+    }) || [];
+
+    const dsKytLuat = filteredDetails.filter(d => !d.isCuuXet);
+    const dsCuuXet = filteredDetails.filter(d => d.isCuuXet);
+
+    const handleExportExcel = async () => {
+        try {
+            messageApi.info('Đang tạo và xuất dữ liệu Excel...');
+            await downloadDraftExcel(activeDraft.id, selectedCohort, selectedMajor);
+            messageApi.success('Tải file Excel thành công!');
+        } catch (e) {
+            messageApi.error('Lỗi khi xuất file Excel');
+        }
+    };
 
     const columns = [
         { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName' },
         { title: 'MSSV', dataIndex: 'studentId', key: 'studentId' },
         { title: 'Ngành', dataIndex: 'major', key: 'major' },
         { title: 'Lớp / Khóa', dataIndex: 'className', key: 'className' },
-        { title: 'Bị phạt (vòng GPA)', dataIndex: 'hinhThucGpa', key: 'hinhThucGpa', render: (t: string) => <Tag color="blue">{t}</Tag> },
+        { title: 'Bị phạt (vòng Học vụ)', dataIndex: 'hinhThucGpa', key: 'hinhThucGpa', render: (t: string) => <Tag color="blue">{t}</Tag> },
         { title: 'Hình phạt Dự kiến', dataIndex: 'hinhThuc', key: 'hinhThuc', render: (t: string) => <Tag color="red">{t}</Tag> },
         {
             title: 'Trạng thái', key: 'status', align: 'center' as const, width: 140, render: (_: any, r: any) => (
@@ -749,6 +788,56 @@ function EvaluationDraftsTab({ messageApi }: { messageApi: any }) {
                     </Popconfirm>
                 </Space>
             </div>
+
+            {/* BỘ LỌC TIM KIẾM VÀ XUẤT EXCEL CHUYÊN NGHIỆP */}
+            <Card size="small" style={{ marginBottom: 16, backgroundColor: '#fafafa', borderRadius: 8 }}>
+                <Row gutter={16} align="middle">
+                    <Col span={6}>
+                        <Input.Search
+                            placeholder="Tìm sinh viên theo tên, MSSV..."
+                            allowClear
+                            onChange={(e) => setSearchText(e.target.value)}
+                            style={{ width: '100%' }}
+                        />
+                    </Col>
+                    <Col span={6}>
+                        <Select
+                            placeholder="Lọc theo Khóa / Lớp"
+                            style={{ width: '100%' }}
+                            allowClear
+                            value={selectedCohort}
+                            onChange={(val) => setSelectedCohort(val)}
+                        >
+                            {cohorts?.map((c: string) => (
+                                <Select.Option key={c} value={c}>{c}</Select.Option>
+                            ))}
+                        </Select>
+                    </Col>
+                    <Col span={6}>
+                        <Select
+                            placeholder="Lọc theo Ngành học"
+                            style={{ width: '100%' }}
+                            allowClear
+                            value={selectedMajor}
+                            onChange={(val) => setSelectedMajor(val)}
+                        >
+                            {uniqueMajors.map((m: string) => (
+                                <Select.Option key={m} value={m}>{m}</Select.Option>
+                            ))}
+                        </Select>
+                    </Col>
+                    <Col span={6} style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <Button
+                            type="primary"
+                            icon={<FileTextOutlined />}
+                            onClick={handleExportExcel}
+                            style={{ backgroundColor: '#217346', borderColor: '#217346', borderRadius: 8 }}
+                        >
+                            Xuất Excel (.xlsx)
+                        </Button>
+                    </Col>
+                </Row>
+            </Card>
 
             <Tabs defaultActiveKey="1" type="card">
                 <TabPane tab={`Danh sách kỷ luật (${dsKytLuat.length})`} key="1">
@@ -834,9 +923,9 @@ function FormalListTab({ messageApi }: { messageApi: any }) {
         },
         { title: 'Năm học', dataIndex: 'namHoc', key: 'namHoc' },
         { title: 'Học kỳ', dataIndex: 'hocKy', key: 'hocKy' },
-        { 
+        {
             title: 'Quyết định', key: 'quyetDinh', render: (_: any, r: any) => (
-                r.quyetDinhs && r.quyetDinhs.length > 0 
+                r.quyetDinhs && r.quyetDinhs.length > 0
                     ? <Tag color="success" icon={<CheckCircleOutlined />}>Đã ban hành ({r.quyetDinhs[0].soQuyetDinh})</Tag>
                     : <Tag color="warning" icon={<ExclamationCircleOutlined />}>Chưa ban hành</Tag>
             )
