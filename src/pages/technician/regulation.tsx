@@ -110,6 +110,7 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
             formData.append('quyPhamId', values.quyPhamId);
             formData.append('ngayViPham', values.ngayViPham.format('YYYY-MM-DD'));
             formData.append('moTaChiTiet', values.moTaChiTiet || '');
+            formData.append('ketQuaHop', values.ketQuaHop || '');
             if (file) {
                 formData.append('minhChung', file);
             }
@@ -161,6 +162,7 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
             await banHanhQuyetDinh({
                 ...values,
                 ngayKy: values.ngayKy.format('YYYY-MM-DD'),
+                ngayHetHieuLuc: values.ngayHetHieuLuc ? values.ngayHetHieuLuc.format('YYYY-MM-DD') : null,
                 dsViPham
             });
             if (messageApi) messageApi.success('Ban hành Quyết định thành công');
@@ -221,6 +223,31 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
                             {record.moTaChiTiet}
                         </div>
                     </Tooltip>
+                </div>
+            )
+        },
+        {
+            title: 'Giải trình & Họp Hội đồng',
+            key: 'giaiTrinhHop',
+            width: 220,
+            render: (_: any, record: any) => (
+                <div>
+                    <div style={{ fontSize: '12px', marginBottom: 4 }}>
+                        <Text strong>Giải trình SV: </Text>
+                        {record.sinhVienGiaiTrinh ? (
+                            <Text type="warning">{record.sinhVienGiaiTrinh}</Text>
+                        ) : (
+                            <Text type="secondary" italic>Chưa nộp</Text>
+                        )}
+                    </div>
+                    <div style={{ fontSize: '12px' }}>
+                        <Text strong>Kết quả họp: </Text>
+                        {record.ketQuaHop ? (
+                            <Text type="success">{record.ketQuaHop}</Text>
+                        ) : (
+                            <Text type="secondary" italic>Chưa ghi nhận</Text>
+                        )}
+                    </div>
                 </div>
             )
         },
@@ -290,7 +317,8 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
                                     studentId: record.studentId,
                                     quyPhamId: record.quyPhamId,
                                     ngayViPham: dayjs(record.ngayViPham),
-                                    moTaChiTiet: record.moTaChiTiet
+                                    moTaChiTiet: record.moTaChiTiet,
+                                    ketQuaHop: record.ketQuaHop
                                 });
                                 setIsViPhamModalOpen(true);
                             }}
@@ -542,6 +570,16 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
                     <Form.Item name="moTaChiTiet" label="Mô tả chi tiết sự vụ">
                         <TextArea rows={4} placeholder="Mô tả sự việc đã diễn ra..." />
                     </Form.Item>
+                    {editingViPham && (
+                        <div style={{ marginBottom: 16, padding: '12px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '4px' }}>
+                            <Text strong><CheckSquareOutlined /> Giải trình của sinh viên:</Text>
+                            <br />
+                            <Text type="warning">{editingViPham.sinhVienGiaiTrinh || 'Sinh viên chưa gửi giải trình.'}</Text>
+                        </div>
+                    )}
+                    <Form.Item name="ketQuaHop" label="Kết quả họp / Ghi chú xử lý Hội đồng">
+                        <TextArea rows={3} placeholder="Ghi nhận ý kiến họp lớp, khoa, hoặc kết luận của Hội đồng kỷ luật..." />
+                    </Form.Item>
                     <Form.Item label="Minh chứng (Ảnh / PDF)">
                         <Upload 
                             beforeUpload={(file) => { setFile(file); return false; }} 
@@ -606,6 +644,9 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
                                     </Form.Item>
                                 </Col>
                             </Row>
+                            <Form.Item name="ngayHetHieuLuc" label="Ngày hết hiệu lực (Không bắt buộc)">
+                                <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" placeholder="Chọn ngày hết hạn..." />
+                            </Form.Item>
                         </Col>
                         <Col span={14}>
                             <Divider orientation="left" plain>Điều chỉnh Hình thức Kỷ luật ({selectedViPhams.length})</Divider>

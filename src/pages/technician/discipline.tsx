@@ -906,7 +906,8 @@ function FormalListTab({ messageApi }: { messageApi: any }) {
                 id: selectedFormalId!,
                 data: {
                     ...values,
-                    ngayKy: values.ngayKy.format('YYYY-MM-DD')
+                    ngayKy: values.ngayKy.format('YYYY-MM-DD'),
+                    ngayHetHieuLuc: values.ngayHetHieuLuc ? values.ngayHetHieuLuc.format('YYYY-MM-DD') : null
                 }
             });
         } catch (e) { /* validation failed */ }
@@ -996,6 +997,9 @@ function FormalListTab({ messageApi }: { messageApi: any }) {
                     </Form.Item>
                     <Form.Item name="trichDan" label="Trích dẫn / Căn cứ">
                         <Input.TextArea rows={4} placeholder="Căn cứ Quy chế đào tạo...; Căn cứ kết quả xét kỷ luật..." />
+                    </Form.Item>
+                    <Form.Item name="ngayHetHieuLuc" label="Ngày hết hiệu lực (Không bắt buộc)">
+                        <DatePicker style={{ width: '100%' }} format="DD/MM/YYYY" placeholder="Chọn ngày hết hạn..." />
                     </Form.Item>
                 </Form>
             </Modal>

@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Typography, Form, Input, Button, Card, Row, Col, Select, DatePicker, Upload, Avatar, Tabs, Table, Tag } from 'antd';
-import { UploadOutlined, UserOutlined } from '@ant-design/icons';
+import { Typography, Form, Input, Button, Card, Row, Col, Select, DatePicker, Upload, Avatar, Tabs, Table, Tag, message, Modal } from 'antd';
+import { UploadOutlined, UserOutlined, WarningOutlined, EditOutlined, FileTextOutlined } from '@ant-design/icons';
 
 import { API_BASE_URL } from '../api/auth';
 
 import type { ColProps } from 'antd';
 import type { Rule } from 'antd/lib/form';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
 
@@ -186,6 +186,74 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
         onFinish(values, avatarFile);
     };
 
+    // State & actions for Pending Violations (Student view)
+    const [pendingViolations, setPendingViolations] = useState<any[]>([]);
+    const [loadingPending, setLoadingPending] = useState(false);
+    const [isExplainModalOpen, setIsExplainModalOpen] = useState(false);
+    const [explainingId, setExplainingId] = useState<number | null>(null);
+    const [explainText, setExplainText] = useState('');
+    const [submitExplainLoading, setSubmitExplainLoading] = useState(false);
+
+    const loadPendingViolations = async () => {
+        try {
+            const token = localStorage.getItem('accessToken');
+            if (!token) return;
+            setLoadingPending(true);
+            const res = await fetch(`${API_BASE_URL}/student/pending-violations`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setPendingViolations(data.violations || []);
+            }
+        } catch (e) {
+            console.error('Failed to load pending violations', e);
+        } finally {
+            setLoadingPending(false);
+        }
+    };
+
+    useEffect(() => {
+        const role = localStorage.getItem('role');
+        if (role === 'student' && initialValues) {
+            loadPendingViolations();
+        }
+    }, [initialValues]);
+
+    const handleOpenExplainModal = (id: number, currentExplain: string) => {
+        setExplainingId(id);
+        setExplainText(currentExplain || '');
+        setIsExplainModalOpen(true);
+    };
+
+    const handleSubmitExplain = async () => {
+        if (!explainingId) return;
+        setSubmitExplainLoading(true);
+        try {
+            const token = localStorage.getItem('accessToken');
+            const res = await fetch(`${API_BASE_URL}/student/pending-violations/${explainingId}/explain`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ giaiTrinh: explainText })
+            });
+            if (res.ok) {
+                message.success('Gửi giải trình thành công');
+                loadPendingViolations();
+                setIsExplainModalOpen(false);
+            } else {
+                message.error('Gửi giải trình thất bại');
+            }
+        } catch (e) {
+            console.error(e);
+            message.error('Có lỗi xảy ra');
+        } finally {
+            setSubmitExplainLoading(false);
+        }
+    };
+
     // Props Responsive
     const defaultColProps: ColProps = { xs: 24, sm: 24, md: 12, lg: 8 };
     const colProps4: ColProps = { xs: 24, sm: 24, md: 12, lg: 6 };
@@ -228,12 +296,31 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
     );
 
     const decisionColumns = [
-        { title: 'Học kỳ', dataIndex: 'hocKy', key: 'hocKy', width: 200 },
-        { title: 'Lý do quyết định', dataIndex: 'lyDo', key: 'lyDo', width: 160 },
-        { title: 'Số quyết định', dataIndex: 'soQuyetDinh', key: 'soQuyetDinh', width: 140 },
+        { title: 'Học kỳ', dataIndex: 'hocKy', key: 'hocKy', width: 130 },
+        { title: 'Lý do quyết định', dataIndex: 'lyDo', key: 'lyDo', width: 150 },
+        { title: 'Số quyết định', dataIndex: 'soQuyetDinh', key: 'soQuyetDinh', width: 130 },
         { title: 'Nội dung quyết định', dataIndex: 'noiDung', key: 'noiDung', ellipsis: true },
-        { title: 'Ngày ký', dataIndex: 'ngayKy', key: 'ngayKy', width: 120, render: (v: string) => v ? new Date(v).toLocaleDateString('vi-VN') : '–' },
-        { title: 'Cập nhật gần nhất', dataIndex: 'updatedAt', key: 'updatedAt', width: 140, render: (v: string) => v ? new Date(v).toLocaleDateString('vi-VN') : '–' },
+        { title: 'Ngày ký', dataIndex: 'ngayKy', key: 'ngayKy', width: 110, render: (v: string) => v ? new Date(v).toLocaleDateString('vi-VN') : '–' },
+        { title: 'Ngày hết hiệu lực', dataIndex: 'ngayHetHieuLuc', key: 'ngayHetHieuLuc', width: 130, render: (v: string) => v ? new Date(v).toLocaleDateString('vi-VN') : 'Vô thời hạn' },
+        { 
+            title: 'Trạng thái hiệu lực', 
+            key: 'hieuLuc', 
+            width: 140, 
+            render: (_: any, r: any) => {
+                if (r.isCuuXet) return <Tag color="success">Được khoan hồng</Tag>;
+                if (!r.ngayHetHieuLuc) {
+                    return <Tag color="error">Còn hiệu lực</Tag>;
+                }
+                const expiry = new Date(r.ngayHetHieuLuc);
+                const today = new Date();
+                expiry.setHours(0,0,0,0);
+                today.setHours(0,0,0,0);
+                if (expiry < today) {
+                    return <Tag color="success">Đã hết hiệu lực</Tag>;
+                }
+                return <Tag color="error">Còn hiệu lực</Tag>;
+            }
+        },
         { title: 'Loại', dataIndex: 'loai', key: 'loai', width: 160, render: (v: string) => <Tag color={v.includes('kỷ luật') ? 'red' : 'blue'}>{v}</Tag> },
     ];
 
@@ -402,7 +489,7 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
 
                 {/* ========== TAB 3: TÌNH TRẠNG / QUYẾT ĐỊNH ========== */}
                 <Tabs.TabPane tab="Tình trạng/Quyết định" key="3">
-                    <Card style={{ marginBottom: 20 }}>
+                    <Card style={{ marginBottom: 20 }} title={<span style={{ color: '#1890ff', fontWeight: 600 }}>Quyết định kỷ luật chính thức</span>}>
                         <div style={{ textAlign: 'center', marginBottom: 24 }}>
                             <Title level={4} style={{ marginBottom: 4 }}>
                                 Họ tên: {initialValues?.fullName || '–'} ({initialValues?.studentId || '–'})
@@ -422,6 +509,99 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
                             size="small"
                         />
                     </Card>
+
+                    {localStorage.getItem('role') === 'student' && (
+                        <Card title={<span style={{ color: '#fa8c16', fontWeight: 600 }}><WarningOutlined /> Vi phạm Quy chế đang chờ xử lý & Giải trình</span>} style={{ marginBottom: 20 }}>
+                            <div style={{ marginBottom: 16 }}>
+                                <Tag color="warning" style={{ whiteSpace: 'normal', height: 'auto', padding: '8px 12px', fontSize: '13px', width: '100%' }}>
+                                    <strong>Lưu ý:</strong> Sinh viên có quyền nộp Bản giải trình/Ý kiến phản hồi đối với các ghi nhận vi phạm đang trong trạng thái "Chờ xử lý". Sau khi Quyết định chính thức được ban hành, thông tin giải trình sẽ không thể chỉnh sửa.
+                                </Tag>
+                            </div>
+                            <Table
+                                loading={loadingPending}
+                                dataSource={pendingViolations}
+                                rowKey="id"
+                                bordered
+                                size="small"
+                                pagination={false}
+                                locale={{ emptyText: 'Không có ghi nhận vi phạm nào đang chờ xử lý' }}
+                                columns={[
+                                    {
+                                        title: 'Lỗi vi phạm',
+                                        render: (_: any, r: any) => (
+                                            <div>
+                                                <Text strong type="danger">{r.quyPham?.tenQuyPham || 'Vi phạm quy chế'}</Text>
+                                                {r.moTaChiTiet && <div style={{ fontSize: '12px', color: '#8c8c8c', marginTop: 4 }}>Chi tiết: {r.moTaChiTiet}</div>}
+                                            </div>
+                                        )
+                                    },
+                                    {
+                                        title: 'Ngày ghi nhận',
+                                        dataIndex: 'ngayViPham',
+                                        width: 140,
+                                        render: (d: string) => d ? new Date(d).toLocaleDateString('vi-VN') : '–'
+                                    },
+                                    {
+                                        title: 'Bản giải trình của bạn',
+                                        key: 'giaiTrinh',
+                                        render: (_: any, r: any) => (
+                                            r.sinhVienGiaiTrinh ? (
+                                                <div style={{ padding: '6px 10px', background: '#fafafa', borderRadius: '4px', border: '1px dashed #d9d9d9' }}>
+                                                    <span style={{ whiteSpace: 'pre-wrap' }}>{r.sinhVienGiaiTrinh}</span>
+                                                </div>
+                                            ) : (
+                                                <span style={{ color: '#bfbfbf', fontStyle: 'italic' }}>Chưa nộp giải trình</span>
+                                            )
+                                        )
+                                    },
+                                    {
+                                        title: 'Thao tác',
+                                        key: 'action',
+                                        width: 150,
+                                        align: 'center' as const,
+                                        render: (_: any, r: any) => (
+                                            <Button 
+                                                type="primary" 
+                                                ghost 
+                                                icon={<EditOutlined />} 
+                                                size="small" 
+                                                onClick={() => handleOpenExplainModal(r.id, r.sinhVienGiaiTrinh)}
+                                                style={{ borderRadius: 4 }}
+                                            >
+                                                {r.sinhVienGiaiTrinh ? 'Cập nhật giải trình' : 'Nộp giải trình'}
+                                            </Button>
+                                        )
+                                    }
+                                ]}
+                            />
+                        </Card>
+                    )}
+
+                    {/* Modal Nộp giải trình cho Sinh viên */}
+                    <Modal
+                        maskStyle={{ backgroundColor: 'transparent' }}
+                        title={<span><FileTextOutlined style={{ color: '#fa8c16' }} /> Viết Bản Giải Trình Vi Phạm</span>}
+                        open={isExplainModalOpen}
+                        onCancel={() => setIsExplainModalOpen(false)}
+                        onOk={handleSubmitExplain}
+                        okText="Gửi giải trình"
+                        cancelText="Hủy"
+                        confirmLoading={submitExplainLoading}
+                        width={600}
+                    >
+                        <div style={{ marginBottom: 16, marginTop: 12 }}>
+                            <Text type="secondary">
+                                Hãy mô tả trung thực lý do, hoàn cảnh diễn ra sự việc hoặc các thông tin cứu xét liên quan đến hành vi vi phạm này để Hội đồng kỷ luật xem xét.
+                            </Text>
+                        </div>
+                        <TextArea
+                            rows={6}
+                            placeholder="Nhập nội dung giải trình chi tiết ở đây (Tối đa 1000 ký tự)..."
+                            value={explainText}
+                            onChange={(e) => setExplainText(e.target.value)}
+                            maxLength={1000}
+                        />
+                    </Modal>
                 </Tabs.TabPane>
             </Tabs>
         </Form>
