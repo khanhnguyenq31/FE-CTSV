@@ -192,7 +192,7 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
     const [isExplainModalOpen, setIsExplainModalOpen] = useState(false);
     const [explainingId, setExplainingId] = useState<number | null>(null);
     const [explainText, setExplainText] = useState('');
-    const [explainFile, setExplainFile] = useState<File | null>(null);
+    const [fileList, setFileList] = useState<any[]>([]);
     const [submitExplainLoading, setSubmitExplainLoading] = useState(false);
 
     const loadPendingViolations = async () => {
@@ -224,12 +224,13 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
     const handleOpenExplainModal = (id: number, currentExplain: string) => {
         setExplainingId(id);
         setExplainText(currentExplain || '');
-        setExplainFile(null);
+        setFileList([]);
         setIsExplainModalOpen(true);
     };
 
     const handleSubmitExplain = async () => {
         if (!explainingId) return;
+        const explainFile = fileList[0]?.originFileObj || fileList[0];
         if (!explainFile) {
             message.error('Vui lòng đính kèm file giải trình (Word/PDF)');
             return;
@@ -644,12 +645,12 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
                                 <div style={{ marginBottom: 8 }}><Text strong style={{ color: '#ff4d4f' }}>* </Text><Text strong>Đính kèm file giải trình đã làm (Word/PDF/Ảnh):</Text></div>
                                 <Upload
                                     beforeUpload={(file) => {
-                                        setExplainFile(file);
+                                        setFileList([file]);
                                         return false;
                                     }}
                                     maxCount={1}
-                                    fileList={explainFile ? [explainFile as any] : []}
-                                    onRemove={() => setExplainFile(null)}
+                                    fileList={fileList}
+                                    onRemove={() => setFileList([])}
                                     accept=".doc,.docx,.pdf,image/*"
                                 >
                                     <Button icon={<UploadOutlined />}>Chọn file đính kèm...</Button>
