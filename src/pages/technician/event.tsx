@@ -71,7 +71,11 @@ import {
   manualAttendanceApi,
   toggleRegistrationLockApi,
   resetAttendanceApi,
-  deleteAttendanceLogApi
+  deleteAttendanceLogApi,
+  uploadStudentsToActivityApi,
+  getActivitySessionsApi,
+  createActivitySessionApi,
+  deleteActivitySessionApi
 } from "../../api/activity";
 import { getKhoasApi, getTagsApi, createTagApi } from "../../api/dm";
 import { useAuthStore } from "../../store/auth";
@@ -400,28 +404,50 @@ export default function EventPage({ messageApi }: { messageApi: any }) {
                 </Upload.Dragger>
               </Form.Item>
             </Col>
-            <Col span={8}>
+            {/* Hàng 1: Thời gian đăng ký */}
+            <Col span={12}>
               <Form.Item label="Bắt đầu đăng ký" name="registrationStartTime" rules={[{ required: true }]}>
-                <DatePicker showTime className="w-full" />
+                <DatePicker
+                  showTime={{ format: 'HH:mm', minuteStep: 5 }}
+                  format="DD/MM/YYYY HH:mm"
+                  className="w-full"
+                  placeholder="Ngày bắt đầu đăng ký"
+                />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col span={12}>
               <Form.Item label="Kết thúc đăng ký" name="registrationEndTime" rules={[{ required: true }]}>
-                <DatePicker showTime className="w-full" />
+                <DatePicker
+                  showTime={{ format: 'HH:mm', minuteStep: 5 }}
+                  format="DD/MM/YYYY HH:mm"
+                  className="w-full"
+                  placeholder="Ngày kết thúc đăng ký"
+                />
               </Form.Item>
             </Col>
-            <Col span={8}>
-              <Form.Item label="Ngày bắt đầu diễn ra" name="eventTime" rules={[{ required: true }]}>
-                <DatePicker showTime className="w-full" placeholder="Ngày bắt đầu" />
+            {/* Hàng 2: Thời gian sự kiện */}
+            <Col span={12}>
+              <Form.Item label="Ngày bắt đầu sự kiện" name="eventTime" rules={[{ required: true }]}>
+                <DatePicker
+                  showTime={{ format: 'HH:mm', minuteStep: 5 }}
+                  format="DD/MM/YYYY HH:mm"
+                  className="w-full"
+                  placeholder="Ngày bắt đầu sự kiện"
+                />
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col span={12}>
               <Form.Item
-                label="Ngày kết thúc diễn ra"
+                label="Ngày kết thúc sự kiện"
                 name="eventEndTime"
                 tooltip="Để trống nếu hoạt động chỉ diễn ra 1 ngày"
               >
-                <DatePicker showTime className="w-full" placeholder="Mặc định = Ngày bắt đầu" />
+                <DatePicker
+                  showTime={{ format: 'HH:mm', minuteStep: 5 }}
+                  format="DD/MM/YYYY HH:mm"
+                  className="w-full"
+                  placeholder="Mặc định = Ngày bắt đầu sự kiện"
+                />
               </Form.Item>
             </Col>
             <Col span={24}>
@@ -678,6 +704,66 @@ function ActivityDetailView({
     onError: (err: any) => messageApi.error(err.response?.data?.message || err.message || "Xóa thất bại"),
   });
 
+  // ── Upload sinh viên (Excel) ──────────────────────────────────────────────
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleUploadStudents = async (file: File) => {
+    setIsUploading(true);
+    try {
+      const res = await uploadStudentsToActivityApi(activity.id, file);
+      const r = res.results;
+      if (r.added > 0 && r.errors.length === 0) {
+        messageApi.success(`Đã thêm ${r.added} sinh viên vào danh sách!`);
+      } else if (r.added > 0) {
+        messageApi.warning({
+          content: `Thêm được ${r.added} SV. Bỏ qua: ${r.alreadyRegistered} trùng danh sách, ${r.duplicateInFile} trùng file, ${r.notFound} không tìm thấy, ${r.notStudent} chưa nhập học.`,
+          duration: 6,
+        });
+      } else {
+        messageApi.error({
+          content: `Không thêm được sinh viên nào. ${r.errors.slice(0, 3).join(' | ')}${r.errors.length > 3 ? '...' : ''}`,
+          duration: 6,
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["registrations", activity.id] });
+    } catch (err: any) {
+      messageApi.error(err.response?.data?.message || "Upload thất bại");
+    } finally {
+      setIsUploading(false);
+    }
+    return false;
+  };
+
+  // ── Quản lý ca điểm danh ─────────────────────────────────────────────────
+  const { data: sessions = [], refetch: refetchSessions } = useQuery({
+    queryKey: ["sessions", activity.id],
+    queryFn: () => getActivitySessionsApi(activity.id),
+    enabled: isCreator,
+  });
+
+  const [isSessionModalOpen, setIsSessionModalOpen] = useState(false);
+  const [sessionForm] = Form.useForm();
+
+  const createSessionMutation = useMutation({
+    mutationFn: (data: any) => createActivitySessionApi(activity.id, data),
+    onSuccess: () => {
+      refetchSessions();
+      messageApi.success("Tạo ca thành công");
+      setIsSessionModalOpen(false);
+      sessionForm.resetFields();
+    },
+    onError: (err: any) => messageApi.error(err.response?.data?.message || err.message || "Tạo ca thất bại"),
+  });
+
+  const deleteSessionMutation = useMutation({
+    mutationFn: (sessionId: number) => deleteActivitySessionApi(activity.id, sessionId),
+    onSuccess: () => {
+      refetchSessions();
+      messageApi.success("Đã xóa ca điểm danh");
+    },
+    onError: (err: any) => messageApi.error(err.response?.data?.message || err.message || "Xóa thất bại"),
+  });
+
   const items = [
     {
       key: 'info',
@@ -765,19 +851,61 @@ function ActivityDetailView({
       children: (
         <div className="py-4">
           {isCreator && (
-            <div className="mb-4 flex gap-2">
-              <Input
-                placeholder="Nhập MSSV để thêm nhanh..."
-                value={newStudentId}
-                onChange={(e) => setNewStudentId(e.target.value)}
-                onPressEnter={() => newStudentId.trim() && addStudentMutation.mutate(newStudentId.trim())}
-                style={{ maxWidth: 300 }}
-              />
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => newStudentId.trim() && addStudentMutation.mutate(newStudentId.trim())} loading={addStudentMutation.isPending}>
-                Thêm sinh viên
-              </Button>
+            <div className="mb-4">
+              <div className="flex flex-wrap gap-2 items-center">
+                <Input
+                  placeholder="Nhập MSSV để thêm nhanh..."
+                  value={newStudentId}
+                  onChange={(e) => setNewStudentId(e.target.value)}
+                  onPressEnter={() => newStudentId.trim() && addStudentMutation.mutate(newStudentId.trim())}
+                  style={{ maxWidth: 260 }}
+                />
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => newStudentId.trim() && addStudentMutation.mutate(newStudentId.trim())} loading={addStudentMutation.isPending}>
+                  Thêm sinh viên
+                </Button>
+                <Divider type="vertical" style={{ height: 28, margin: '0 4px' }} />
+                {/* Hướng dẫn định dạng Excel */}
+                <Popover
+                  title={<Space><InfoCircleOutlined style={{ color: '#1890ff' }} /><span style={{ fontWeight: 600 }}>Hướng dẫn file Excel upload</span></Space>}
+                  content={
+                    <div style={{ maxWidth: 340 }}>
+                      <p style={{ margin: '0 0 8px', color: '#595959' }}>File Excel (.xlsx/.xls) cần có các cột sau (dòng đầu là header):</p>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                        <thead>
+                          <tr style={{ background: '#f0f5ff' }}>
+                            <th style={{ padding: '5px 8px', border: '1px solid #d9d9d9' }}>Cột</th>
+                            <th style={{ padding: '5px 8px', border: '1px solid #d9d9d9' }}>Tên header</th>
+                            <th style={{ padding: '5px 8px', border: '1px solid #d9d9d9' }}>Bắt buộc</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[['A', 'MSSV', '✅ Bắt buộc'], ['B', 'Họ và tên', '❌ Tùy chọn']].map(([col, name, req]) => (
+                            <tr key={col}>
+                              <td style={{ padding: '4px 8px', border: '1px solid #d9d9d9', fontWeight: 600, color: '#1890ff' }}>{col}</td>
+                              <td style={{ padding: '4px 8px', border: '1px solid #d9d9d9' }}>{name}</td>
+                              <td style={{ padding: '4px 8px', border: '1px solid #d9d9d9', fontSize: 12 }}>{req}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <Divider style={{ margin: '8px 0' }} />
+                      <p style={{ margin: 0, fontSize: 12, color: '#8c8c8c' }}>
+                        ⚠️ Hệ thống tự bỏ qua: MSSV trùng trong file, sinh viên đã có trong danh sách, sinh viên chưa nhập học. Kết quả hiển thị chi tiết sau khi upload.
+                      </p>
+                    </div>
+                  }
+                  trigger="click"
+                  placement="bottomRight"
+                >
+                  <Button icon={<InfoCircleOutlined />} style={{ color: '#1890ff', borderColor: '#1890ff' }}>Hướng dẫn</Button>
+                </Popover>
+                <Upload beforeUpload={handleUploadStudents} showUploadList={false} accept=".xlsx,.xls">
+                  <Button icon={<UploadOutlined />} loading={isUploading}>Upload danh sách (Excel)</Button>
+                </Upload>
+              </div>
             </div>
           )}
+
           <Table
             dataSource={registrations}
             loading={isLoadingRegs}
@@ -881,84 +1009,229 @@ function ActivityDetailView({
       label: <span><QrcodeOutlined /> Quản lý điểm danh</span>,
       disabled: !isCreator,
       children: (
-        <div className="py-10 flex flex-col items-center">
-          <div className="max-w-md w-full bg-white p-8 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center">
-            <Title level={4} className="mb-4">Cổng điểm danh điện tử</Title>
-
-            <Select
-              value={attendanceType}
-              onChange={(v) => { setAttendanceType(v); setAttendanceCode(null); setCurrentSession(null); }}
-              className="w-full mb-3"
-              size="large"
-              options={[{ label: 'Điểm danh VÀO', value: 'in' }, { label: 'Điểm danh RA', value: 'out' }]}
-            />
-
-            {/* Ô nhập tên ca — hiện cho cả VÀO lẫn RA, mỗi mã lưu session riêng */}
-            <Input
-              placeholder="Tên ca (tùy chọn): Ca sáng, Ca chiều..."
-              value={sessionInput}
-              onChange={(e) => setSessionInput(e.target.value)}
-              className="w-full mb-3"
-              prefix={<span style={{ color: '#999', fontSize: 12 }}>📆&nbsp;</span>}
-            />
-
-            <Button type="primary" size="large" block icon={<SyncOutlined />}
-              onClick={() => generateCodeMutation.mutate(attendanceType)}
-              loading={generateCodeMutation.isPending}
-            >
-              Tạo mã QR mới
-            </Button>
-
-            {attendanceCode && (
-              <div className="mt-6 flex flex-col items-center">
-                {currentSession && (
-                  <Tag color="blue" style={{ marginBottom: 8, fontSize: 13, padding: '2px 12px' }}>
-                    {currentSession}
-                  </Tag>
-                )}
-                <QRCode value={attendanceCode} size={220} bordered={false} />
-                <Text strong className="text-xl mt-4 tracking-widest">{attendanceCode}</Text>
-                <Text type="secondary" style={{ fontSize: 12 }}>Mã có hiệu lực trong phiên làm việc hiện tại</Text>
-              </div>
-            )}
-
-            <Divider>Hoặc nhập MSSV thủ công</Divider>
-            <div className="w-full space-y-2">
-              <Input
-                placeholder="Nhập MSSV"
-                value={newStudentId}
-                onChange={(e) => setNewStudentId(e.target.value)}
-              />
-              <Input
-                placeholder="Tên ca (tùy chọn): Ca sáng, Ca chiều..."
-                value={manualSession}
-                onChange={(e) => setManualSession(e.target.value)}
-                prefix={<span style={{ color: '#999', fontSize: 12 }}>📆 </span>}
-              />
-              <DatePicker
-                className="w-full"
-                placeholder="Chọn ngày điểm danh (mặc định: hôm nay)"
-                format="DD/MM/YYYY"
-                onChange={(d) => setManualDate(d ? d.format('YYYY-MM-DD') : undefined)}
-                disabledDate={(current) => {
-                  const start = dayjs(activity.eventTime).startOf('day');
-                  const end = dayjs(activity.eventEndTime ?? activity.eventTime).endOf('day');
-                  return current.isBefore(start) || current.isAfter(end);
-                }}
-              />
-              <Button
-                block
-                onClick={() => newStudentId.trim() && manualAttendanceMutation.mutate({ sid: newStudentId.trim(), date: manualDate })}
-                loading={manualAttendanceMutation.isPending}
+        <div className="py-4">
+          <Row gutter={[24, 24]}>
+            {/* ── Cột trái: Danh sách ca điểm danh ── */}
+            <Col xs={24} lg={12}>
+              <Card
+                title={<span><CalendarOutlined style={{ marginRight: 8, color: '#1890ff' }} />Danh sách ca điểm danh</span>}
+                extra={
+                  <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => setIsSessionModalOpen(true)}>
+                    Thêm ca
+                  </Button>
+                }
+                className="shadow-sm rounded-xl"
+                style={{ height: '100%' }}
               >
-                Điểm danh thủ công
-              </Button>
-            </div>
-          </div>
+                {(sessions as any[]).length === 0 ? (
+                  <Empty description="Chưa có ca nào được tạo" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                ) : (
+                  <Table
+                    dataSource={sessions as any[]}
+                    rowKey="id"
+                    size="small"
+                    pagination={false}
+                    columns={[
+                      {
+                        title: 'Tên ca',
+                        dataIndex: 'sessionName',
+                        key: 'sessionName',
+                        render: (v: string) => <Text strong>{v}</Text>
+                      },
+                      {
+                        title: 'Bắt đầu',
+                        dataIndex: 'startTime',
+                        key: 'startTime',
+                        render: (v: string) => dayjs(v).format('DD/MM/YYYY HH:mm'),
+                      },
+                      {
+                        title: 'Kết thúc',
+                        dataIndex: 'endTime',
+                        key: 'endTime',
+                        render: (v: string) => dayjs(v).format('DD/MM/YYYY HH:mm'),
+                      },
+                      {
+                        title: '',
+                        key: 'action',
+                        width: 50,
+                        render: (_: any, r: any) => (
+                          <Popconfirm
+                            title="Xóa ca này?"
+                            onConfirm={() => deleteSessionMutation.mutate(r.id)}
+                            okButtonProps={{ danger: true }}
+                          >
+                            <Button type="text" danger size="small" icon={<DeleteOutlined />} loading={deleteSessionMutation.isPending} />
+                          </Popconfirm>
+                        )
+                      }
+                    ]}
+                  />
+                )}
+              </Card>
+            </Col>
+
+            {/* ── Cột phải: Cổng điểm danh ── */}
+            <Col xs={24} lg={12}>
+              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center">
+                <Title level={4} className="mb-4">Cổng điểm danh điện tử</Title>
+
+                <Select
+                  value={attendanceType}
+                  onChange={(v) => { setAttendanceType(v); setAttendanceCode(null); setCurrentSession(null); }}
+                  className="w-full mb-3"
+                  size="large"
+                  options={[{ label: 'Điểm danh VÀO', value: 'in' }, { label: 'Điểm danh RA', value: 'out' }]}
+                />
+
+                {/* Chọn ca từ danh sách hoặc nhập tự do */}
+                {(sessions as any[]).length > 0 ? (
+                  <Select
+                    className="w-full mb-3"
+                    size="large"
+                    placeholder="Chọn ca điểm danh (tùy chọn)"
+                    allowClear
+                    value={sessionInput || undefined}
+                    onChange={(v) => setSessionInput(v || '')}
+                    options={(sessions as any[]).map((s: any) => ({
+                      label: `${s.sessionName} (${dayjs(s.startTime).format('DD/MM HH:mm')} – ${dayjs(s.endTime).format('HH:mm')})`,
+                      value: s.sessionName
+                    }))}
+                  />
+                ) : (
+                  <Input
+                    placeholder="Tên ca (tùy chọn): Ca sáng, Ca chiều..."
+                    value={sessionInput}
+                    onChange={(e) => setSessionInput(e.target.value)}
+                    className="w-full mb-3"
+                    prefix={<span style={{ color: '#999', fontSize: 12 }}>📆&nbsp;</span>}
+                  />
+                )}
+
+                <Button type="primary" size="large" block icon={<SyncOutlined />}
+                  onClick={() => generateCodeMutation.mutate(attendanceType)}
+                  loading={generateCodeMutation.isPending}
+                >
+                  Tạo mã QR mới
+                </Button>
+
+                {attendanceCode && (
+                  <div className="mt-6 flex flex-col items-center">
+                    {currentSession && (
+                      <Tag color="blue" style={{ marginBottom: 8, fontSize: 13, padding: '2px 12px' }}>
+                        {currentSession}
+                      </Tag>
+                    )}
+                    <QRCode value={attendanceCode} size={220} bordered={false} />
+                    <Text strong className="text-xl mt-4 tracking-widest">{attendanceCode}</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>Mã có hiệu lực trong phiên làm việc hiện tại</Text>
+                  </div>
+                )}
+
+                <Divider>Hoặc nhập MSSV thủ công</Divider>
+                <div className="w-full space-y-2">
+                  <Input
+                    placeholder="Nhập MSSV"
+                    value={newStudentId}
+                    onChange={(e) => setNewStudentId(e.target.value)}
+                  />
+                  {(sessions as any[]).length > 0 ? (
+                    <Select
+                      className="w-full"
+                      placeholder="Chọn ca (tùy chọn)"
+                      allowClear
+                      value={manualSession || undefined}
+                      onChange={(v) => setManualSession(v || '')}
+                      options={(sessions as any[]).map((s: any) => ({
+                        label: `${s.sessionName} (${dayjs(s.startTime).format('DD/MM HH:mm')})`,
+                        value: s.sessionName
+                      }))}
+                    />
+                  ) : (
+                    <Input
+                      placeholder="Tên ca (tùy chọn): Ca sáng, Ca chiều..."
+                      value={manualSession}
+                      onChange={(e) => setManualSession(e.target.value)}
+                      prefix={<span style={{ color: '#999', fontSize: 12 }}>📆 </span>}
+                    />
+                  )}
+                  <DatePicker
+                    className="w-full"
+                    placeholder="Chọn ngày điểm danh (mặc định: hôm nay)"
+                    format="DD/MM/YYYY"
+                    onChange={(d) => setManualDate(d ? d.format('YYYY-MM-DD') : undefined)}
+                    disabledDate={(current) => {
+                      const start = dayjs(activity.eventTime).startOf('day');
+                      const end = dayjs(activity.eventEndTime ?? activity.eventTime).endOf('day');
+                      return current.isBefore(start) || current.isAfter(end);
+                    }}
+                  />
+                  <Button
+                    block
+                    onClick={() => newStudentId.trim() && manualAttendanceMutation.mutate({ sid: newStudentId.trim(), date: manualDate })}
+                    loading={manualAttendanceMutation.isPending}
+                  >
+                    Điểm danh thủ công
+                  </Button>
+                </div>
+              </div>
+            </Col>
+          </Row>
         </div>
       )
     }
   ];
+
+  // ── Modal Thêm Ca ─────────────────────────────────────────────────────────
+  const sessionModal = (
+    <Modal
+      title={<span><CalendarOutlined style={{ marginRight: 8 }} />Thêm ca điểm danh mới</span>}
+      open={isSessionModalOpen}
+      onCancel={() => { setIsSessionModalOpen(false); sessionForm.resetFields(); }}
+      footer={null}
+      width={480}
+      destroyOnClose
+    >
+      <Form
+        form={sessionForm}
+        layout="vertical"
+        style={{ marginTop: 16 }}
+        onFinish={(values) => {
+          createSessionMutation.mutate({
+            sessionName: values.sessionName,
+            startTime: values.startTime.toISOString(),
+            endTime: values.endTime.toISOString(),
+          });
+        }}
+      >
+        <Form.Item name="sessionName" label="Tên ca" rules={[{ required: true, message: 'Nhập tên ca' }]}>
+          <Input placeholder="VD: Ca sáng, Ca chiều 1..." />
+        </Form.Item>
+        <Form.Item name="startTime" label="Thời gian bắt đầu" rules={[{ required: true, message: 'Chọn giờ bắt đầu' }]}>
+          <DatePicker
+            showTime={{ format: 'HH:mm', minuteStep: 5 }}
+            format="DD/MM/YYYY HH:mm"
+            className="w-full"
+            placeholder="Ngày và giờ bắt đầu ca"
+          />
+        </Form.Item>
+        <Form.Item name="endTime" label="Thời gian kết thúc" rules={[{ required: true, message: 'Chọn giờ kết thúc' }]}>
+          <DatePicker
+            showTime={{ format: 'HH:mm', minuteStep: 5 }}
+            format="DD/MM/YYYY HH:mm"
+            className="w-full"
+            placeholder="Ngày và giờ kết thúc ca"
+          />
+        </Form.Item>
+        <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
+          <Space>
+            <Button onClick={() => { setIsSessionModalOpen(false); sessionForm.resetFields(); }}>Hủy</Button>
+            <Button type="primary" htmlType="submit" loading={createSessionMutation.isPending}>Tạo ca</Button>
+          </Space>
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+
 
   return (
     <div>
@@ -973,6 +1246,8 @@ function ActivityDetailView({
       <Card bordered={false} className="shadow-sm rounded-xl overflow-hidden">
         <Tabs defaultActiveKey="info" items={items} className="custom-tabs" />
       </Card>
+
+      {sessionModal}
     </div>
   );
 }

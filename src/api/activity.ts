@@ -116,3 +116,31 @@ export async function deleteAttendanceLogApi(activityId: string, logId: number) 
     const response = await api.delete(`/activities/${activityId}/attendance/logs/${logId}`);
     return response.data;
 }
+
+/** Upload file Excel danh sách sinh viên bắt buộc vào hoạt động */
+export async function uploadStudentsToActivityApi(activityId: string, file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post(`/activities/${activityId}/upload-students`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response.data; // { message, results: { added, duplicateInFile, alreadyRegistered, notFound, notStudent, errors[] } }
+}
+
+/** Lấy danh sách ca điểm danh của hoạt động */
+export async function getActivitySessionsApi(activityId: string) {
+    const response = await api.get(`/activities/${activityId}/sessions`);
+    return response.data;
+}
+
+/** Tạo ca điểm danh mới */
+export async function createActivitySessionApi(activityId: string, data: { sessionName: string; startTime: string; endTime: string }) {
+    const response = await api.post(`/activities/${activityId}/sessions`, data);
+    return response.data;
+}
+
+/** Xóa ca điểm danh */
+export async function deleteActivitySessionApi(activityId: string, sessionId: number) {
+    const response = await api.delete(`/activities/${activityId}/sessions/${sessionId}`);
+    return response.data;
+}
