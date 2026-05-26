@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Typography, Form, Input, Button, Card, Row, Col, Select, DatePicker, Upload, Avatar, Tabs, Table, Tag, message, Modal } from 'antd';
-import { UploadOutlined, UserOutlined, WarningOutlined, EditOutlined, FileTextOutlined } from '@ant-design/icons';
+import { UploadOutlined, UserOutlined, WarningOutlined, EditOutlined, FileTextOutlined, DownloadOutlined } from '@ant-design/icons';
 
 import { API_BASE_URL } from '../api/auth';
 
@@ -192,6 +192,7 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
     const [isExplainModalOpen, setIsExplainModalOpen] = useState(false);
     const [explainingId, setExplainingId] = useState<number | null>(null);
     const [explainText, setExplainText] = useState('');
+    const [explainFile, setExplainFile] = useState<File | null>(null);
     const [submitExplainLoading, setSubmitExplainLoading] = useState(false);
 
     const loadPendingViolations = async () => {
@@ -223,21 +224,29 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
     const handleOpenExplainModal = (id: number, currentExplain: string) => {
         setExplainingId(id);
         setExplainText(currentExplain || '');
+        setExplainFile(null);
         setIsExplainModalOpen(true);
     };
 
     const handleSubmitExplain = async () => {
         if (!explainingId) return;
+        if (!explainFile) {
+            message.error('Vui lòng đính kèm file giải trình (Word/PDF)');
+            return;
+        }
         setSubmitExplainLoading(true);
         try {
             const token = localStorage.getItem('accessToken');
+            const formData = new FormData();
+            formData.append('giaiTrinh', explainText);
+            formData.append('file', explainFile);
+
             const res = await fetch(`${API_BASE_URL}/student/pending-violations/${explainingId}/explain`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ giaiTrinh: explainText })
+                body: formData
             });
             if (res.ok) {
                 message.success('Gửi giải trình thành công');
@@ -543,22 +552,41 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
                                             render: (d: string) => d ? new Date(d).toLocaleDateString('vi-VN') : '–'
                                         },
                                         {
-                                            title: 'Bản giải trình của bạn',
+                                            title: 'File giải trình',
+                                            key: 'fileGiaiTrinh',
+                                            width: 180,
+                                            render: (_: any, r: any) => (
+                                                r.sinhVienGiaiTrinhUrl ? (
+                                                    <a 
+                                                        href={r.sinhVienGiaiTrinhUrl} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        style={{ display: 'inline-flex', alignItems: 'center', color: '#52c41a', fontWeight: 500 }}
+                                                    >
+                                                        <FileTextOutlined style={{ marginRight: 6 }} /> Xem tệp giải trình
+                                                    </a>
+                                                ) : (
+                                                    <span style={{ color: '#bfbfbf', fontStyle: 'italic' }}>Chưa đính kèm file</span>
+                                                )
+                                            )
+                                        },
+                                        {
+                                            title: 'Ghi chú thêm',
                                             key: 'giaiTrinh',
                                             render: (_: any, r: any) => (
                                                 r.sinhVienGiaiTrinh ? (
-                                                    <div style={{ padding: '6px 10px', background: '#fafafa', borderRadius: '4px', border: '1px dashed #d9d9d9' }}>
+                                                    <div style={{ padding: '6px 10px', background: '#fafafa', borderRadius: '4px', border: '1px dashed #d9d9d9', fontSize: '12px' }}>
                                                         <span style={{ whiteSpace: 'pre-wrap' }}>{r.sinhVienGiaiTrinh}</span>
                                                     </div>
                                                 ) : (
-                                                    <span style={{ color: '#bfbfbf', fontStyle: 'italic' }}>Chưa nộp giải trình</span>
+                                                    <span style={{ color: '#bfbfbf', fontStyle: 'italic' }}>–</span>
                                                 )
                                             )
                                         },
                                         {
                                             title: 'Thao tác',
                                             key: 'action',
-                                            width: 150,
+                                            width: 160,
                                             align: 'center' as const,
                                             render: (_: any, r: any) => (
                                                 <Button 
@@ -569,7 +597,7 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
                                                     onClick={() => handleOpenExplainModal(r.id, r.sinhVienGiaiTrinh)}
                                                     style={{ borderRadius: 4 }}
                                                 >
-                                                    {r.sinhVienGiaiTrinh ? 'Cập nhật giải trình' : 'Nộp giải trình'}
+                                                    {r.sinhVienGiaiTrinhUrl ? 'Cập nhật giải trình' : 'Nộp giải trình'}
                                                 </Button>
                                             )
                                         }
@@ -592,16 +620,52 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
                         >
                             <div style={{ marginBottom: 16, marginTop: 12 }}>
                                 <Text type="secondary">
-                                    Hãy mô tả trung thực lý do, hoàn cảnh diễn ra sự việc hoặc các thông tin cứu xét liên quan đến hành vi vi phạm này để Hội đồng kỷ luật xem xét.
+                                    Hãy tải file mẫu giải trình, điền đầy đủ thông tin, ký tên và đính kèm bản quét/chụp (Word hoặc PDF) của giải trình để gửi lên Hội đồng xem xét.
                                 </Text>
                             </div>
-                            <TextArea
-                                rows={6}
-                                placeholder="Nhập nội dung giải trình chi tiết ở đây (Tối đa 1000 ký tự)..."
-                                value={explainText}
-                                onChange={(e) => setExplainText(e.target.value)}
-                                maxLength={1000}
-                            />
+                            
+                            <Card size="small" style={{ marginBottom: 16, backgroundColor: '#f9f9f9', border: '1px solid #d9d9d9' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div>
+                                        <Text strong>Tải mẫu đơn giải trình chuẩn:</Text>
+                                        <div style={{ fontSize: '12px', color: '#8c8c8c', marginTop: 2 }}>Mẫu chuẩn theo quy định phòng CTSV</div>
+                                    </div>
+                                    <a 
+                                        href="/Don-giai-trinh-vi-ly-do-ca-nhan.doc" 
+                                        download="Don-giai-trinh-vi-ly-do-ca-nhan.doc"
+                                        style={{ display: 'inline-flex', alignItems: 'center', fontWeight: 600, color: '#1890ff' }}
+                                    >
+                                        <DownloadOutlined style={{ marginRight: 6 }} /> Tải về (.doc)
+                                    </a>
+                                </div>
+                            </Card>
+
+                            <div style={{ marginBottom: 16 }}>
+                                <div style={{ marginBottom: 8 }}><Text strong style={{ color: '#ff4d4f' }}>* </Text><Text strong>Đính kèm file giải trình đã làm (Word/PDF/Ảnh):</Text></div>
+                                <Upload
+                                    beforeUpload={(file) => {
+                                        setExplainFile(file);
+                                        return false;
+                                    }}
+                                    maxCount={1}
+                                    fileList={explainFile ? [explainFile as any] : []}
+                                    onRemove={() => setExplainFile(null)}
+                                    accept=".doc,.docx,.pdf,image/*"
+                                >
+                                    <Button icon={<UploadOutlined />}>Chọn file đính kèm...</Button>
+                                </Upload>
+                            </div>
+
+                            <div>
+                                <div style={{ marginBottom: 8 }}><Text strong>Ghi chú/Tóm tắt gửi Hội đồng:</Text></div>
+                                <TextArea
+                                    rows={4}
+                                    placeholder="Nhập ghi chú tóm tắt ngắn gọn nếu có..."
+                                    value={explainText}
+                                    onChange={(e) => setExplainText(e.target.value)}
+                                    maxLength={1000}
+                                />
+                            </div>
                         </Modal>
                     </Form>
                 </Tabs.TabPane>

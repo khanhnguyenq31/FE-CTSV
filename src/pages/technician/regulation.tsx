@@ -43,7 +43,8 @@ import {
     PrinterOutlined,
     ArrowLeftOutlined,
     EyeOutlined,
-    EditOutlined
+    EditOutlined,
+    DownloadOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
@@ -200,6 +201,50 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
         }
     };
 
+    const renderEmbeddedFile = (url: string) => {
+        if (!url) return null;
+        const lowercaseUrl = url.toLowerCase();
+        
+        // Detect images
+        if (lowercaseUrl.match(/\.(jpeg|jpg|gif|png|webp|svg)$/)) {
+            return (
+                <div style={{ marginTop: 12, border: '1px solid #d9d9d9', borderRadius: '4px', padding: '8px', textAlign: 'center', backgroundColor: '#f9f9f9' }}>
+                    <Text strong style={{ display: 'block', marginBottom: 8, color: '#fa8c16' }}>Ảnh đính kèm giải trình:</Text>
+                    <img src={url} alt="Bản giải trình" style={{ maxWidth: '100%', maxHeight: '350px', objectFit: 'contain', border: '1px solid #eee', borderRadius: '4px' }} />
+                </div>
+            );
+        }
+        
+        const isPdf = lowercaseUrl.endsWith('.pdf');
+        const isWord = lowercaseUrl.endsWith('.doc') || lowercaseUrl.endsWith('.docx');
+        
+        let embedUrl = url;
+        if (isWord) {
+            embedUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
+        }
+        
+        return (
+            <div style={{ marginTop: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <Text strong style={{ color: '#fa8c16' }}>Tệp giải trình ({isPdf ? 'PDF' : isWord ? 'Word' : 'Tệp tin'}):</Text>
+                    <a href={url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600, color: '#1890ff', display: 'inline-flex', alignItems: 'center' }}>
+                        <DownloadOutlined style={{ marginRight: 4 }} /> Tải xuống / Mở tab mới
+                    </a>
+                </div>
+                <div style={{ border: '1px solid #d9d9d9', borderRadius: '4px', overflow: 'hidden', height: '350px', backgroundColor: '#f0f2f5' }}>
+                    <iframe 
+                        src={embedUrl} 
+                        title="Embedded Explanation" 
+                        width="100%" 
+                        height="100%" 
+                        style={{ border: 'none' }}
+                        sandbox="allow-scripts allow-same-origin allow-popups"
+                    />
+                </div>
+            </div>
+        );
+    };
+
     const viPhamColumns = [
         {
             title: 'Sinh viên',
@@ -231,21 +276,23 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
             key: 'giaiTrinhHop',
             width: 220,
             render: (_: any, record: any) => (
-                <div>
-                    <div style={{ fontSize: '12px', marginBottom: 4 }}>
-                        <Text strong>Giải trình SV: </Text>
-                        {record.sinhVienGiaiTrinh ? (
-                            <Text type="warning">{record.sinhVienGiaiTrinh}</Text>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 600 }}>Giải trình:</span>
+                        {record.sinhVienGiaiTrinhUrl ? (
+                            <Tag color="success" style={{ margin: 0 }}>Đã nộp file</Tag>
+                        ) : record.sinhVienGiaiTrinh ? (
+                            <Tag color="warning" style={{ margin: 0 }}>Có tóm tắt</Tag>
                         ) : (
-                            <Text type="secondary" italic>Chưa nộp</Text>
+                            <Tag color="default" style={{ margin: 0 }}>Chưa nộp</Tag>
                         )}
                     </div>
-                    <div style={{ fontSize: '12px' }}>
-                        <Text strong>Kết quả họp: </Text>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 600 }}>Hội đồng:</span>
                         {record.ketQuaHop ? (
-                            <Text type="success">{record.ketQuaHop}</Text>
+                            <Tag color="blue" style={{ margin: 0 }}>Đã họp</Tag>
                         ) : (
-                            <Text type="secondary" italic>Chưa ghi nhận</Text>
+                            <Tag color="default" style={{ margin: 0 }}>Chưa ghi nhận</Tag>
                         )}
                     </div>
                 </div>
@@ -571,10 +618,23 @@ export default function RegulationPage({ messageApi }: { messageApi: any }) {
                         <TextArea rows={4} placeholder="Mô tả sự việc đã diễn ra..." />
                     </Form.Item>
                     {editingViPham && (
-                        <div style={{ marginBottom: 16, padding: '12px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '4px' }}>
-                            <Text strong><CheckSquareOutlined /> Giải trình của sinh viên:</Text>
-                            <br />
-                            <Text type="warning">{editingViPham.sinhVienGiaiTrinh || 'Sinh viên chưa gửi giải trình.'}</Text>
+                        <div style={{ marginBottom: 16, padding: '16px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '8px' }}>
+                            <div>
+                                <Text strong style={{ fontSize: '14px', color: '#d46b08' }}><CheckSquareOutlined /> Bản giải trình của sinh viên:</Text>
+                            </div>
+                            <div style={{ marginTop: 8, padding: '8px 12px', background: '#ffffff', borderRadius: '4px', border: '1px dashed #ffe58f', fontSize: '13px' }}>
+                                <Text strong>Ghi chú của sinh viên: </Text>
+                                <span style={{ whiteSpace: 'pre-wrap', color: '#d46b08' }}>
+                                    {editingViPham.sinhVienGiaiTrinh || 'Không có ghi chú tóm tắt thêm.'}
+                                </span>
+                            </div>
+                            {editingViPham.sinhVienGiaiTrinhUrl ? (
+                                renderEmbeddedFile(editingViPham.sinhVienGiaiTrinhUrl)
+                            ) : (
+                                <div style={{ marginTop: 12 }}>
+                                    <Text type="secondary" italic>Sinh viên chưa đính kèm tệp giải trình.</Text>
+                                </div>
+                            )}
                         </div>
                     )}
                     <Form.Item name="ketQuaHop" label="Kết quả họp / Ghi chú xử lý Hội đồng">
