@@ -61,7 +61,7 @@ export async function getAdmissionPeriods() {
     return response.data;
 }
 
-export async function createAdmissionPeriod(data: { name: string; startDate: string; endDate: string; requiredDocuments?: string[] }) {
+export async function createAdmissionPeriod(data: { name: string; startDate: string; endDate: string; giayToIds?: number[] }) {
     const token = localStorage.getItem("accessToken");
     const response = await api.post("/admission/periods", data, {
         headers: { Authorization: `Bearer ${token}` },
@@ -176,6 +176,30 @@ export async function searchAdmissionStudent(studentId: string) {
 export async function cancelFinalizeAdmission(studentId: string) {
     const token = localStorage.getItem("accessToken");
     const response = await api.post(`/admission/students/${studentId}/cancel-finalize`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+}
+
+export async function updatePeriodDocuments(periodId: string, giayToIds: number[]) {
+    const token = localStorage.getItem("accessToken");
+    const response = await api.put(`/admission/periods/${periodId}/documents`, { giayToIds }, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+}
+
+export async function getGiayTos() {
+    const token = localStorage.getItem("accessToken");
+    const response = await api.get("/dm/giay-to", {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+}
+
+export async function createGiayTo(tenGiayTo: string, moTa?: string) {
+    const token = localStorage.getItem("accessToken");
+    const response = await api.post("/dm/giay-to", { tenGiayTo, moTa }, {
         headers: { Authorization: `Bearer ${token}` },
     });
     return response.data;

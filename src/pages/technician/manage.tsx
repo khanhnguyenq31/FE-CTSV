@@ -25,7 +25,6 @@ import {
   Tabs,
   Select,
   Spin,
-  Checkbox,
   Popover,
 } from "antd";
 import {
@@ -85,22 +84,14 @@ import {
   finalizeAdmission,
   searchAdmissionStudent,
   cancelFinalizeAdmission,
-  deleteAdmissionPeriod
+  deleteAdmissionPeriod,
+  updatePeriodDocuments,
+  getGiayTos,
+  createGiayTo
 } from "../../api/admission";
 import type { AdmissionPeriod, AdmissionStudent, AdmissionStats } from "../../api/admission";
 const { Title, Text } = Typography;
 const { Search } = Input;
-
-const documentChecklist = [
-  "Giấy báo trúng tuyển (bản photo)",
-  "Giấy chứng nhận tốt nghiệp THPT tạm thời hoặc Bằng tốt nghiệp (Bản sao công chứng)",
-  "Học bạ THPT hoặc tương đương + Giấy khai sinh (Bản sao công chứng)",
-  "01 ảnh 2x3 (ghi họ tên, ngày sinh, mã số sinh viên ở mặt sau)",
-  "Giấy tờ xác nhận ưu tiên (con liệt sĩ, thương binh...) (Bản sao công chứng)",
-  "Bản photo chứng minh thư + Thẻ sinh viên",
-  "Giấy chứng nhận đăng ký nghĩa vụ quân sự (với nam)",
-  "Giấy chuyển sinh hoạt đoàn, Sổ đoàn viên",
-];
 
 // Component quét QR riêng để đảm bảo DOM element đã mount và có kiểm soát camera tốt hơn
 interface ScannerProps {
@@ -206,6 +197,11 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
   const [isTogglingDoc, setIsTogglingDoc] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
+  // State cho Giấy tờ nhập học
+  const [allGiayTos, setAllGiayTos] = useState<{ id: number; tenGiayTo: string }[]>([]);
+  const [isSavingDocs, setIsSavingDocs] = useState(false);
+  const [editingDocIds, setEditingDocIds] = useState<number[] | null>(null); // null = not editing
+
   const { data: studentsData, isLoading: studentLoading } = useQuery({
     queryKey: ["admissionStudents", routeId],
     queryFn: () => getAdmissionStudents(routeId!),
@@ -261,7 +257,17 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
 
   useEffect(() => {
     fetchPeriods();
+    fetchGiayTos();
   }, []);
+
+  const fetchGiayTos = async () => {
+    try {
+      const data = await getGiayTos();
+      setAllGiayTos(data.giayTos || []);
+    } catch (e) {
+      console.error('Lỗi tải giấy tờ:', e);
+    }
+  };
 
   const fetchPeriods = async () => {
     setPeriodLoading(true);
@@ -284,7 +290,7 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
         name: values.name,
         startDate: values.range[0].format("YYYY-MM-DD"),
         endDate: values.range[1].format("YYYY-MM-DD"),
-        requiredDocuments: values.requiredDocuments || []
+        giayToIds: values.giayToIds || []
       });
       if (messageApi) messageApi.success("Tạo đợt nhập học thành công");
       setIsModalOpen(false);
@@ -1128,6 +1134,108 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
               }
             ]}
           />
+          <div style={{ marginTop: 16 }}>
+            <Card
+              bordered={false}
+              style={{ borderRadius: 12 }}
+              title={
+                <span>
+                  <FileDoneOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+                  Giấy tờ nhập học của đợt này
+                </span>
+              }
+              extra={
+                editingDocIds === null ? (
+                  <Button type="link" icon={<FilterOutlined />} onClick={() => {
+                    const current = (selectedPeriod as any)?.giayTos?.map((g: any) => g.id) || [];
+                    setEditingDocIds(current);
+                  }}>
+                    Chỉnh sửa
+                  </Button>
+                ) : (
+                  <Space>
+                    <Button onClick={() => setEditingDocIds(null)}>Hủy</Button>
+                    <Button
+                      type="primary"
+                      loading={isSavingDocs}
+                      onClick={async () => {
+                        if (!routeId) return;
+                        setIsSavingDocs(true);
+                        try {
+                          await updatePeriodDocuments(routeId, editingDocIds!);
+                          if (messageApi) messageApi.success('Đã lưu danh sách giấy tờ');
+                          setEditingDocIds(null);
+                          fetchPeriods();
+                        } catch {
+                          if (messageApi) messageApi.error('Lưu thất bại');
+                        } finally {
+                          setIsSavingDocs(false);
+                        }
+                      }}
+                    >
+                      Lưu
+                    </Button>
+                  </Space>
+                )
+              }
+            >
+              {editingDocIds === null ? (
+                <div style={{ minHeight: 48 }}>
+                  {((selectedPeriod as any)?.giayTos || []).length === 0 ? (
+                    <Text type="secondary">Chưa cấu hình giấy tờ cho đợt này. Nhấn "Chỉnh sửa" để thêm.</Text>
+                  ) : (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {((selectedPeriod as any)?.giayTos || []).map((g: any) => (
+                        <Tag key={g.id} color="blue" style={{ fontSize: 13, padding: '4px 10px', borderRadius: 16 }}>
+                          {g.tenGiayTo}
+                        </Tag>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <Select
+                    mode="multiple"
+                    allowClear
+                    placeholder="Chọn các loại giấy tờ..."
+                    style={{ width: '100%' }}
+                    value={editingDocIds}
+                    onChange={(vals) => setEditingDocIds(vals)}
+                    options={allGiayTos.map(g => ({ label: g.tenGiayTo, value: g.id }))}
+                    filterOption={(input, option) =>
+                      (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+                    }
+                    dropdownRender={(menu) => (
+                      <>
+                        {menu}
+                        <Divider style={{ margin: '8px 0' }} />
+                        <div
+                          style={{ padding: '4px 8px', cursor: 'pointer', color: '#1890ff', display: 'flex', alignItems: 'center', gap: 4 }}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={async () => {
+                            const name = prompt('Nhập tên giấy tờ mới:');
+                            if (!name?.trim()) return;
+                            try {
+                              const res = await createGiayTo(name.trim());
+                              setAllGiayTos(prev => [...prev, res.giayTo]);
+                              setEditingDocIds(prev => [...(prev || []), res.giayTo.id]);
+                              if (messageApi) messageApi.success('Đã thêm giấy tờ mới vào danh mục');
+                            } catch { if (messageApi) messageApi.error('Không thể tạo giấy tờ'); }
+                          }}
+                        >
+                          <PlusOutlined /> Thêm giấy tờ mới vào danh mục
+                        </div>
+                      </>
+                    )}
+                  />
+                  <Text type="secondary" style={{ fontSize: 12, marginTop: 8, display: 'block' }}>
+                    Các giấy tờ được chọn sẽ hiển thị trên Biên nhận hồ sơ của sinh viên trong đợt này.
+                  </Text>
+                </div>
+              )}
+            </Card>
+          </div>
         </div>
       )}
 
@@ -1146,12 +1254,38 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
             <DatePicker.RangePicker format="DD/MM/YYYY" style={{ width: "100%" }} />
           </Form.Item>
 
-          <Form.Item name="requiredDocuments" label="Cấu hình danh sách giấy tờ nộp (Biên nhận)" initialValue={documentChecklist}>
-            <Checkbox.Group style={{ width: "100%", display: "flex", flexDirection: "column", gap: "8px" }}>
-              {documentChecklist.map((doc, idx) => (
-                <Checkbox key={idx} value={doc}>{doc}</Checkbox>
-              ))}
-            </Checkbox.Group>
+          <Form.Item name="giayToIds" label="Cấu hình giấy tờ nộp (Biên nhận)">
+            <Select
+              mode="multiple"
+              allowClear
+              placeholder="Chọn các loại giấy tờ yêu cầu..."
+              style={{ width: '100%' }}
+              options={allGiayTos.map(g => ({ label: g.tenGiayTo, value: g.id }))}
+              filterOption={(input, option) =>
+                (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+              }
+              dropdownRender={(menu) => (
+                <>
+                  {menu}
+                  <Divider style={{ margin: '8px 0' }} />
+                  <div
+                    style={{ padding: '4px 8px', cursor: 'pointer', color: '#1890ff', display: 'flex', alignItems: 'center', gap: 4 }}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={async () => {
+                      const name = prompt('Nhập tên giấy tờ mới:');
+                      if (!name?.trim()) return;
+                      try {
+                        const res = await createGiayTo(name.trim());
+                        setAllGiayTos(prev => [...prev, res.giayTo]);
+                        if (messageApi) messageApi.success('Đã thêm giấy tờ mới vào danh mục');
+                      } catch { if (messageApi) messageApi.error('Không thể tạo giấy tờ'); }
+                    }}
+                  >
+                    <PlusOutlined /> Thêm giấy tờ mới vào danh mục
+                  </div>
+                </>
+              )}
+            />
           </Form.Item>
 
           <Form.Item style={{ marginBottom: 0, textAlign: "right" }}>

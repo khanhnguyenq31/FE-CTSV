@@ -91,8 +91,8 @@ export default function EnrollmentRecords({ messageApi }: { messageApi: any }) {
                             examId: profile.soBaoDanh,
                         };
 
-                        if (profile.admissionPeriod?.requiredDocuments?.length > 0) {
-                            setPeriodChecklist(profile.admissionPeriod.requiredDocuments);
+                        if (profile.admissionPeriod?.giayTos?.length > 0) {
+                            setPeriodChecklist(profile.admissionPeriod.giayTos.map((g: any) => g.tenGiayTo));
                         }
 
                         form.setFieldsValue(formatted);
