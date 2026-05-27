@@ -202,6 +202,12 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
   const [isSavingDocs, setIsSavingDocs] = useState(false);
   const [editingDocIds, setEditingDocIds] = useState<number[] | null>(null); // null = not editing
 
+  // State cho Modal tạo giấy tờ mới đẹp đẽ
+  const [isNewDocModalOpen, setIsNewDocModalOpen] = useState(false);
+  const [newDocForm] = Form.useForm();
+  const [newDocTargetForm, setNewDocTargetForm] = useState<"create_modal" | "edit_card" | null>(null);
+  const [isCreatingNewDoc, setIsCreatingNewDoc] = useState(false);
+
   const { data: studentsData, isLoading: studentLoading } = useQuery({
     queryKey: ["admissionStudents", routeId],
     queryFn: () => getAdmissionStudents(routeId!),
@@ -266,6 +272,27 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
       setAllGiayTos(data.giayTos || []);
     } catch (e) {
       console.error('Lỗi tải giấy tờ:', e);
+    }
+  };
+
+  const handleCreateNewDoc = async (values: { tenGiayTo: string; moTa?: string }) => {
+    setIsCreatingNewDoc(true);
+    try {
+      const res = await createGiayTo(values.tenGiayTo, values.moTa);
+      setAllGiayTos(prev => [...prev, res.giayTo]);
+      if (newDocTargetForm === "create_modal") {
+        const currentVals = form.getFieldValue("giayToIds") || [];
+        form.setFieldsValue({ giayToIds: [...currentVals, res.giayTo.id] });
+      } else if (newDocTargetForm === "edit_card") {
+        setEditingDocIds(prev => [...(prev || []), res.giayTo.id]);
+      }
+      if (messageApi) messageApi.success('Đã thêm giấy tờ mới vào danh mục thành công');
+      setIsNewDocModalOpen(false);
+      newDocForm.resetFields();
+    } catch (error) {
+      if (messageApi) messageApi.error('Không thể tạo giấy tờ. Tên giấy tờ có thể đã tồn tại.');
+    } finally {
+      setIsCreatingNewDoc(false);
     }
   };
 
@@ -1213,15 +1240,9 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
                         <div
                           style={{ padding: '4px 8px', cursor: 'pointer', color: '#1890ff', display: 'flex', alignItems: 'center', gap: 4 }}
                           onMouseDown={(e) => e.preventDefault()}
-                          onClick={async () => {
-                            const name = prompt('Nhập tên giấy tờ mới:');
-                            if (!name?.trim()) return;
-                            try {
-                              const res = await createGiayTo(name.trim());
-                              setAllGiayTos(prev => [...prev, res.giayTo]);
-                              setEditingDocIds(prev => [...(prev || []), res.giayTo.id]);
-                              if (messageApi) messageApi.success('Đã thêm giấy tờ mới vào danh mục');
-                            } catch { if (messageApi) messageApi.error('Không thể tạo giấy tờ'); }
+                          onClick={() => {
+                            setNewDocTargetForm("edit_card");
+                            setIsNewDocModalOpen(true);
                           }}
                         >
                           <PlusOutlined /> Thêm giấy tờ mới vào danh mục
@@ -1271,14 +1292,9 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
                   <div
                     style={{ padding: '4px 8px', cursor: 'pointer', color: '#1890ff', display: 'flex', alignItems: 'center', gap: 4 }}
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={async () => {
-                      const name = prompt('Nhập tên giấy tờ mới:');
-                      if (!name?.trim()) return;
-                      try {
-                        const res = await createGiayTo(name.trim());
-                        setAllGiayTos(prev => [...prev, res.giayTo]);
-                        if (messageApi) messageApi.success('Đã thêm giấy tờ mới vào danh mục');
-                      } catch { if (messageApi) messageApi.error('Không thể tạo giấy tờ'); }
+                    onClick={() => {
+                      setNewDocTargetForm("create_modal");
+                      setIsNewDocModalOpen(true);
                     }}
                   >
                     <PlusOutlined /> Thêm giấy tờ mới vào danh mục
@@ -1455,6 +1471,73 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
           </Space>
         )}
       </Modal>
+
+      {/* Modal Thêm giấy tờ mẫu mới (Premium design) */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1a73e8' }}>
+            <FileDoneOutlined style={{ fontSize: '20px' }} />
+            <span style={{ fontSize: '18px', fontWeight: 600 }}>Thêm giấy tờ mới vào danh mục mẫu</span>
+          </div>
+        }
+        open={isNewDocModalOpen}
+        onCancel={() => {
+          setIsNewDocModalOpen(false);
+          newDocForm.resetFields();
+        }}
+        footer={null}
+        width={500}
+        destroyOnClose
+      >
+        <Form
+          form={newDocForm}
+          layout="vertical"
+          onFinish={handleCreateNewDoc}
+          style={{ marginTop: 20 }}
+        >
+          <Form.Item
+            name="tenGiayTo"
+            label={<Text strong>Tên loại giấy tờ</Text>}
+            rules={[{ required: true, message: "Vui lòng nhập tên giấy tờ" }]}
+          >
+            <Input placeholder="Ví dụ: Giấy chứng nhận tốt nghiệp THPT tạm thời..." size="large" />
+          </Form.Item>
+
+          <Form.Item
+            name="moTa"
+            label={<Text strong>Mô tả / Yêu cầu chi tiết (Tùy chọn)</Text>}
+          >
+            <Input.TextArea 
+              placeholder="Mô tả hướng dẫn sinh viên chuẩn bị (ví dụ: Bản sao công chứng, photo 2 mặt...)" 
+              rows={3} 
+            />
+          </Form.Item>
+
+          <Form.Item style={{ marginBottom: 0, textAlign: "right", marginTop: 24 }}>
+            <Space size="middle">
+              <Button 
+                onClick={() => {
+                  setIsNewDocModalOpen(false);
+                  newDocForm.resetFields();
+                }}
+                size="large"
+              >
+                Hủy bỏ
+              </Button>
+              <Button 
+                type="primary" 
+                htmlType="submit" 
+                loading={isCreatingNewDoc}
+                size="large"
+                style={{ background: '#1a73e8', borderColor: '#1a73e8' }}
+              >
+                Thêm vào danh mục
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }
+
