@@ -204,3 +204,20 @@ export async function createGiayTo(tenGiayTo: string, moTa?: string) {
     });
     return response.data;
 }
+
+export async function getStudentSubmittedDocs(studentId: string) {
+    const token = localStorage.getItem("accessToken");
+    const response = await api.get(`/admission/students/${studentId}/submitted-documents`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+}
+
+export async function updateStudentSubmittedDocs(studentId: string, giayToIds: number[]) {
+    const token = localStorage.getItem("accessToken");
+    const response = await api.put(`/admission/students/${studentId}/submitted-documents`, { giayToIds }, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+}
+

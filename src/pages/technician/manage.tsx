@@ -26,6 +26,7 @@ import {
   Select,
   Spin,
   Popover,
+  Checkbox,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -87,7 +88,9 @@ import {
   deleteAdmissionPeriod,
   updatePeriodDocuments,
   getGiayTos,
-  createGiayTo
+  createGiayTo,
+  getStudentSubmittedDocs,
+  updateStudentSubmittedDocs
 } from "../../api/admission";
 import type { AdmissionPeriod, AdmissionStudent, AdmissionStats } from "../../api/admission";
 const { Title, Text } = Typography;
@@ -207,6 +210,15 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
   const [newDocForm] = Form.useForm();
   const [newDocTargetForm, setNewDocTargetForm] = useState<"create_modal" | "edit_card" | null>(null);
   const [isCreatingNewDoc, setIsCreatingNewDoc] = useState(false);
+
+  // State cho Checklist hồ sơ giấy sinh viên
+  const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
+  const [checklistStudent, setChecklistStudent] = useState<any>(null);
+  const [requiredDocs, setRequiredDocs] = useState<any[]>([]);
+  const [submittedDocIds, setSubmittedDocIds] = useState<number[]>([]);
+  const [isSavingChecklist, setIsSavingChecklist] = useState(false);
+  const [isLoadingChecklist, setIsLoadingChecklist] = useState(false);
+
 
   const { data: studentsData, isLoading: studentLoading } = useQuery({
     queryKey: ["admissionStudents", routeId],
@@ -419,6 +431,42 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
       setIsTogglingDoc(false);
     }
   };
+
+  const openChecklistModal = async (student: any) => {
+    setChecklistStudent(student);
+    setIsChecklistModalOpen(true);
+    setIsLoadingChecklist(true);
+    try {
+      const res = await getStudentSubmittedDocs(student.studentId);
+      setRequiredDocs(res.requiredDocs || []);
+      setSubmittedDocIds(res.submittedDocIds || []);
+    } catch {
+      if (messageApi) messageApi.error("Không thể lấy danh sách giấy tờ của sinh viên");
+    } finally {
+      setIsLoadingChecklist(false);
+    }
+  };
+
+  const handleSaveChecklist = async () => {
+    if (!checklistStudent) return;
+    setIsSavingChecklist(true);
+    try {
+      const res = await updateStudentSubmittedDocs(checklistStudent.studentId, submittedDocIds);
+      if (messageApi) messageApi.success(res.isPhysicalDocSubmitted ? "Đã nhận ĐẦY ĐỦ hồ sơ giấy của sinh viên!" : "Đã cập nhật danh sách giấy tờ nộp thành công.");
+      setIsChecklistModalOpen(false);
+      // Refresh searched student if matches
+      if (searchedStudent?.studentId === checklistStudent.studentId) {
+        handleSearchStudent();
+      }
+      queryClient.invalidateQueries({ queryKey: ["admissionStudents", selectedPeriod?.id] });
+      queryClient.invalidateQueries({ queryKey: ["admissionStats", selectedPeriod?.id] });
+    } catch {
+      if (messageApi) messageApi.error("Cập nhật thất bại");
+    } finally {
+      setIsSavingChecklist(false);
+    }
+  };
+
 
   const handleFinalize = async (studentId: string) => {
     setIsFinalizing(true);
@@ -1097,13 +1145,12 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
                                 <Button
                                   block
                                   size="large"
-                                  icon={displaySearchedStudent.isPhysicalDocSubmitted ? <ClockCircleOutlined /> : <FileDoneOutlined />}
-                                  onClick={() => handleToggleDocStatus(displaySearchedStudent.studentId)}
-                                  type={displaySearchedStudent.isPhysicalDocSubmitted ? "default" : "primary"}
+                                  icon={<SolutionOutlined />}
+                                  onClick={() => openChecklistModal(displaySearchedStudent)}
+                                  type="primary"
                                   disabled={displaySearchedStudent.graduationType === "Đang học"}
-                                  loading={isTogglingDoc}
                                 >
-                                  {displaySearchedStudent.isPhysicalDocSubmitted ? "Hủy nhận hồ sơ giấy" : "Xác nhận hồ sơ giấy"}
+                                  Kiểm tra hồ sơ giấy
                                 </Button>
                               </Col>
                               <Col span={12}>
@@ -1407,12 +1454,12 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
                         <div style={{ marginTop: 8 }}>
                           <Button
                             size="small"
-                            type={currentStudent.isPhysicalDocSubmitted ? "default" : "primary"}
-                            icon={currentStudent.isPhysicalDocSubmitted ? <ClockCircleOutlined /> : <FileDoneOutlined />}
-                            onClick={() => handleToggleDocStatus(currentStudent.studentId)}
+                            type="primary"
+                            icon={<SolutionOutlined />}
+                            onClick={() => openChecklistModal(currentStudent)}
                             disabled={currentStudent.graduationType === "Đang học"}
                           >
-                            {currentStudent.isPhysicalDocSubmitted ? "Hủy nhận hồ sơ giấy" : "Xác nhận nhận hồ sơ giấy"}
+                            Kiểm tra hồ sơ giấy
                           </Button>
                         </div>
                       </div>
@@ -1536,6 +1583,126 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
             </Space>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Modal Checklist Hồ sơ giấy (Premium design) */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1890ff' }}>
+            <SolutionOutlined style={{ fontSize: '22px' }} />
+            <span style={{ fontSize: '18px', fontWeight: 600 }}>Kiểm tra & Tiếp nhận Hồ sơ giấy</span>
+          </div>
+        }
+        open={isChecklistModalOpen}
+        onCancel={() => setIsChecklistModalOpen(false)}
+        footer={null}
+        width={600}
+        destroyOnClose
+      >
+        <Spin spinning={isLoadingChecklist}>
+          {checklistStudent && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: 8, marginBottom: 16, border: '1px solid #e2e8f0' }}>
+                <Row gutter={[16, 8]}>
+                  <Col span={12}>
+                    <Text type="secondary">Sinh viên: </Text>
+                    <Text strong>{checklistStudent.fullName}</Text>
+                  </Col>
+                  <Col span={12}>
+                    <Text type="secondary">MSSV: </Text>
+                    <Text strong>{checklistStudent.studentId}</Text>
+                  </Col>
+                  <Col span={24}>
+                    <Text type="secondary">Ngành: </Text>
+                    <Text strong>{checklistStudent.major}</Text>
+                  </Col>
+                </Row>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <Text strong style={{ fontSize: 15 }}>Danh sách giấy tờ cần nộp:</Text>
+                {requiredDocs.length > 0 && (
+                  <div>
+                    {requiredDocs.every(d => submittedDocIds.includes(d.id)) ? (
+                      <Tag color="success" style={{ fontSize: 13, padding: '4px 8px', borderRadius: 4 }}>
+                        Đầy đủ hồ sơ (✓)
+                      </Tag>
+                    ) : (
+                      <Tag color="warning" style={{ fontSize: 13, padding: '4px 8px', borderRadius: 4 }}>
+                        Còn thiếu ({requiredDocs.filter(d => !submittedDocIds.includes(d.id)).length} / {requiredDocs.length})
+                      </Tag>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {requiredDocs.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '24px 0', background: '#fafafa', borderRadius: 8, border: '1px dashed #d9d9d9' }}>
+                  <Text type="secondary">Đợt nhập học này chưa cấu hình danh mục giấy tờ yêu cầu.</Text>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 350, overflowY: 'auto', paddingRight: 4 }}>
+                  {requiredDocs.map((doc: any) => {
+                    const isChecked = submittedDocIds.includes(doc.id);
+                    return (
+                      <div
+                        key={doc.id}
+                        onClick={() => {
+                          if (isChecked) {
+                            setSubmittedDocIds(prev => prev.filter(id => id !== doc.id));
+                          } else {
+                            setSubmittedDocIds(prev => [...prev, doc.id]);
+                          }
+                        }}
+                        style={{
+                          padding: '12px 16px',
+                          border: isChecked ? '1px solid #91d5ff' : '1px solid #f0f0f0',
+                          borderRadius: 8,
+                          backgroundColor: isChecked ? '#e6f7ff' : '#ffffff',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: 12,
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <Checkbox 
+                          checked={isChecked} 
+                          style={{ marginTop: 2 }}
+                          onChange={() => {}} 
+                        />
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <Text strong={isChecked} style={{ color: isChecked ? '#1890ff' : 'inherit', fontSize: 14 }}>
+                            {doc.tenGiayTo}
+                          </Text>
+                          {doc.moTa && (
+                            <Text type="secondary" style={{ fontSize: 12, marginTop: 4 }}>
+                              {doc.moTa}
+                            </Text>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div style={{ textAlign: 'right', marginTop: 24, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
+                <Space>
+                  <Button onClick={() => setIsChecklistModalOpen(false)}>Hủy</Button>
+                  <Button
+                    type="primary"
+                    loading={isSavingChecklist}
+                    onClick={handleSaveChecklist}
+                    style={{ background: '#1890ff', borderColor: '#1890ff' }}
+                  >
+                    Lưu kết quả
+                  </Button>
+                </Space>
+              </div>
+            </div>
+          )}
+        </Spin>
       </Modal>
     </div>
   );
