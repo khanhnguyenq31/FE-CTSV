@@ -527,7 +527,8 @@ function EvaluateDisciplineTab({ messageApi }: { messageApi: any }) {
                     <Form.Item name="khoaSinhVien" label="Khóa">
                         <Select
                             mode="multiple"
-                            style={{ minWidth: 200 }}
+                            style={{ width: 180 }}
+                            maxTagCount="responsive"
                             placeholder="Chọn khóa sinh viên..."
                             allowClear
                             loading={isLoadingCohorts}
@@ -540,7 +541,8 @@ function EvaluateDisciplineTab({ messageApi }: { messageApi: any }) {
                     <Form.Item name="ctdtIds" label="Chương trình đào tạo">
                         <Select
                             mode="multiple"
-                            style={{ minWidth: 260 }}
+                            style={{ width: 260 }}
+                            maxTagCount="responsive"
                             placeholder="Chọn chương trình..."
                             allowClear
                             loading={isLoadingCtdts}
