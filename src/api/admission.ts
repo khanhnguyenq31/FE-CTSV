@@ -44,7 +44,8 @@ export interface AdmissionStats {
     completedAdmissions: number;
     pendingAdmissions: number;
     byCtdt: {
-        name: string;
+        name: string;       // maCtdt (ngắn)
+        fullName: string;   // tenCtdt (đầy đủ)
         count: number;
     }[];
     byMajor: {

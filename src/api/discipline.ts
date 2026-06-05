@@ -174,6 +174,10 @@ export const getCohorts = async () => {
     const res = await api.get('/discipline/cohorts');
     return res.data;
 };
+export const getCtdts = async () => {
+    const res = await api.get('/discipline/ctdts');
+    return res.data;
+};
 export const getAcademicYears = async () => {
     const res = await api.get('/discipline/academic-years');
     return res.data;

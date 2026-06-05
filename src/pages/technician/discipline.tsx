@@ -16,7 +16,7 @@ import {
     saveDisciplineConditions, evaluateDiscipline, saveEvaluation, getEvaluationHistory, getEvaluationDetails, clearEvaluationHistory,
     getEvaluationDrafts, finalizeEvaluation, toggleAppeal, getFormalLists, applyDisciplineStatus, downloadDisciplinePdf,
     downloadPreliminaryPdf, downloadDraftExcel,
-    publishDraft, getCohorts, getAcademicYears
+    publishDraft, getCohorts, getCtdts, getAcademicYears
 } from '../../api/discipline';
 import { getAdmissionPeriods } from '../../api/admission';
 import type { DisciplineForm, DisciplineConfig, DisciplineCondition } from '../../api/discipline';
@@ -463,6 +463,7 @@ function EvaluateDisciplineTab({ messageApi }: { messageApi: any }) {
 
     const { data: configs } = useQuery({ queryKey: ['disciplineConfigs'], queryFn: getDisciplineConfigs });
     const { data: cohorts, isLoading: isLoadingCohorts } = useQuery({ queryKey: ['cohorts'], queryFn: getCohorts });
+    const { data: ctdts, isLoading: isLoadingCtdts } = useQuery({ queryKey: ['ctdts'], queryFn: getCtdts });
     const { data: academicYears, isLoading: isLoadingYears } = useQuery({ queryKey: ['academicYears'], queryFn: getAcademicYears });
 
     const mutationEvaluate = useMutation({
@@ -533,6 +534,19 @@ function EvaluateDisciplineTab({ messageApi }: { messageApi: any }) {
                         >
                             {cohorts?.map((c: string) => (
                                 <Select.Option key={c} value={c}>{c}</Select.Option>
+                            ))}
+                        </Select>
+                    </Form.Item>
+                    <Form.Item name="ctdtIds" label="Chương trình đào tạo">
+                        <Select
+                            mode="multiple"
+                            style={{ minWidth: 260 }}
+                            placeholder="Chọn chương trình..."
+                            allowClear
+                            loading={isLoadingCtdts}
+                        >
+                            {ctdts?.map((c: any) => (
+                                <Select.Option key={c.maCtdt} value={c.maCtdt}>{c.maCtdt} – {c.tenCtdt}</Select.Option>
                             ))}
                         </Select>
                     </Form.Item>

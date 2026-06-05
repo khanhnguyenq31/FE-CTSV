@@ -790,8 +790,13 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
-                        <RechartsTooltip />
-                        <Legend />
+                        <RechartsTooltip
+                          formatter={(value: any, name: any, props: any) => [
+                            `${value} sinh viên`,
+                            props?.payload?.fullName || name
+                          ]}
+                        />
+                        <Legend formatter={(value: any, entry: any) => entry?.payload?.fullName || value} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
