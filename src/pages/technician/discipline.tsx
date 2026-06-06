@@ -459,6 +459,8 @@ function DisciplineConfigTab({ messageApi }: { messageApi: any }) {
 function EvaluateDisciplineTab({ messageApi }: { messageApi: any }) {
     const [evalResults, setEvalResults] = useState<any[]>([]);
     const [hasTested, setHasTested] = useState(false);
+    // Lưu filter values đã dùng để evaluate, tránh mất dữ liệu khi save
+    const [lastFilterValues, setLastFilterValues] = useState<any>(null);
     const [form] = Form.useForm();
 
     const { data: configs } = useQuery({ queryKey: ['disciplineConfigs'], queryFn: getDisciplineConfigs });
@@ -481,16 +483,21 @@ function EvaluateDisciplineTab({ messageApi }: { messageApi: any }) {
             if (messageApi) messageApi.success('Lưu kết quả xét kỷ luật thành công!');
             setHasTested(false);
             setEvalResults([]);
+            setLastFilterValues(null);
         }
     });
 
     const onFinishEval = (values: any) => {
+        // Lưu lại filter values tại thời điểm evaluate để dùng khi save
+        setLastFilterValues(values);
         mutationEvaluate.mutate(values);
     };
 
     const handleSaveList = () => {
+        // Dùng lastFilterValues (đã lưu khi evaluate) thay vì form.getFieldsValue()
+        // để đảm bảo khoaSinhVien, cauHinhId... không bị mất
         const payload = {
-            ...form.getFieldsValue(),
+            ...(lastFilterValues || form.getFieldsValue()),
             results: evalResults
         };
         mutationSaveEvaluation.mutate(payload);
