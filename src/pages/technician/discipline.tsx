@@ -497,13 +497,14 @@ function EvaluateDisciplineTab({ messageApi }: { messageApi: any }) {
     };
 
     const columns = [
-        { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName' },
-        { title: 'MSSV', dataIndex: 'studentId', key: 'studentId' },
-        { title: 'Ngành', dataIndex: 'major', key: 'major' },
+        { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName', width: 160 },
+        { title: 'MSSV', dataIndex: 'studentId', key: 'studentId', width: 110 },
+        { title: 'Ngành', dataIndex: 'major', key: 'major', width: 160 },
+        { title: 'CTDT áp dụng', dataIndex: 'ctdtName', key: 'ctdtName', width: 180, render: (t: string) => t ? <Tag color="geekblue">{t}</Tag> : <Text type="secondary">-</Text> },
         { title: 'Tiến trình vi phạm', dataIndex: ['matchedRule', 'escalationPath'], key: 'escalationPath', render: (t: string) => <Text type="secondary">{t}</Text> },
-        { title: 'Kết quả vòng Học vụ', dataIndex: ['matchedRule', 'gpaForm', 'tenHinhThuc'], key: 'gpaForm', render: (t: string) => <Tag color="blue">{t}</Tag> },
-        { title: 'Kết quả vòng Lũy tiến', dataIndex: ['matchedRule', 'luyTienForm', 'tenHinhThuc'], key: 'luyTienForm', render: (t: string) => t ? <Tag color="orange">{t}</Tag> : <Text type="secondary">-</Text> },
-        { title: 'Kết quả Cuối cùng', dataIndex: ['matchedRule', 'hinhThuc', 'tenHinhThuc'], key: 'hinhThuc', render: (t: string) => <Tag color="red">{t}</Tag> },
+        { title: 'Kết quả vòng Học vụ', dataIndex: ['matchedRule', 'gpaForm', 'tenHinhThuc'], key: 'gpaForm', width: 160, render: (t: string) => <Tag color="blue">{t}</Tag> },
+        { title: 'Kết quả vòng Lũy tiến', dataIndex: ['matchedRule', 'luyTienForm', 'tenHinhThuc'], key: 'luyTienForm', width: 160, render: (t: string) => t ? <Tag color="orange">{t}</Tag> : <Text type="secondary">-</Text> },
+        { title: 'Kết quả Cuối cùng', dataIndex: ['matchedRule', 'hinhThuc', 'tenHinhThuc'], key: 'hinhThuc', width: 160, render: (t: string) => <Tag color="red">{t}</Tag> },
         { title: 'Kết quả thực tế', key: 'actualGpa', render: (_: any, r: any) => `GPA HK: ${r.actualGpaSem?.toFixed(2)} | GPA TL: ${r.actualGpaTotal?.toFixed(2)} | TC HK: ${r.actualCreditsSem || 0} | TC TL: ${r.actualCreditsTotal || 0}` }
     ];
 
@@ -747,12 +748,13 @@ function EvaluationDraftsTab({ messageApi }: { messageApi: any }) {
     };
 
     const columns = [
-        { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName' },
-        { title: 'MSSV', dataIndex: 'studentId', key: 'studentId' },
-        { title: 'Ngành', dataIndex: 'major', key: 'major' },
-        { title: 'Lớp / Khóa', dataIndex: 'className', key: 'className' },
-        { title: 'Bị phạt (vòng Học vụ)', dataIndex: 'hinhThucGpa', key: 'hinhThucGpa', render: (t: string) => <Tag color="blue">{t}</Tag> },
-        { title: 'Hình phạt Dự kiến', dataIndex: 'hinhThuc', key: 'hinhThuc', render: (t: string) => <Tag color="red">{t}</Tag> },
+        { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName', width: 160 },
+        { title: 'MSSV', dataIndex: 'studentId', key: 'studentId', width: 110 },
+        { title: 'Ngành', dataIndex: 'major', key: 'major', width: 160 },
+        { title: 'CTDT áp dụng', dataIndex: 'ctdtName', key: 'ctdtName', width: 180, render: (t: string) => t ? <Tag color="geekblue">{t}</Tag> : <Text type="secondary">-</Text> },
+        { title: 'Lớp / Khóa', dataIndex: 'className', key: 'className', width: 100 },
+        { title: 'Bị phạt (vòng Học vụ)', dataIndex: 'hinhThucGpa', key: 'hinhThucGpa', width: 160, render: (t: string) => <Tag color="blue">{t}</Tag> },
+        { title: 'Hình phạt Dự kiến', dataIndex: 'hinhThuc', key: 'hinhThuc', width: 160, render: (t: string) => <Tag color="red">{t}</Tag> },
         {
             title: 'Trạng thái', key: 'status', align: 'center' as const, width: 140, render: (_: any, r: any) => (
                 r.isCuuXet
@@ -965,11 +967,12 @@ function FormalListTab({ messageApi }: { messageApi: any }) {
     ];
 
     const detColumns = [
-        { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName' },
-        { title: 'MSSV', dataIndex: 'studentId', key: 'studentId' },
-        { title: 'Ngành', dataIndex: 'major', key: 'major' },
-        { title: 'Kết quả Cuối cùng', dataIndex: 'hinhThuc', key: 'hinhThuc', render: (t: string) => <Tag color="red">{t}</Tag> },
-        { title: 'Trạng thái', dataIndex: 'isCuuXet', key: 'isCuuXet', render: (isCuuXet: boolean) => isCuuXet ? <Tag color="green">Được Cứu Xét / Khoan hồng</Tag> : <Tag color="red">Bị Kỷ Luật</Tag> },
+        { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName', width: 160 },
+        { title: 'MSSV', dataIndex: 'studentId', key: 'studentId', width: 110 },
+        { title: 'Ngành', dataIndex: 'major', key: 'major', width: 160 },
+        { title: 'CTDT áp dụng', dataIndex: 'ctdtName', key: 'ctdtName', width: 180, render: (t: string) => t ? <Tag color="geekblue">{t}</Tag> : <Text type="secondary">-</Text> },
+        { title: 'Kết quả Cuối cùng', dataIndex: 'hinhThuc', key: 'hinhThuc', width: 160, render: (t: string) => <Tag color="red">{t}</Tag> },
+        { title: 'Trạng thái', dataIndex: 'isCuuXet', key: 'isCuuXet', width: 180, render: (isCuuXet: boolean) => isCuuXet ? <Tag color="green">Được Cứu Xét / Khoan hồng</Tag> : <Tag color="red">Bị Kỷ Luật</Tag> },
     ];
 
     return (
