@@ -610,49 +610,52 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
   ];
 
   const studentColumns: ColumnsType<AdmissionStudent> = [
-    { title: "MSSV", dataIndex: "studentId", key: "studentId", width: 100 },
-    { title: "Họ và tên", dataIndex: "fullName", key: "fullName", width: 180 },
-    { title: "Khóa", dataIndex: "className", key: "className", width: 100 },
-    { title: "Ngành", dataIndex: "major", key: "major", width: 180 },
-    {
-      title: "Người duyệt",
-      key: "admissionApprovedBy",
-      width: 150,
-      render: (_, s) => s.graduationType === "Đang học" ? s.admissionApprovedBy || "N/A" : "N/A"
+    { title: "MSSV", dataIndex: "studentId", key: "studentId", width: 110 },
+    { title: "Họ và tên", dataIndex: "fullName", key: "fullName",
+      ellipsis: { showTitle: false },
+      render: (t: string) => <Tooltip title={t}>{t}</Tooltip>
+    },
+    { title: "Khóa / Ngành", key: "cohortMajor", width: 200,
+      render: (_: any, s: any) => (
+        <div style={{ lineHeight: '1.5' }}>
+          <div style={{ fontWeight: 500 }}>{s.className}</div>
+          <div style={{ fontSize: 12, color: '#888', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 185 }}>
+            <Tooltip title={s.major}>{s.major}</Tooltip>
+          </div>
+        </div>
+      )
     },
     {
-      title: "Thời gian duyệt",
-      key: "admissionApprovedAt",
-      width: 180,
-      render: (_, s) => s.graduationType === "Đang học" && s.admissionApprovedAt
-        ? dayjs(s.admissionApprovedAt).format("HH:mm DD/MM/YYYY")
-        : "N/A"
-    },
-    {
-      title: () => (
-        <Tooltip title="Trạng thái gửi email thông báo nhập học">
-          <Space size={4}><MailOutlined /> Email</Space>
-        </Tooltip>
-      ),
-      key: "isNotified",
-      width: 90,
-      align: "center" as const,
-      render: (_, s) => s.isNotified
-        ? <Tooltip title="Đã gửi email thông báo nhập học"><SendOutlined style={{ color: '#52c41a', fontSize: 16 }} /></Tooltip>
-        : <Tooltip title="Chưa gửi email thông báo"><StopOutlined style={{ color: '#bfbfbf', fontSize: 16 }} /></Tooltip>
+      title: "Duyệt bởi",
+      key: "duyet",
+      width: 170,
+      render: (_: any, s: any) => s.graduationType === "Đang học" ? (
+        <div style={{ lineHeight: '1.5' }}>
+          <div style={{ fontSize: 13 }}>{s.admissionApprovedBy || "N/A"}</div>
+          <div style={{ fontSize: 11, color: '#888' }}>
+            {s.admissionApprovedAt ? dayjs(s.admissionApprovedAt).format("HH:mm DD/MM/YYYY") : ""}
+          </div>
+        </div>
+      ) : <span style={{ color: '#bfbfbf' }}>N/A</span>
     },
     {
       title: "Trạng thái",
       key: "status",
-      width: 150,
-      render: (_, s) => (
-        <Space>
+      width: 160,
+      render: (_: any, s: any) => (
+        <Space size={4} wrap>
           {s.graduationType === "Đang học" ? (
-            <Tag color="success" icon={<CheckCircleOutlined />}>Hoàn tất</Tag>
+            <Tag color="success" icon={<CheckCircleOutlined />}>Đang học</Tag>
           ) : (
             <Tag color="warning" icon={<ClockCircleOutlined />}>Đang nhập học</Tag>
           )}
           {s.isPhysicalDocSubmitted && <Tooltip title="Đã nộp hồ sơ giấy"><FileDoneOutlined style={{ color: '#52c41a' }} /></Tooltip>}
+          <Tooltip title={s.isNotified ? "Đã gửi email thông báo" : "Chưa gửi email"}>
+            {s.isNotified
+              ? <SendOutlined style={{ color: '#52c41a', fontSize: 14 }} />
+              : <StopOutlined style={{ color: '#bfbfbf', fontSize: 14 }} />
+            }
+          </Tooltip>
         </Space>
       )
     },
@@ -981,7 +984,6 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
                         rowKey="studentId"
                         loading={studentLoading}
                         pagination={{ pageSize: 10, showSizeChanger: true }}
-                        scroll={{ x: 1000 }}
                       />
                     </Card>
                   </>
