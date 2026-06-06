@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Typography, Form, Input, Button, Card, Row, Col, Select, DatePicker, Upload, Avatar, Tabs, Table, Tag, message, Modal } from 'antd';
 import { UploadOutlined, UserOutlined, WarningOutlined, EditOutlined, FileTextOutlined, DownloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -56,6 +56,19 @@ const nationalityOptions: OptionType[] = [
 ];
 
 
+// Các trường bị khóa vĩnh viễn với sinh viên (không phụ thuộc vào đợt nhập học)
+const STUDENT_PERMANENT_LOCKED: string[] = ['studentId', 'major', 'className', 'priorityArea'];
+
+// Style cho trường chỉ đọc
+const READ_ONLY_STYLE: React.CSSProperties = {
+    backgroundColor: '#f6f8fa',
+    color: '#1f2937',
+    cursor: 'not-allowed',
+    borderColor: '#e5e7eb',
+    fontWeight: 500,
+    boxShadow: 'none',
+};
+
 interface StudentProfileFormProps {
     initialValues: any;
     onFinish: (values: any, avatarFile: File | null) => void;
@@ -68,6 +81,18 @@ interface StudentProfileFormProps {
 }
 
 export default function StudentProfileForm({ initialValues, onFinish, loading, submitText = "Cập nhật toàn bộ Hồ sơ", academicLocked = false, formDisabled = false, decisions = [], tinhTrang = 'Đang học' }: StudentProfileFormProps) {
+    const isStudentRole = localStorage.getItem('role') === 'student';
+
+    // Kiểm tra field có bị khóa không:
+    // - Trường vĩnh viễn bị khóa với sinh viên (studentId, major, className, priorityArea)
+    // - Hoặc toàn bộ form bị disable (formDisabled)
+    const isReadOnly = (fieldName: string, extraLocked: boolean = false): boolean => {
+        if (formDisabled) return true;
+        if (loading) return true;
+        if (extraLocked) return true;
+        if (isStudentRole && STUDENT_PERMANENT_LOCKED.includes(fieldName)) return true;
+        return false;
+    };
     const [form] = Form.useForm();
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [previewAvatar, setPreviewAvatar] = useState<string>('');
@@ -255,67 +280,54 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
     const colProps6: ColProps = { xs: 24, sm: 24, md: 12, lg: 4 };
 
     // Helpers
-    const renderInput = (label: string, name: string | number | (string | number)[], disabled: boolean = false, colProps: ColProps = defaultColProps, rules: Rule[] = []) => {
-        const isStudent = localStorage.getItem('role') === 'student';
-        const isLockedField = isStudent && typeof name === 'string' && ['studentId', 'major', 'className'].includes(name);
-        
+    const renderInput = (label: string, name: string | number | (string | number)[], extraLocked: boolean = false, colProps: ColProps = defaultColProps, rules: Rule[] = []) => {
+        const fieldName = typeof name === 'string' ? name : '';
+        const locked = isReadOnly(fieldName, extraLocked);
+
         return (
             <Col {...colProps}>
-                <Form.Item label={label} name={name} rules={rules}>
-                    {isLockedField || disabled ? (
-                        <Input 
-                            readOnly 
-                            style={{ 
-                                backgroundColor: "#f9fafb", 
-                                color: "#262626", 
-                                cursor: "not-allowed",
-                                borderColor: "#d9d9d9",
-                                fontWeight: 500
-                            }} 
-                        />
-                    ) : (
-                        <Input placeholder={label} />
-                    )}
+                <Form.Item label={label} name={name} rules={locked ? [] : rules}>
+                    <Input
+                        readOnly={locked}
+                        placeholder={locked ? undefined : label}
+                        style={locked ? READ_ONLY_STYLE : undefined}
+                        tabIndex={locked ? -1 : undefined}
+                    />
                 </Form.Item>
             </Col>
         );
     };
 
-    const renderSelect = (label: string, name: string | number, options: OptionType[], placeholder: string = "Chọn...", colProps: ColProps = defaultColProps, disabled: boolean = false, onChange?: (val: any) => void, loading: boolean = false) => {
-        const isStudent = localStorage.getItem('role') === 'student';
-        const isLockedField = isStudent && name === 'priorityArea';
-        
-        if (isLockedField || disabled) {
+    const renderSelect = (label: string, name: string | number, options: OptionType[], placeholder: string = "Chọn...", colProps: ColProps = defaultColProps, extraLocked: boolean = false, onChange?: (val: any) => void, selectLoading: boolean = false) => {
+        const fieldName = typeof name === 'string' ? name : String(name);
+        const locked = isReadOnly(fieldName, extraLocked);
+
+        if (locked) {
             const currentValue = form.getFieldValue(name);
             const selectedOpt = options.find(o => o.value === currentValue);
-            const displayValue = selectedOpt ? selectedOpt.label : currentValue;
-            
+            const displayValue = selectedOpt ? selectedOpt.label : (currentValue ?? '');
+
             return (
                 <Col {...colProps}>
                     <Form.Item label={label}>
-                        <Input 
-                            readOnly 
+                        <Input
+                            readOnly
                             value={displayValue}
-                            style={{ 
-                                backgroundColor: "#f9fafb", 
-                                color: "#262626", 
-                                cursor: "not-allowed",
-                                borderColor: "#d9d9d9",
-                                fontWeight: 500
-                            }} 
+                            style={READ_ONLY_STYLE}
+                            tabIndex={-1}
                         />
                     </Form.Item>
                 </Col>
             );
         }
-        
+
         return (
             <Col {...colProps}>
                 <Form.Item label={label} name={name}>
-                    <Select 
-                        placeholder={placeholder} 
+                    <Select
+                        placeholder={placeholder}
                         onChange={onChange}
-                        loading={loading}
+                        loading={selectLoading}
                         showSearch
                         filterOption={(input, option) =>
                             String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
@@ -328,32 +340,30 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
         );
     };
 
-    const renderDatePicker = (label: string, name: string | number, format: string = "DD/MM/YYYY", colProps: ColProps = defaultColProps, disabled: boolean = false) => {
-        if (disabled) {
+    const renderDatePicker = (label: string, name: string | number, format: string = "DD/MM/YYYY", colProps: ColProps = defaultColProps, extraLocked: boolean = false) => {
+        const fieldName = typeof name === 'string' ? name : String(name);
+        const locked = isReadOnly(fieldName, extraLocked);
+
+        if (locked) {
             const currentValue = form.getFieldValue(name);
-            const displayValue = currentValue 
-                ? (dayjs.isDayjs(currentValue) ? currentValue.format(format) : dayjs(currentValue).format(format)) 
+            const displayValue = currentValue
+                ? (dayjs.isDayjs(currentValue) ? currentValue.format(format) : dayjs(currentValue).format(format))
                 : '';
-            
+
             return (
                 <Col {...colProps}>
                     <Form.Item label={label}>
-                        <Input 
-                            readOnly 
+                        <Input
+                            readOnly
                             value={displayValue}
-                            style={{ 
-                                backgroundColor: "#f9fafb", 
-                                color: "#262626", 
-                                cursor: "not-allowed",
-                                borderColor: "#d9d9d9",
-                                fontWeight: 500
-                            }} 
+                            style={READ_ONLY_STYLE}
+                            tabIndex={-1}
                         />
                     </Form.Item>
                 </Col>
             );
         }
-        
+
         return (
             <Col {...colProps}>
                 <Form.Item label={label} name={name}>
@@ -400,7 +410,6 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
             layout="vertical"
             onFinish={handleSubmit}
             initialValues={initialValues}
-            disabled={loading || formDisabled}
         >
             <Tabs defaultActiveKey="1" type="card" style={{ marginBottom: 16 }}>
                 {/* ========== TAB 1: THÔNG TIN SINH VIÊN ========== */}
@@ -512,11 +521,13 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
                         </Form.Item>
                     </Card>
 
-                    <Form.Item style={{ textAlign: 'right' }}>
-                        <Button type="primary" htmlType="submit" size="large" loading={loading}>
-                            {submitText}
-                        </Button>
-                    </Form.Item>
+                    {!formDisabled && (
+                        <Form.Item style={{ textAlign: 'right' }}>
+                            <Button type="primary" htmlType="submit" size="large" loading={loading}>
+                                {submitText}
+                            </Button>
+                        </Form.Item>
+                    )}
                 </Tabs.TabPane>
 
                 {/* ========== TAB 2: HỒ SƠ SINH VIÊN ========== */}
