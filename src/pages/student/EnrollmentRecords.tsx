@@ -296,11 +296,11 @@ export default function EnrollmentRecords({ messageApi }: { messageApi: any }) {
                             <Title level={5} style={{ marginTop: 16 }}>Danh mục giấy tờ nộp:</Title>
                             <div style={{ marginBottom: 16 }}>
                                 <Text strong>Danh sách các giấy tờ cần nộp:</Text>
-                                <ul style={{ marginTop: 8, paddingLeft: 24, fontSize: 14 }}>
+                                <ol style={{ marginTop: 8, paddingLeft: 20, fontSize: 14 }}>
                                     {periodChecklist.map((item, index) => (
                                         <li key={index} style={{ marginBottom: 8 }}>{item}</li>
                                     ))}
-                                </ul>
+                                </ol>
                             </div>
 
                             <div style={{ marginTop: 24, textAlign: "right" }}>

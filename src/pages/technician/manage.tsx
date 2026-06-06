@@ -614,7 +614,6 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
     { title: "Họ và tên", dataIndex: "fullName", key: "fullName", width: 180 },
     { title: "Khóa", dataIndex: "className", key: "className", width: 100 },
     { title: "Ngành", dataIndex: "major", key: "major", width: 180 },
-    { title: "Email", dataIndex: "emailPersonal", key: "emailPersonal", width: 220 },
     {
       title: "Người duyệt",
       key: "admissionApprovedBy",
@@ -1264,9 +1263,9 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
                     <Text type="secondary">Chưa cấu hình giấy tờ cho đợt này. Nhấn "Chỉnh sửa" để thêm.</Text>
                   ) : (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {((selectedPeriod as any)?.giayTos || []).map((g: any) => (
+                      {((selectedPeriod as any)?.giayTos || []).map((g: any, idx: number) => (
                         <Tag key={g.id} color="blue" style={{ fontSize: 13, padding: '4px 10px', borderRadius: 16 }}>
-                          {g.tenGiayTo}
+                          {idx + 1}. {g.tenGiayTo}
                         </Tag>
                       ))}
                     </div>
@@ -1647,7 +1646,7 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 350, overflowY: 'auto', paddingRight: 4 }}>
-                  {requiredDocs.map((doc: any) => {
+                  {requiredDocs.map((doc: any, index: number) => {
                     const isChecked = submittedDocIds.includes(doc.id);
                     return (
                       <div
@@ -1678,7 +1677,7 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
                         />
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                           <Text strong={isChecked} style={{ color: isChecked ? '#1890ff' : 'inherit', fontSize: 14 }}>
-                            {doc.tenGiayTo}
+                            {index + 1}. {doc.tenGiayTo}
                           </Text>
                           {doc.moTa && (
                             <Text type="secondary" style={{ fontSize: 12, marginTop: 4 }}>
