@@ -982,7 +982,7 @@ function FormalListTab({ messageApi }: { messageApi: any }) {
         <div>
             <Table loading={isLoading} columns={columns} dataSource={formalLists as any[]} rowKey="id" scroll={{ x: 1200 }} />
             <Drawer title="Chi tiết danh sách chính thức" width={900} open={!!detailId} onClose={() => setDetailId(null)}>
-                <Table loading={isLoadingDetails} columns={detColumns} dataSource={details as any[]} rowKey="id" pagination={{ pageSize: 15 }} scroll={{ x: 1400 }} />
+                <Table loading={isLoadingDetails} columns={detColumns} dataSource={(details as any[])?.filter((d: any) => !d.isCuuXet)} rowKey="id" pagination={{ pageSize: 15 }} scroll={{ x: 1400 }} />
             </Drawer>
 
             {/* Modal Tạo Quyết Định Kỷ Luật */}
