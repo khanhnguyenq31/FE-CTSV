@@ -709,7 +709,7 @@ function EvaluationDraftsTab({ messageApi }: { messageApi: any }) {
         mutationFn: toggleAppeal,
         onSuccess: () => {
             if (messageApi) messageApi.success('Đã cập nhật trạng thái cứu xét');
-            queryClient.invalidateQueries({ queryKey: ['evalDetails', activeDraft?.id] });
+            queryClient.invalidateQueries({ queryKey: ['evalDetails'] });
         }
     });
 
