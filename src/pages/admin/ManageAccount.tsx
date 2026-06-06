@@ -1,7 +1,7 @@
 import { Button, Table, Modal, Form, Input, Select, Tag, Space, Card, Tooltip, Popconfirm } from 'antd';
 import { PlusOutlined, EditOutlined, LockOutlined, UnlockOutlined, DeleteOutlined, SearchOutlined, UserOutlined, ToolOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
-import { createStudentApi, createTechnicianApi, API_BASE_URL } from '../../api/auth';
+import { createStudentApi, createTechnicianApi, api } from '../../api/auth';
 import useDocumentTitle from '../../hooks/useDocumentTitle';
 
 interface UserData {
@@ -30,13 +30,8 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
 
   const fetchPermissions = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`${API_BASE_URL}/auth/permissions`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error('Không thể tải danh sách quyền');
-      const data = await res.json();
-      setPermissionsList(data.permissions || []);
+      const res = await api.get('/auth/permissions');
+      setPermissionsList(res.data.permissions || []);
     } catch (e) {
       console.error(e);
     }
@@ -49,14 +44,8 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`${API_BASE_URL}/auth/user-list`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      if (!res.ok) throw new Error('Không thể lấy danh sách tài khoản');
-      const json = await res.json();
+      const res = await api.get('/auth/user-list');
+      const json = res.data;
       const today = new Date().toISOString().split('T')[0];
       const users: UserData[] = (json.users || []).map((u: any, idx: number) => ({
         key: u.email || idx,
@@ -84,23 +73,12 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
   const handleDeleteUser = async (email: string) => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`${API_BASE_URL}/auth/user/${email}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || 'Xóa tài khoản thất bại');
-      }
-
+      await api.delete(`/auth/user/${email}`);
       messageApi.success('Xóa tài khoản thành công');
       fetchUsers();
     } catch (err: any) {
-      messageApi.error(err.message || 'Có lỗi xảy ra khi xóa tài khoản');
+      const msg = err.response?.data?.message || err.message || 'Có lỗi xảy ra khi xóa tài khoản';
+      messageApi.error(msg);
     } finally {
       setLoading(false);
     }
@@ -110,23 +88,12 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
     setLoading(true);
     const newStatus = currentStatus === 'locked' ? 'active' : 'locked';
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`${API_BASE_URL}/auth/user/${email}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({}));
-        throw new Error(error.message || 'Cập nhật trạng thái thất bại');
-      }
+      await api.patch(`/auth/user/${email}/status`, { status: newStatus });
       messageApi.success(`Đã ${newStatus === 'locked' ? 'khóa' : 'mở khóa'} tài khoản thành công`);
       fetchUsers();
     } catch (err: any) {
-      messageApi.error(err.message || 'Lỗi cập nhật trạng thái');
+      const msg = err.response?.data?.message || err.message || 'Lỗi cập nhật trạng thái';
+      messageApi.error(msg);
     } finally {
       setLoading(false);
     }
@@ -145,27 +112,16 @@ export default function ManageAccounts({ messageApi }: { messageApi: any }) {
     if (!editingUser) return;
     setLoading(true);
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`${API_BASE_URL}/auth/user/${editingUser.email}/permissions`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          technicianType: values.technicianType,
-          permissions: values.technicianType === 'senior' ? [] : values.permissions
-        })
+      await api.patch(`/auth/user/${editingUser.email}/permissions`, {
+        technicianType: values.technicianType,
+        permissions: values.technicianType === 'senior' ? [] : values.permissions
       });
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({}));
-        throw new Error(error.message || 'Cập nhật quyền thất bại');
-      }
       messageApi.success('Cập nhật quyền chuyên viên thành công');
       setEditOpen(false);
       fetchUsers();
     } catch (err: any) {
-      messageApi.error(err.message || 'Lỗi cập nhật quyền');
+      const msg = err.response?.data?.message || err.message || 'Lỗi cập nhật quyền';
+      messageApi.error(msg);
     } finally {
       setLoading(false);
     }

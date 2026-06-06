@@ -9,7 +9,7 @@ import {
 import { useState, useEffect } from 'react';
 import useDocumentTitle from '../../hooks/useDocumentTitle';
 
-import { API_BASE_URL } from '../../api/auth';
+import { api } from '../../api/auth';
 
 const { Title, Text } = Typography;
 
@@ -29,14 +29,8 @@ export default function AdminOverview({ messageApi }: AdminOverviewProps) {
 
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const res = await fetch(`${API_BASE_URL}/auth/admin-stats`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setAdminStats(data);
-      }
+      const res = await api.get('/auth/admin-stats');
+      setAdminStats(res.data);
     } catch (e) {
       console.error(e);
     }

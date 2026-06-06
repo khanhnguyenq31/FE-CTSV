@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Typography, Form, Input, Button, Card, Row, Col, Select, DatePicker, Upload, Avatar, Tabs, Table, Tag, message, Modal } from 'antd';
 import { UploadOutlined, UserOutlined, WarningOutlined, EditOutlined, FileTextOutlined, DownloadOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 
-import { API_BASE_URL } from '../api/auth';
+import { api } from '../api/auth';
 
 import type { ColProps } from 'antd';
 import type { Rule } from 'antd/lib/form';
@@ -84,8 +85,8 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
     const [loadingContactWards, setLoadingContactWards] = useState(false);
 
     useEffect(() => {
-        fetch(`${API_BASE_URL}/address/provinces`)
-            .then(r => r.json())
+        api.get('/address/provinces')
+            .then(res => res.data)
             .then(d => d.provinces && setProvinces(d.provinces))
             .catch(console.error);
     }, []);
@@ -98,8 +99,8 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
             const p = provinces.find(x => x.name === initialValues.province);
             if (p) {
                 setLoadingWards(true);
-                fetch(`${API_BASE_URL}/address/wards?province_code=${p.code}`)
-                    .then(r => r.json())
+                api.get(`/address/wards?province_code=${p.code}`)
+                    .then(res => res.data)
                     .then(w => setWards(w.wards || []))
                     .finally(() => setLoadingWards(false));
             }
@@ -108,8 +109,8 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
             const p = provinces.find(x => x.name === initialValues.contactProvince);
             if (p) {
                 setLoadingContactWards(true);
-                fetch(`${API_BASE_URL}/address/wards?province_code=${p.code}`)
-                    .then(r => r.json())
+                api.get(`/address/wards?province_code=${p.code}`)
+                    .then(res => res.data)
                     .then(w => setContactWards(w.wards || []))
                     .finally(() => setLoadingContactWards(false));
             }
@@ -130,8 +131,8 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
         const p = provinces.find(x => x.name === val);
         if (p) {
             setLoadingWards(true);
-            fetch(`${API_BASE_URL}/address/wards?province_code=${p.code}`)
-                .then(r => r.json())
+            api.get(`/address/wards?province_code=${p.code}`)
+                .then(res => res.data)
                 .then(w => setWards(w.wards || []))
                 .finally(() => setLoadingWards(false));
         }
@@ -151,8 +152,8 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
         const p = provinces.find(x => x.name === val);
         if (p) {
             setLoadingContactWards(true);
-            fetch(`${API_BASE_URL}/address/wards?province_code=${p.code}`)
-                .then(r => r.json())
+            api.get(`/address/wards?province_code=${p.code}`)
+                .then(res => res.data)
                 .then(w => setContactWards(w.wards || []))
                 .finally(() => setLoadingContactWards(false));
         }
@@ -197,16 +198,9 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
 
     const loadPendingViolations = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
-            if (!token) return;
             setLoadingPending(true);
-            const res = await fetch(`${API_BASE_URL}/student/pending-violations`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setPendingViolations(data.violations || []);
-            }
+            const res = await api.get('/student/pending-violations');
+            setPendingViolations(res.data.violations || []);
         } catch (e) {
             console.error('Failed to load pending violations', e);
         } finally {
@@ -237,28 +231,19 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
         }
         setSubmitExplainLoading(true);
         try {
-            const token = localStorage.getItem('accessToken');
             const formData = new FormData();
             formData.append('giaiTrinh', explainText);
             formData.append('file', explainFile);
 
-            const res = await fetch(`${API_BASE_URL}/student/pending-violations/${explainingId}/explain`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                body: formData
+            await api.post(`/student/pending-violations/${explainingId}/explain`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
             });
-            if (res.ok) {
-                message.success('Gửi giải trình thành công');
-                loadPendingViolations();
-                setIsExplainModalOpen(false);
-            } else {
-                message.error('Gửi giải trình thất bại');
-            }
-        } catch (e) {
+            message.success('Gửi giải trình thành công');
+            loadPendingViolations();
+            setIsExplainModalOpen(false);
+        } catch (e: any) {
             console.error(e);
-            message.error('Có lỗi xảy ra');
+            message.error(e.response?.data?.message || 'Có lỗi xảy ra');
         } finally {
             setSubmitExplainLoading(false);
         }
@@ -270,40 +255,113 @@ export default function StudentProfileForm({ initialValues, onFinish, loading, s
     const colProps6: ColProps = { xs: 24, sm: 24, md: 12, lg: 4 };
 
     // Helpers
-    const renderInput = (label: string, name: string | number | (string | number)[], disabled: boolean = false, colProps: ColProps = defaultColProps, rules: Rule[] = []) => (
-        <Col {...colProps}>
-            <Form.Item label={label} name={name} rules={rules}>
-                <Input disabled={disabled} />
-            </Form.Item>
-        </Col>
-    );
+    const renderInput = (label: string, name: string | number | (string | number)[], disabled: boolean = false, colProps: ColProps = defaultColProps, rules: Rule[] = []) => {
+        const isStudent = localStorage.getItem('role') === 'student';
+        const isLockedField = isStudent && typeof name === 'string' && ['studentId', 'major', 'className'].includes(name);
+        
+        return (
+            <Col {...colProps}>
+                <Form.Item label={label} name={name} rules={rules}>
+                    {isLockedField || disabled ? (
+                        <Input 
+                            readOnly 
+                            style={{ 
+                                backgroundColor: "#f9fafb", 
+                                color: "#262626", 
+                                cursor: "not-allowed",
+                                borderColor: "#d9d9d9",
+                                fontWeight: 500
+                            }} 
+                        />
+                    ) : (
+                        <Input placeholder={label} />
+                    )}
+                </Form.Item>
+            </Col>
+        );
+    };
 
-    const renderSelect = (label: string, name: string | number, options: OptionType[], placeholder: string = "Chọn...", colProps: ColProps = defaultColProps, disabled: boolean = false, onChange?: (val: any) => void, loading: boolean = false) => (
-        <Col {...colProps}>
-            <Form.Item label={label} name={name}>
-                <Select 
-                    placeholder={placeholder} 
-                    disabled={disabled} 
-                    onChange={onChange}
-                    loading={loading}
-                    showSearch
-                    filterOption={(input, option) =>
-                        String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                    }
-                >
-                    {options.map(opt => <Option key={opt.value} value={opt.value}>{opt.label}</Option>)}
-                </Select>
-            </Form.Item>
-        </Col>
-    );
+    const renderSelect = (label: string, name: string | number, options: OptionType[], placeholder: string = "Chọn...", colProps: ColProps = defaultColProps, disabled: boolean = false, onChange?: (val: any) => void, loading: boolean = false) => {
+        const isStudent = localStorage.getItem('role') === 'student';
+        const isLockedField = isStudent && name === 'priorityArea';
+        
+        if (isLockedField || disabled) {
+            const currentValue = form.getFieldValue(name);
+            const selectedOpt = options.find(o => o.value === currentValue);
+            const displayValue = selectedOpt ? selectedOpt.label : currentValue;
+            
+            return (
+                <Col {...colProps}>
+                    <Form.Item label={label}>
+                        <Input 
+                            readOnly 
+                            value={displayValue}
+                            style={{ 
+                                backgroundColor: "#f9fafb", 
+                                color: "#262626", 
+                                cursor: "not-allowed",
+                                borderColor: "#d9d9d9",
+                                fontWeight: 500
+                            }} 
+                        />
+                    </Form.Item>
+                </Col>
+            );
+        }
+        
+        return (
+            <Col {...colProps}>
+                <Form.Item label={label} name={name}>
+                    <Select 
+                        placeholder={placeholder} 
+                        onChange={onChange}
+                        loading={loading}
+                        showSearch
+                        filterOption={(input, option) =>
+                            String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                        }
+                    >
+                        {options.map(opt => <Option key={opt.value} value={opt.value}>{opt.label}</Option>)}
+                    </Select>
+                </Form.Item>
+            </Col>
+        );
+    };
 
-    const renderDatePicker = (label: string, name: string | number, format: string = "DD/MM/YYYY", colProps: ColProps = defaultColProps, disabled: boolean = false) => (
-        <Col {...colProps}>
-            <Form.Item label={label} name={name}>
-                <DatePicker style={{ width: '100%' }} format={format} disabled={disabled} />
-            </Form.Item>
-        </Col>
-    );
+    const renderDatePicker = (label: string, name: string | number, format: string = "DD/MM/YYYY", colProps: ColProps = defaultColProps, disabled: boolean = false) => {
+        if (disabled) {
+            const currentValue = form.getFieldValue(name);
+            const displayValue = currentValue 
+                ? (dayjs.isDayjs(currentValue) ? currentValue.format(format) : dayjs(currentValue).format(format)) 
+                : '';
+            
+            return (
+                <Col {...colProps}>
+                    <Form.Item label={label}>
+                        <Input 
+                            readOnly 
+                            value={displayValue}
+                            style={{ 
+                                backgroundColor: "#f9fafb", 
+                                color: "#262626", 
+                                cursor: "not-allowed",
+                                borderColor: "#d9d9d9",
+                                fontWeight: 500
+                            }} 
+                        />
+                    </Form.Item>
+                </Col>
+            );
+        }
+        
+        return (
+            <Col {...colProps}>
+                <Form.Item label={label} name={name}>
+                    <DatePicker style={{ width: '100%' }} format={format} placeholder="Chọn ngày" />
+                </Form.Item>
+            </Col>
+        );
+    };
 
     const decisionColumns = [
         { title: 'Học kỳ', dataIndex: 'hocKy', key: 'hocKy', width: 130 },

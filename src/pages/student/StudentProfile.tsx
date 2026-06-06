@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Typography, Spin, Alert } from 'antd';
 import dayjs from 'dayjs';
 import StudentProfileForm from '../../components/StudentProfileForm';
-import { API_BASE_URL } from '../../api/auth';
+import { api } from '../../api/auth';
 
 const { Title } = Typography;
 
@@ -20,40 +20,20 @@ export default function DetailedStudentProfile({ messageApi }: { messageApi: any
         const fetchProfile = async () => {
             setLoading(true);
             try {
-                const token = localStorage.getItem('accessToken');
-                if (!token) {
-                    if (messageApi) messageApi.error('Vui lòng đăng nhập để xem hồ sơ');
-                    return;
-                }
-
                 // 1. Fetch Period Status
-                const periodRes = await fetch(`${API_BASE_URL}/periods/status`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (periodRes.ok) {
-                    const periodData = await periodRes.json();
-                    if (periodData.canEdit && periodData.activePeriod) {
-                        setCanEdit(true);
-                        setPeriodName(periodData.activePeriod.name);
-                    } else {
-                        setCanEdit(false);
-                        setPeriodName("");
-                    }
+                const periodRes = await api.get('/periods/status');
+                const periodData = periodRes.data;
+                if (periodData.canEdit && periodData.activePeriod) {
+                    setCanEdit(true);
+                    setPeriodName(periodData.activePeriod.name);
+                } else {
+                    setCanEdit(false);
+                    setPeriodName("");
                 }
 
                 // 2. Fetch Profile
-                const res = await fetch(`${API_BASE_URL}/student/profile`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                    },
-                });
-
-                if (!res.ok) {
-                    if (res.status === 401) throw new Error('Phiên đăng nhập hết hạn');
-                    throw new Error('Không thể lấy hồ sơ');
-                }
-
-                const data = await res.json();
+                const res = await api.get('/student/profile');
+                const data = res.data;
                 if (!data || !data.profile) {
                     throw new Error('Dữ liệu hồ sơ không hợp lệ');
                 }
@@ -78,15 +58,11 @@ export default function DetailedStudentProfile({ messageApi }: { messageApi: any
 
                 // 4. Fetch discipline decisions
                 try {
-                    const email = profile.email || localStorage.getItem('email');
+                    const email = profile.email || localStorage.getItem('userEmail');
                     if (email) {
-                        const decRes = await fetch(`${API_BASE_URL}/discipline/decisions/${encodeURIComponent(email)}`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                        });
-                        if (decRes.ok) {
-                            const decData = await decRes.json();
-                            setDecisions(decData.decisions || []);
-                        }
+                        const decRes = await api.get(`/discipline/decisions/${encodeURIComponent(email)}`);
+                        const decData = decRes.data;
+                        setDecisions(decData.decisions || []);
                     }
                 } catch (err) {
                     console.warn('Could not load discipline decisions:', err);
@@ -94,7 +70,8 @@ export default function DetailedStudentProfile({ messageApi }: { messageApi: any
 
             } catch (e: any) {
                 console.error(e);
-                if (messageApi) messageApi.error(e.message || 'Có lỗi xảy ra khi tải hồ sơ');
+                const errMsg = e.response?.data?.message || e.message || 'Có lỗi xảy ra khi tải hồ sơ';
+                if (messageApi) messageApi.error(errMsg);
             } finally {
                 setLoading(false);
             }
@@ -105,8 +82,6 @@ export default function DetailedStudentProfile({ messageApi }: { messageApi: any
     const onFinish = async (values: any, avatarFile: File | null) => {
         setLoading(true);
         try {
-            const token = localStorage.getItem('accessToken');
-
             // Filter only top-level fields that are not objects (except dayjs)
             const commonData: any = {};
             Object.keys(values).forEach(key => {
@@ -124,11 +99,7 @@ export default function DetailedStudentProfile({ messageApi }: { messageApi: any
                 }
             });
 
-            let body: any;
-            let headers: any = {
-                'Authorization': `Bearer ${token}`,
-            };
-
+            let res;
             if (avatarFile) {
                 // Use FormData if there's a new avatar
                 const formData = new FormData();
@@ -138,24 +109,15 @@ export default function DetailedStudentProfile({ messageApi }: { messageApi: any
                     }
                 });
                 formData.append('avatar', avatarFile);
-                body = formData;
+                res = await api.put('/student/profile', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
             } else {
                 // Use JSON otherwise
-                body = JSON.stringify(commonData);
-                headers['Content-Type'] = 'application/json';
+                res = await api.put('/student/profile', commonData);
             }
 
-            const res = await fetch(`${API_BASE_URL}/student/profile`, {
-                method: 'PUT',
-                headers: headers,
-                body: body,
-            });
-
-            if (!res.ok) {
-                const errorData = await res.json();
-                throw new Error(errorData.message || 'Cập nhật thất bại');
-            }
-            const data = await res.json();
+            const data = res.data;
 
             if (messageApi) messageApi.success('Cập nhật hồ sơ thành công');
 
@@ -173,7 +135,8 @@ export default function DetailedStudentProfile({ messageApi }: { messageApi: any
             setInitialValues(profile);
 
         } catch (e: any) {
-            if (messageApi) messageApi.error(e.message || 'Có lỗi xảy ra khi cập nhật');
+            const errMsg = e.response?.data?.message || e.message || 'Có lỗi xảy ra khi cập nhật';
+            if (messageApi) messageApi.error(errMsg);
         } finally {
             setLoading(false);
         }

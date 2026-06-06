@@ -24,7 +24,7 @@ import {
     CameraOutlined,
 } from "@ant-design/icons";
 import { updateExportStatus, uploadStudentAvatar } from "../../api/admission";
-import { API_BASE_URL } from "../../api/auth";
+import { api } from "../../api/auth";
 import dayjs from "dayjs";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -62,12 +62,8 @@ export default function EnrollmentRecords({ messageApi }: { messageApi: any }) {
         const fetchProfile = async () => {
             setLoading(true);
             try {
-                const token = localStorage.getItem("accessToken");
-                const res = await fetch(`${API_BASE_URL}/student/profile`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                if (res.ok) {
-                    const data = await res.json();
+                const res = await api.get("/student/profile");
+                const data = res.data;
                     const profile = data.profile;
                     if (profile) {
                         const formatted = {
@@ -108,7 +104,6 @@ export default function EnrollmentRecords({ messageApi }: { messageApi: any }) {
                             setAvatarUrl(profile.avatar);
                         }
                     }
-                }
             } catch (e) {
                 console.error("Lỗi khi tải profile:", e);
             } finally {
@@ -545,7 +540,21 @@ export default function EnrollmentRecords({ messageApi }: { messageApi: any }) {
 function renderFormItem(label: string, name: string, required = false, disabled = false) {
     return (
         <Form.Item label={label} name={name} rules={[{ required, message: `Vui lòng nhập ${label.toLowerCase()}` }]}>
-            <Input placeholder={label} disabled={disabled} />
+            {disabled ? (
+                <Input 
+                    placeholder={label} 
+                    readOnly 
+                    style={{ 
+                        backgroundColor: "#f9fafb", 
+                        color: "#262626", 
+                        cursor: "not-allowed",
+                        borderColor: "#d9d9d9",
+                        fontWeight: 500
+                    }} 
+                />
+            ) : (
+                <Input placeholder={label} />
+            )}
         </Form.Item>
     );
 }

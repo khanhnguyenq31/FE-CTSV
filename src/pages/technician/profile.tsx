@@ -33,7 +33,7 @@ import { useNavigate } from "react-router-dom";
 
 import StudentProfileForm from "../../components/StudentProfileForm";
 import dayjs from "dayjs";
-import { API_BASE_URL } from "../../api/auth";
+import { api } from "../../api/auth";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -101,14 +101,8 @@ export default function ProfilePage({ messageApi }: { messageApi: any }) {
   const fetchStudents = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("accessToken");
-      const res = await fetch(`${API_BASE_URL}/student/list`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!res.ok) throw new Error("Không thể lấy danh sách sinh viên");
-      const json = await res.json();
+      const res = await api.get('/student/list');
+      const json = res.data;
       // Map dữ liệu API sang RowData
       const rawStudents = Array.isArray(json) ? json : (json.students || []);
       const students: RowData[] = rawStudents
@@ -302,20 +296,8 @@ export default function ProfilePage({ messageApi }: { messageApi: any }) {
     setEditLoading(true);
 
     try {
-      const token = localStorage.getItem("accessToken");
-      // API lấy chi tiết sinh viên cho Technician
-      const res = await fetch(`${API_BASE_URL}/student/profile/${selectedStudent.studentId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      let profileData;
-      if (res.ok) {
-        const json = await res.json();
-        profileData = json.student || json.profile; // Tuỳ response
-      } else {
-        // Fallback nếu API chưa sẵn sàng hoặc lỗi, dùng dữ liệu đang có
-        profileData = { ...selectedStudent, fullName: selectedStudent.name };
-      }
+      const res = await api.get(`/student/profile/${selectedStudent.studentId}`);
+      const profileData = res.data.student || res.data.profile || { ...selectedStudent, fullName: selectedStudent.name };
 
       // Convert dates to dayjs
       const dateFields = ['dateOfBirth', 'idCardIssueDate', 'enrollmentDate', 'activityDate'];
@@ -344,7 +326,6 @@ export default function ProfilePage({ messageApi }: { messageApi: any }) {
     if (!editingStudent) return;
     setEditLoading(true);
     try {
-      const token = localStorage.getItem('accessToken');
       // Filter only top-level fields that are not objects (except dayjs)
       const commonData: any = {};
       Object.keys(values).forEach(key => {
@@ -362,9 +343,7 @@ export default function ProfilePage({ messageApi }: { messageApi: any }) {
         }
       });
 
-      let body: any;
-      let headers: any = { 'Authorization': `Bearer ${token}` };
-
+      let res;
       if (avatarFile) {
         const formData = new FormData();
         Object.keys(commonData).forEach(key => {
@@ -373,21 +352,11 @@ export default function ProfilePage({ messageApi }: { messageApi: any }) {
           }
         });
         formData.append('avatar', avatarFile);
-        body = formData;
+        res = await api.put(`/student/profile/${editingStudent.studentId}`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
       } else {
-        body = JSON.stringify(commonData);
-        headers['Content-Type'] = 'application/json';
-      }
-
-      const res = await fetch(`${API_BASE_URL}/student/profile/${editingStudent.studentId}`, {
-        method: 'PUT',
-        headers: headers,
-        body: body,
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || 'Cập nhật thất bại');
+        res = await api.put(`/student/profile/${editingStudent.studentId}`, commonData);
       }
 
       if (messageApi) messageApi.success('Cập nhật hồ sơ thành công');
@@ -414,14 +383,9 @@ export default function ProfilePage({ messageApi }: { messageApi: any }) {
   const fetchPeriods = async () => {
     setPeriodLoading(true);
     try {
-      const token = localStorage.getItem("accessToken");
-      const res = await fetch(`${API_BASE_URL}/periods`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setPeriods(Array.isArray(data) ? data : (data.periods || []));
-      }
+      const res = await api.get('/periods');
+      const data = res.data;
+      setPeriods(Array.isArray(data) ? data : (data.periods || []));
     } catch (e) {
       console.error("Failed to fetch periods", e);
     } finally {
@@ -449,7 +413,6 @@ export default function ProfilePage({ messageApi }: { messageApi: any }) {
   const handleSavePeriod = async (values: any) => {
     setPeriodLoading(true);
     try {
-      const token = localStorage.getItem("accessToken");
       const [start, end] = values.dates;
       const payload = {
         name: values.name,
@@ -458,24 +421,11 @@ export default function ProfilePage({ messageApi }: { messageApi: any }) {
         isActive: values.isActive !== undefined ? values.isActive : true,
       };
 
-      let url = `${API_BASE_URL}/periods`;
-      let method = 'POST';
-
       if (editingPeriod) {
-        url = `${API_BASE_URL}/periods/${editingPeriod.id}`;
-        method = 'PUT';
+        await api.put(`/periods/${editingPeriod.id}`, payload);
+      } else {
+        await api.post('/periods', payload);
       }
-
-      const res = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!res.ok) throw new Error("Failed to save period");
 
       if (messageApi) messageApi.success(editingPeriod ? "Cập nhật đợt thành công" : "Tạo đợt mới thành công");
       setIsPeriodModalOpen(false);
@@ -490,11 +440,7 @@ export default function ProfilePage({ messageApi }: { messageApi: any }) {
 
   const handleDeletePeriod = async (id: number) => {
     try {
-      const token = localStorage.getItem("accessToken");
-      await fetch(`${API_BASE_URL}/periods/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/periods/${id}`);
       if (messageApi) messageApi.success("Đã xóa đợt");
       fetchPeriods();
     } catch (e) {
