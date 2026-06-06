@@ -574,7 +574,7 @@ function EvaluateDisciplineTab({ messageApi }: { messageApi: any }) {
                     extra={<Button type="primary" danger icon={<SaveOutlined />} onClick={handleSaveList} loading={mutationSaveEvaluation.isPending} style={{ borderRadius: 8 }}>Ghim & Lưu Lịch Sử Nhắc Nhở</Button>}
                 >
                     <AppLoading loading={mutationEvaluate.isPending} tip="Đang chạy thuật toán xét kỷ luật...">
-                        <Table rowKey="studentEmail" columns={columns} dataSource={evalResults} pagination={{ pageSize: 15 }} />
+                        <Table rowKey="studentEmail" columns={columns} dataSource={evalResults} pagination={{ pageSize: 15 }} scroll={{ x: 1400 }} />
                     </AppLoading>
                 </Card>
             )}
@@ -616,11 +616,8 @@ function EvaluationHistoryTab({ messageApi }: { messageApi: any }) {
         { title: 'Tên Đợt Xét', dataIndex: 'tenDotXet', key: 'tenDotXet' },
         {
             title: 'Khóa áp dụng', dataIndex: 'khoaSinhVien', key: 'khoaSinhVien', render: (val: string) => {
-                if (val) {
+                if (val && val.trim() !== '') {
                     return val.split(',').join(', ');
-                }
-                if (cohorts && cohorts.length > 0) {
-                    return cohorts.join(', ');
                 }
                 return 'Tất cả';
             }
@@ -668,11 +665,11 @@ function EvaluationHistoryTab({ messageApi }: { messageApi: any }) {
                 </Popconfirm>
             </div>
             <AppLoading loading={isLoading} tip="Đang tải lịch sử đợt xét...">
-                <Table columns={columns} dataSource={history as any[]} rowKey="id" />
+                <Table columns={columns} dataSource={history as any[]} rowKey="id" scroll={{ x: 1200 }} />
             </AppLoading>
             <Drawer title="Chi tiết sinh viên trong đợt xét" width={800} open={!!detailId} onClose={() => setDetailId(null)}>
                 <AppLoading loading={isLoadingDetails} tip="Đang tải chi tiết danh sách...">
-                    <Table columns={detColumns} dataSource={details as any[]} rowKey="id" pagination={{ pageSize: 15 }} />
+                    <Table columns={detColumns} dataSource={details as any[]} rowKey="id" pagination={{ pageSize: 15 }} scroll={{ x: 1400 }} />
                 </AppLoading>
             </Drawer>
         </div>
@@ -861,10 +858,10 @@ function EvaluationDraftsTab({ messageApi }: { messageApi: any }) {
 
             <Tabs defaultActiveKey="1" type="card">
                 <TabPane tab={`Danh sách kỷ luật (${dsKytLuat.length})`} key="1">
-                    <Table columns={columns} dataSource={dsKytLuat} rowKey="id" pagination={{ pageSize: 15 }} />
+                    <Table columns={columns} dataSource={dsKytLuat} rowKey="id" pagination={{ pageSize: 15 }} scroll={{ x: 1400 }} />
                 </TabPane>
                 <TabPane tab={`Danh sách được cứu xét (${dsCuuXet.length})`} key="2">
-                    <Table columns={columns} dataSource={dsCuuXet} rowKey="id" pagination={{ pageSize: 15 }} />
+                    <Table columns={columns} dataSource={dsCuuXet} rowKey="id" pagination={{ pageSize: 15 }} scroll={{ x: 1400 }} />
                 </TabPane>
             </Tabs>
         </div>
@@ -935,11 +932,10 @@ function FormalListTab({ messageApi }: { messageApi: any }) {
         { title: 'Tên Đợt Xét', dataIndex: 'tenDotXet', key: 'tenDotXet' },
         {
             title: 'Khóa áp dụng', dataIndex: 'khoaSinhVien', key: 'khoaSinhVien', render: (val: string) => {
-                if (!val) return 'Tất cả';
-                if (!admissionPeriods?.periods) return val;
-                const ids = val.split(',').map(Number);
-                const matched = admissionPeriods.periods.filter((p: any) => ids.includes(p.id));
-                return matched.map((p: any) => p.name).join(', ');
+                if (val && val.trim() !== '') {
+                    return val.split(',').join(', ');
+                }
+                return 'Tất cả';
             }
         },
         { title: 'Năm học', dataIndex: 'namHoc', key: 'namHoc' },
@@ -977,9 +973,9 @@ function FormalListTab({ messageApi }: { messageApi: any }) {
 
     return (
         <div>
-            <Table loading={isLoading} columns={columns} dataSource={formalLists as any[]} rowKey="id" />
+            <Table loading={isLoading} columns={columns} dataSource={formalLists as any[]} rowKey="id" scroll={{ x: 1200 }} />
             <Drawer title="Chi tiết danh sách chính thức" width={900} open={!!detailId} onClose={() => setDetailId(null)}>
-                <Table loading={isLoadingDetails} columns={detColumns} dataSource={details as any[]} rowKey="id" pagination={{ pageSize: 15 }} />
+                <Table loading={isLoadingDetails} columns={detColumns} dataSource={details as any[]} rowKey="id" pagination={{ pageSize: 15 }} scroll={{ x: 1400 }} />
             </Drawer>
 
             {/* Modal Tạo Quyết Định Kỷ Luật */}
