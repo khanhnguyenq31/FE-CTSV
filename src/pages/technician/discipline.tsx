@@ -504,44 +504,16 @@ function EvaluateDisciplineTab({ messageApi }: { messageApi: any }) {
     };
 
     const columns = [
-        { title: 'Họ tên', dataIndex: 'fullName', key: 'fullName', width: 160,
-          ellipsis: { showTitle: false },
-          render: (t: string) => <Tooltip title={t}>{t}</Tooltip>
-        },
+        { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName', width: 160 },
         { title: 'MSSV', dataIndex: 'studentId', key: 'studentId', width: 110 },
-        { title: 'Ngành / CTDT', key: 'nganh', width: 180,
-          render: (_: any, r: any) => (
-            <div style={{ lineHeight: '1.4' }}>
-              <div style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 170 }}>
-                <Tooltip title={r.major}>{r.major}</Tooltip>
-              </div>
-              {r.ctdtName && <Tag color="geekblue" style={{ marginTop: 2, fontSize: 11 }}>{r.ctdtName}</Tag>}
-            </div>
-          )
-        },
-        { title: 'Tiến trình vi phạm', dataIndex: ['matchedRule', 'escalationPath'], key: 'escalationPath',
-          ellipsis: { showTitle: false },
-          render: (t: string) => <Tooltip title={t}><Text type="secondary" style={{ fontSize: 12 }}>{t}</Text></Tooltip>
-        },
-        { title: 'Kết quả xử lý', key: 'ketQua', width: 200,
-          render: (_: any, r: any) => (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <Tag color="blue" style={{ margin: 0, fontSize: 11 }}>HV: {r.matchedRule?.gpaForm?.tenHinhThuc}</Tag>
-              {r.matchedRule?.luyTienForm && <Tag color="orange" style={{ margin: 0, fontSize: 11 }}>LT: {r.matchedRule.luyTienForm.tenHinhThuc}</Tag>}
-              <Tag color="red" style={{ margin: 0, fontSize: 11 }}>Cuối: {r.matchedRule?.hinhThuc?.tenHinhThuc}</Tag>
-            </div>
-          )
-        },
+        { title: 'Ngành', dataIndex: 'major', key: 'major', width: 160 },
+        { title: 'CTDT áp dụng', dataIndex: 'ctdtName', key: 'ctdtName', width: 180, render: (t: string) => t ? <Tag color="geekblue">{t}</Tag> : <Text type="secondary">-</Text> },
+        { title: 'Tiến trình vi phạm', dataIndex: ['matchedRule', 'escalationPath'], key: 'escalationPath', render: (t: string) => <Text type="secondary">{t}</Text> },
+        { title: 'Kết quả vòng Học vụ', dataIndex: ['matchedRule', 'gpaForm', 'tenHinhThuc'], key: 'gpaForm', width: 160, render: (t: string) => <Tag color="blue">{t}</Tag> },
+        { title: 'Kết quả vòng Lũy tiến', dataIndex: ['matchedRule', 'luyTienForm', 'tenHinhThuc'], key: 'luyTienForm', width: 160, render: (t: string) => t ? <Tag color="orange">{t}</Tag> : <Text type="secondary">-</Text> },
+        { title: 'Kết quả Cuối cùng', dataIndex: ['matchedRule', 'hinhThuc', 'tenHinhThuc'], key: 'hinhThuc', width: 160, render: (t: string) => <Tag color="red">{t}</Tag> },
+        { title: 'Kết quả thực tế', key: 'actualGpa', render: (_: any, r: any) => `GPA HK: ${r.actualGpaSem?.toFixed(2)} | GPA TL: ${r.actualGpaTotal?.toFixed(2)} | TC HK: ${r.actualCreditsSem || 0} | TC TL: ${r.actualCreditsTotal || 0}` }
     ];
-
-    const expandedRowRender = (r: any) => (
-        <div style={{ padding: '4px 0', color: '#555', fontSize: 12, display: 'flex', gap: 24 }}>
-            <span>GPA Học kỳ: <strong>{r.actualGpaSem?.toFixed(2)}</strong></span>
-            <span>GPA Tích lũy: <strong>{r.actualGpaTotal?.toFixed(2)}</strong></span>
-            <span>Tín chỉ Họk: <strong>{r.actualCreditsSem || 0}</strong></span>
-            <span>Tín chỉ Tích lũy: <strong>{r.actualCreditsTotal || 0}</strong></span>
-        </div>
-    );
 
     return (
         <div>
@@ -609,14 +581,7 @@ function EvaluateDisciplineTab({ messageApi }: { messageApi: any }) {
                     extra={<Button type="primary" danger icon={<SaveOutlined />} onClick={handleSaveList} loading={mutationSaveEvaluation.isPending} style={{ borderRadius: 8 }}>Ghim & Lưu Lịch Sử Nhắc Nhở</Button>}
                 >
                     <AppLoading loading={mutationEvaluate.isPending} tip="Đang chạy thuật toán xét kỷ luật...">
-                        <Table
-                            rowKey="studentEmail"
-                            columns={columns}
-                            dataSource={evalResults}
-                            pagination={{ pageSize: 15 }}
-                            expandable={{ expandedRowRender, rowExpandable: () => true }}
-                            size="small"
-                        />
+                        <Table rowKey="studentEmail" columns={columns} dataSource={evalResults} pagination={{ pageSize: 15 }} scroll={{ x: 1400 }} />
                     </AppLoading>
                 </Card>
             )}
@@ -787,29 +752,13 @@ function EvaluationDraftsTab({ messageApi }: { messageApi: any }) {
     };
 
     const columns = [
-        { title: 'Họ tên', dataIndex: 'fullName', key: 'fullName', width: 150,
-          ellipsis: { showTitle: false }, render: (t: string) => <Tooltip title={t}>{t}</Tooltip> },
+        { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName', width: 160 },
         { title: 'MSSV', dataIndex: 'studentId', key: 'studentId', width: 110 },
-        { title: 'Ngành / CTDT', key: 'nganh', width: 180,
-          render: (_: any, r: any) => (
-            <div style={{ lineHeight: '1.4' }}>
-              <div style={{ fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 170 }}>
-                <Tooltip title={r.major}>{r.major}</Tooltip>
-              </div>
-              {r.ctdtName && <Tag color="geekblue" style={{ marginTop: 2, fontSize: 11 }}>{r.ctdtName}</Tag>}
-            </div>
-          )
-        },
-        { title: 'Lớp / Khóa', dataIndex: 'className', key: 'className', width: 90 },
-        { title: 'Kết quả xử lý', key: 'ketQua', width: 200,
-          render: (_: any, r: any) => (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <Tag color="blue" style={{ margin: 0, fontSize: 11 }}>HV: {r.hinhThucGpa}</Tag>
-              {r.hinhThucLuyTien && <Tag color="orange" style={{ margin: 0, fontSize: 11 }}>LT: {r.hinhThucLuyTien}</Tag>}
-              <Tag color="red" style={{ margin: 0, fontSize: 11 }}>Cuối: {r.hinhThuc}</Tag>
-            </div>
-          )
-        },
+        { title: 'Ngành', dataIndex: 'major', key: 'major', width: 160 },
+        { title: 'CTDT áp dụng', dataIndex: 'ctdtName', key: 'ctdtName', width: 180, render: (t: string) => t ? <Tag color="geekblue">{t}</Tag> : <Text type="secondary">-</Text> },
+        { title: 'Lớp / Khóa', dataIndex: 'className', key: 'className', width: 100 },
+        { title: 'Bị phạt (vòng Học vụ)', dataIndex: 'hinhThucGpa', key: 'hinhThucGpa', width: 160, render: (t: string) => <Tag color="blue">{t}</Tag> },
+        { title: 'Hình phạt Dự kiến', dataIndex: 'hinhThuc', key: 'hinhThuc', width: 160, render: (t: string) => <Tag color="red">{t}</Tag> },
         {
             title: 'Trạng thái', key: 'status', align: 'center' as const, width: 140, render: (_: any, r: any) => (
                 r.isCuuXet
