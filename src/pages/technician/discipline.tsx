@@ -593,10 +593,10 @@ function EvaluateDisciplineTab({ messageApi }: { messageApi: any }) {
                     extra={<Button type="primary" danger icon={<SaveOutlined />} onClick={handleSaveList} loading={mutationSaveEvaluation.isPending} style={{ borderRadius: 8 }}>Ghim & Lưu Lịch Sử Nhắc Nhở</Button>}
                 >
                     <AppLoading loading={mutationEvaluate.isPending} tip="Đang chạy thuật toán xét kỷ luật...">
-                        <Table 
-                            rowKey="studentEmail" 
-                            columns={columns} 
-                            dataSource={evalResults} 
+                        <Table
+                            rowKey="studentEmail"
+                            columns={columns}
+                            dataSource={evalResults}
                             pagination={{ pageSize: 15 }}
                             expandable={{
                                 expandedRowRender: (record: any) => (
@@ -718,15 +718,15 @@ function EvaluationHistoryTab({ messageApi }: { messageApi: any }) {
 
     return (
         <div>
-            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+            <div style={{ marginBottom: 16, display: 'none', justifyContent: 'flex-end' }}>
                 <Popconfirm title="Xác nhận xóa trắng Lịch sử đợt xét?" onConfirm={() => mutationClear.mutate()} okText="Xóa" cancelText="Hủy" okButtonProps={{ danger: true }}>
                     <Button type="primary" danger icon={<ClearOutlined />} loading={mutationClear.isPending} style={{ borderRadius: 8 }}>Xóa trắng lịch sử (Reset DB)</Button>
                 </Popconfirm>
             </div>
             <AppLoading loading={isLoading} tip="Đang tải lịch sử đợt xét...">
-                <Table 
-                    columns={columns} 
-                    dataSource={history as any[]} 
+                <Table
+                    columns={columns}
+                    dataSource={history as any[]}
                     rowKey="id"
                     expandable={{
                         expandedRowRender: (record: any) => (
@@ -749,11 +749,11 @@ function EvaluationHistoryTab({ messageApi }: { messageApi: any }) {
             </AppLoading>
             <Drawer title="Chi tiết sinh viên trong đợt xét" width={800} open={!!detailId} onClose={() => setDetailId(null)}>
                 <AppLoading loading={isLoadingDetails} tip="Đang tải chi tiết danh sách...">
-                    <Table 
-                        columns={detColumns} 
-                        dataSource={details as any[]} 
-                        rowKey="id" 
-                        pagination={{ pageSize: 15 }} 
+                    <Table
+                        columns={detColumns}
+                        dataSource={details as any[]}
+                        rowKey="id"
+                        pagination={{ pageSize: 15 }}
                         expandable={{
                             expandedRowRender: (record: any) => (
                                 <div style={{ padding: '8px 24px', backgroundColor: '#fafafa', borderRadius: 8 }}>
@@ -974,12 +974,12 @@ function EvaluationDraftsTab({ messageApi }: { messageApi: any }) {
 
             <Tabs defaultActiveKey="1" type="card">
                 <TabPane tab={`Danh sách kỷ luật (${dsKytLuat.length})`} key="1">
-                    <Table 
-                        columns={columns} 
-                        dataSource={dsKytLuat} 
-                        rowKey="id" 
-                        pagination={{ pageSize: 15 }} 
-                        scroll={{ x: 1000 }} 
+                    <Table
+                        columns={columns}
+                        dataSource={dsKytLuat}
+                        rowKey="id"
+                        pagination={{ pageSize: 15 }}
+                        scroll={{ x: 1000 }}
                         expandable={{
                             expandedRowRender: (record: any) => (
                                 <div style={{ padding: '8px 24px', backgroundColor: '#fafafa', borderRadius: 8 }}>
@@ -1005,12 +1005,12 @@ function EvaluationDraftsTab({ messageApi }: { messageApi: any }) {
                     />
                 </TabPane>
                 <TabPane tab={`Danh sách được cứu xét (${dsCuuXet.length})`} key="2">
-                    <Table 
-                        columns={columns} 
-                        dataSource={dsCuuXet} 
-                        rowKey="id" 
-                        pagination={{ pageSize: 15 }} 
-                        scroll={{ x: 1000 }} 
+                    <Table
+                        columns={columns}
+                        dataSource={dsCuuXet}
+                        rowKey="id"
+                        pagination={{ pageSize: 15 }}
+                        scroll={{ x: 1000 }}
                         expandable={{
                             expandedRowRender: (record: any) => (
                                 <div style={{ padding: '8px 24px', backgroundColor: '#fafafa', borderRadius: 8 }}>
@@ -1148,11 +1148,11 @@ function FormalListTab({ messageApi }: { messageApi: any }) {
 
     return (
         <div>
-            <Table 
-                loading={isLoading} 
-                columns={columns} 
-                dataSource={formalLists as any[]} 
-                rowKey="id" 
+            <Table
+                loading={isLoading}
+                columns={columns}
+                dataSource={formalLists as any[]}
+                rowKey="id"
                 expandable={{
                     expandedRowRender: (record: any) => (
                         <div style={{ padding: '8px 24px', backgroundColor: '#fafafa', borderRadius: 8 }}>
@@ -1169,12 +1169,12 @@ function FormalListTab({ messageApi }: { messageApi: any }) {
                 }}
             />
             <Drawer title="Chi tiết danh sách chính thức" width={900} open={!!detailId} onClose={() => setDetailId(null)}>
-                <Table 
-                    loading={isLoadingDetails} 
-                    columns={detColumns} 
-                    dataSource={(details as any[])?.filter((d: any) => !d.isCuuXet)} 
-                    rowKey="id" 
-                    pagination={{ pageSize: 15 }} 
+                <Table
+                    loading={isLoadingDetails}
+                    columns={detColumns}
+                    dataSource={(details as any[])?.filter((d: any) => !d.isCuuXet)}
+                    rowKey="id"
+                    pagination={{ pageSize: 15 }}
                     expandable={{
                         expandedRowRender: (record: any) => (
                             <div style={{ padding: '8px 24px', backgroundColor: '#fafafa', borderRadius: 8 }}>
