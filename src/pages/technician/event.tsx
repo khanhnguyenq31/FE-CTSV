@@ -1,5 +1,6 @@
 import useDocumentTitle from '../../hooks/useDocumentTitle';
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
+import html2canvas from "html2canvas";
 import type { ColumnsType } from "antd/es/table";
 import MapPicker from "../../components/MapPicker";
 import ReactQuill from "react-quill-new";
@@ -55,6 +56,7 @@ import {
   InfoCircleOutlined,
   SettingOutlined,
   UploadOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient, useQueries } from "@tanstack/react-query";
@@ -653,6 +655,33 @@ function ActivityDetailView({
   const [manualDate, setManualDate] = useState<string | undefined>(undefined);
   const [manualSession, setManualSession] = useState(''); // Tên ca khi điểm danh thủ công
 
+  const qrCardRef = useRef<HTMLDivElement>(null);
+
+  const handleDownloadQR = async () => {
+    if (!qrCardRef.current) return;
+    try {
+      const element = qrCardRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 3,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      const imgData = canvas.toDataURL("image/png");
+      const link = document.createElement('a');
+      link.href = imgData;
+      const cleanTitle = activity.title.replace(/[^a-zA-Z0-9\sÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝàáâãèéêìíòóôõùúýĂăĐđĨĩŨũƠơƯưẠ-ỹ]/g, '').replace(/\s+/g, '_');
+      const sessionLabel = currentSession ? currentSession.replace(/\s+/g, '_') : 'General';
+      const typeLabel = attendanceType === 'in' ? 'Vao' : 'Ra';
+      link.download = `QR_${cleanTitle}_${sessionLabel}_${typeLabel}.png`;
+      link.click();
+      messageApi.success("Tải ảnh mã QR thành công!");
+    } catch (error) {
+      console.error(error);
+      messageApi.error("Có lỗi xảy ra khi tải ảnh mã QR");
+    }
+  };
+
   const addStudentMutation = useMutation({
     mutationFn: (sid: string) => addStudentToActivityApi(activity.id, sid),
     onSuccess: () => {
@@ -1163,6 +1192,14 @@ function ActivityDetailView({
                     <QRCode value={attendanceCode} size={220} bordered={false} />
                     <Text strong className="text-xl mt-4 tracking-widest">{attendanceCode}</Text>
                     <Text type="secondary" style={{ fontSize: 12 }}>Mã có hiệu lực trong phiên làm việc hiện tại</Text>
+                    <Button 
+                      type="default" 
+                      icon={<DownloadOutlined />} 
+                      style={{ marginTop: 12 }}
+                      onClick={handleDownloadQR}
+                    >
+                      Tải ảnh mã QR
+                    </Button>
                   </div>
                 )}
 
@@ -1310,6 +1347,91 @@ function ActivityDetailView({
       </Card>
 
       {sessionModal}
+
+      {/* Hidden QR Code Card template for download */}
+      {attendanceCode && (
+        <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+          <div
+            ref={qrCardRef}
+            style={{
+              width: '400px',
+              padding: '24px',
+              background: '#ffffff',
+              borderRadius: '16px',
+              textAlign: 'center',
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              color: '#1f2937',
+              display: 'inline-block',
+              border: '2px solid #3b82f6',
+            }}
+          >
+            {/* Title: Activity Name */}
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 'bold', color: '#1e3a8a' }}>
+              {activity.title}
+            </h3>
+            
+            {/* QR Type */}
+            <div style={{ 
+              display: 'inline-block',
+              backgroundColor: attendanceType === 'in' ? '#eff6ff' : '#fef2f2',
+              color: attendanceType === 'in' ? '#2563eb' : '#dc2626',
+              fontWeight: 'bold',
+              fontSize: '14px',
+              padding: '4px 16px',
+              borderRadius: '9999px',
+              marginBottom: '16px',
+              border: attendanceType === 'in' ? '1px solid #bfdbfe' : '1px solid #fecaca'
+            }}>
+              MÃ ĐIỂM DANH {attendanceType === 'in' ? 'VÀO' : 'RA'}
+            </div>
+
+            {/* QR Code Canvas */}
+            <div style={{ display: 'flex', justifyContent: 'center', margin: '12px 0 16px 0' }}>
+              <QRCode value={attendanceCode} size={260} bordered={false} />
+            </div>
+
+            {/* QR Code Text */}
+            <div style={{ fontSize: '18px', fontWeight: 'bold', letterSpacing: '4px', margin: '0 0 16px 0', color: '#374151' }}>
+              {attendanceCode}
+            </div>
+
+            {/* Divider */}
+            <div style={{ height: '1px', backgroundColor: '#e5e7eb', margin: '0 0 16px 0' }}></div>
+
+            {/* Session details */}
+            {(() => {
+              const selectedSessionObj = (sessions as any[]).find((s: any) => String(s.id) === sessionInput);
+              if (selectedSessionObj) {
+                return (
+                  <div>
+                    <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#1f2937', marginBottom: '4px' }}>
+                      Ca: {selectedSessionObj.sessionName}
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#4b5563', marginBottom: '2px' }}>
+                      Ngày: {dayjs(selectedSessionObj.startTime).format('DD/MM/YYYY')}
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#4b5563' }}>
+                      Thời gian: {dayjs(selectedSessionObj.startTime).format('HH:mm')} – {dayjs(selectedSessionObj.endTime).format('HH:mm')}
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div>
+                  {currentSession && (
+                    <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#1f2937', marginBottom: '4px' }}>
+                      Ca: {currentSession}
+                    </div>
+                  )}
+                  <div style={{ fontSize: '13px', color: '#4b5563' }}>
+                    Điểm danh chung (Không phân ca)
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
