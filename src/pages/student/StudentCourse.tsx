@@ -60,7 +60,7 @@ export default function StudentCourse() {
     const [loading, setLoading] = useState(false);
     const [semesterData, setSemesterData] = useState<SemesterGPA[]>([]);
     const [gpaTotal, setGpaTotal] = useState<number | null>(null);
-    const [creditsTotal, setCreditsTotal] = useState<number | null>(null);
+    const [totalCredits, setTotalCredits] = useState<number | null>(null);
 
     useEffect(() => {
         const fetchGrades = async () => {
@@ -70,7 +70,7 @@ export default function StudentCourse() {
                 if (res.data) {
                     setSemesterData(res.data.grades || []);
                     setGpaTotal(res.data.gpaTotal);
-                    setCreditsTotal(res.data.creditsTotal);
+                    setTotalCredits(res.data.totalCredits);
                 }
             } catch (err) {
                 console.error('Lỗi khi tải kết quả học tập:', err);
@@ -98,9 +98,9 @@ export default function StudentCourse() {
                                 {gpaTotal !== null && gpaTotal !== undefined ? gpaTotal.toFixed(2) : 'Chưa có'}
                             </span>
                         </Title>
-                        {creditsTotal !== null && creditsTotal !== undefined && (
+                        {totalCredits !== null && totalCredits !== undefined && (
                             <Title level={5} style={{ marginTop: 8, color: '#555' }}>
-                                Tổng số tín chỉ tích lũy: <span style={{ color: '#52c41a' }}>{creditsTotal}</span>
+                                Tổng số tín chỉ tích lũy: <span style={{ color: '#52c41a' }}>{totalCredits}</span>
                             </Title>
                         )}
                     </div>
