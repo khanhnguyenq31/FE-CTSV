@@ -1131,7 +1131,7 @@ function ActivityDetailView({
                     onChange={(v) => setSessionInput(v || '')}
                     options={(sessions as any[]).map((s: any) => ({
                       label: `${s.sessionName} (${dayjs(s.startTime).format('DD/MM/YYYY')} : ${dayjs(s.startTime).format('HH:mm')} – ${dayjs(s.endTime).format('HH:mm')})`,
-                      value: s.sessionName
+                      value: String(s.id)
                     }))}
                   />
                 ) : (
@@ -1181,7 +1181,7 @@ function ActivityDetailView({
                       onChange={(v) => {
                         setManualSession(v || '');
                         if (v) {
-                          const found = (sessions as any[]).find((s: any) => s.sessionName === v);
+                          const found = (sessions as any[]).find((s: any) => String(s.id) === v);
                           if (found) {
                             setManualDate(dayjs(found.startTime).format('YYYY-MM-DD'));
                           }
@@ -1191,7 +1191,7 @@ function ActivityDetailView({
                       }}
                       options={(sessions as any[]).map((s: any) => ({
                         label: `${s.sessionName} (${dayjs(s.startTime).format('DD/MM/YYYY')})`,
-                        value: s.sessionName
+                        value: String(s.id)
                       }))}
                     />
                   ) : null}
