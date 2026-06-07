@@ -666,7 +666,7 @@ function EvaluationHistoryTab({ messageApi }: { messageApi: any }) {
 
     return (
         <div>
-            <div style={{ marginBottom: 16, display: 'none', justifyContent: 'flex-end' }}>
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
                 <Popconfirm title="Xác nhận xóa trắng Lịch sử đợt xét?" onConfirm={() => mutationClear.mutate()} okText="Xóa" cancelText="Hủy" okButtonProps={{ danger: true }}>
                     <Button type="primary" danger icon={<ClearOutlined />} loading={mutationClear.isPending} style={{ borderRadius: 8 }}>Xóa trắng lịch sử (Reset DB)</Button>
                 </Popconfirm>
