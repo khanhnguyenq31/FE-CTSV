@@ -182,7 +182,6 @@ export const getAcademicYears = async () => {
     const res = await api.get('/discipline/academic-years');
     return res.data;
 };
-
 export const downloadDraftExcel = async (draftId: number | string, khoa?: string, nganh?: string, dotName?: string) => {
     const params = new URLSearchParams();
     if (khoa) params.append('khoa', khoa);
@@ -192,11 +191,30 @@ export const downloadDraftExcel = async (draftId: number | string, khoa?: string
         responseType: 'blob'
     });
     
-    // Tạo tên file chính xác theo điều kiện lọc
-    const suffixKhoa = khoa ? `_Khoa${khoa}` : '_KhoaTatCa';
-    const suffixNganh = nganh ? `_Nganh${nganh}` : '_NganhTatCa';
-    const tenDot = dotName ? dotName.replace(/\s+/g, '_') : draftId;
-    const filename = `DanhSach_KyLuat${suffixKhoa}${suffixNganh}_${tenDot}.xlsx`;
+    // Extract filename from Content-Disposition header if available
+    let filename = '';
+    const disposition = res.headers['content-disposition'];
+    if (disposition) {
+        // Look for filename*=UTF-8'' first
+        const utf8FilenameRegex = /filename\*=UTF-8''([^;\n]*)/i;
+        const utf8Matches = utf8FilenameRegex.exec(disposition);
+        if (utf8Matches && utf8Matches[1]) {
+            filename = decodeURIComponent(utf8Matches[1]);
+        } else {
+            const filenameRegex = /filename="?([^";\n]*)"?/i;
+            const matches = filenameRegex.exec(disposition);
+            if (matches && matches[1]) {
+                filename = decodeURIComponent(matches[1]);
+            }
+        }
+    }
+
+    if (!filename) {
+        const suffixKhoa = khoa ? `_Khoa${khoa}` : '_KhoaTatCa';
+        const suffixNganh = nganh ? `_Nganh${nganh}` : '_NganhTatCa';
+        const tenDot = dotName ? dotName.replace(/\s+/g, '_') : draftId;
+        filename = `DanhSach_KyLuat${suffixKhoa}${suffixNganh}_${tenDot}.xlsx`;
+    }
     
     const blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = window.URL.createObjectURL(blob);

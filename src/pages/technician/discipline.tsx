@@ -791,8 +791,6 @@ function EvaluationDraftsTab({ messageApi }: { messageApi: any }) {
         enabled: !!activeDraft
     });
 
-    const { data: cohorts } = useQuery({ queryKey: ['cohorts'], queryFn: getCohorts });
-
     const [searchText, setSearchText] = useState('');
     const [selectedCohort, setSelectedCohort] = useState<string | undefined>(undefined);
     const [selectedMajor, setSelectedMajor] = useState<string | undefined>(undefined);
@@ -818,15 +816,20 @@ function EvaluationDraftsTab({ messageApi }: { messageApi: any }) {
     if (!activeDraft) return <div style={{ padding: 50, textAlign: 'center' }}>Không có danh sách dự kiến nào đang hoạt động.</div>;
 
     // Lấy danh sách ngành học duy nhất từ chi tiết xét kỷ luật để lọc
-    const uniqueMajors = Array.from(new Set((details as any[])?.map(d => d.major).filter(Boolean))) as string[];
+    const uniqueMajors = Array.from(new Set((details as any[])?.map(d => d.major?.trim().normalize('NFC')).filter(Boolean))) as string[];
+    uniqueMajors.sort();
+
+    // Lấy danh sách khóa học duy nhất từ chi tiết xét kỷ luật để lọc
+    const uniqueCohorts = Array.from(new Set((details as any[])?.map(d => d.className?.trim().normalize('NFC')).filter(Boolean))) as string[];
+    uniqueCohorts.sort();
 
     // Lọc phía Client side
     const filteredDetails = (details as any[])?.filter(d => {
         const matchesSearch = !searchText ||
             d.fullName?.toLowerCase().includes(searchText.toLowerCase()) ||
             d.studentId?.toLowerCase().includes(searchText.toLowerCase());
-        const matchesCohort = !selectedCohort || d.className === selectedCohort;
-        const matchesMajor = !selectedMajor || d.major === selectedMajor;
+        const matchesCohort = !selectedCohort || d.className?.trim().normalize('NFC') === selectedCohort;
+        const matchesMajor = !selectedMajor || d.major?.trim().normalize('NFC') === selectedMajor;
         return matchesSearch && matchesCohort && matchesMajor;
     }) || [];
 
@@ -935,13 +938,13 @@ function EvaluationDraftsTab({ messageApi }: { messageApi: any }) {
                     </Col>
                     <Col span={6}>
                         <Select
-                            placeholder="Lọc theo Khóa / Lớp"
+                            placeholder="Lọc theo Khóa"
                             style={{ width: '100%' }}
                             allowClear
                             value={selectedCohort}
                             onChange={(val) => setSelectedCohort(val)}
                         >
-                            {cohorts?.map((c: string) => (
+                            {uniqueCohorts.map((c: string) => (
                                 <Select.Option key={c} value={c}>{c}</Select.Option>
                             ))}
                         </Select>

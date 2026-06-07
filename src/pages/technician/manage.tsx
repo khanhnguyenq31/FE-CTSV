@@ -382,9 +382,9 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
     try {
       const res = await uploadAdmissionExcel(selectedPeriod.id, file);
       const { results, message } = res;
-      
+
       if (results.failed > 0) {
-        const errorSummary = results.errors.length > 3 
+        const errorSummary = results.errors.length > 3
           ? `${results.errors.slice(0, 3).join(", ")}... và ${results.errors.length - 3} lỗi khác.`
           : results.errors.join(", ");
 
@@ -402,7 +402,7 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
       } else {
         messageApi.success("Bổ sung danh sách sinh viên thành công!");
       }
-      
+
       queryClient.invalidateQueries({ queryKey: ["admissionStudents", selectedPeriod.id] });
       queryClient.invalidateQueries({ queryKey: ["admissionStats", selectedPeriod.id] });
     } catch (error: any) {
@@ -692,8 +692,8 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
                     style={{ borderRadius: 6, width: 280 }}
                     allowClear={false}
                   />
-                  <Button 
-                    icon={<SyncOutlined />} 
+                  <Button
+                    icon={<SyncOutlined />}
                     type="link"
                     size="small"
                     style={{ color: '#8c8c8c' }}
@@ -714,92 +714,92 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
             {stats ? (
               <>
                 <Row gutter={[16, 16]}>
-              <Col xs={24} sm={8}>
-                <Card bordered={false} className="shadow-sm" style={{ height: '100%' }}>
-                  <Statistic
-                    title="Tổng sinh viên đợt"
-                    value={stats.totalStudents}
-                    prefix={<TeamOutlined style={{ color: '#1890ff' }} />}
-                  />
-                  <div style={{ marginTop: 8 }}><Text type="secondary">Tất cả hồ sơ</Text></div>
-                </Card>
-              </Col>
-              <Col xs={24} sm={8}>
-                <Card bordered={false} className="shadow-sm" style={{ height: '100%' }}>
-                  <Statistic title="Đã hoàn tất" value={stats.completedAdmissions} valueStyle={{ color: '#52c41a' }} prefix={<CheckCircleOutlined />} />
-                  <div style={{ marginTop: 8 }}><Text type="secondary">Tỉ lệ: {stats.totalStudents ? Math.round((stats.completedAdmissions / stats.totalStudents) * 100) : 0}%</Text></div>
-                </Card>
-              </Col>
-              <Col xs={24} sm={8}>
-                <Card bordered={false} className="shadow-sm" style={{ height: '100%' }}>
-                  <Statistic title="Đang chờ duyệt" value={stats.pendingAdmissions} valueStyle={{ color: '#faad14' }} prefix={<ClockCircleOutlined />} />
-                  <div style={{ marginTop: 8 }}><Text type="secondary">Đang nhập học</Text></div>
-                </Card>
-              </Col>
-            </Row>
+                  <Col xs={24} sm={8}>
+                    <Card bordered={false} className="shadow-sm" style={{ height: '100%' }}>
+                      <Statistic
+                        title="Tổng sinh viên đợt"
+                        value={stats.totalStudents}
+                        prefix={<TeamOutlined style={{ color: '#1890ff' }} />}
+                      />
+                      <div style={{ marginTop: 8 }}><Text type="secondary">Tất cả hồ sơ</Text></div>
+                    </Card>
+                  </Col>
+                  <Col xs={24} sm={8}>
+                    <Card bordered={false} className="shadow-sm" style={{ height: '100%' }}>
+                      <Statistic title="Đã hoàn tất" value={stats.completedAdmissions} valueStyle={{ color: '#52c41a' }} prefix={<CheckCircleOutlined />} />
+                      <div style={{ marginTop: 8 }}><Text type="secondary">Tỉ lệ: {stats.totalStudents ? Math.round((stats.completedAdmissions / stats.totalStudents) * 100) : 0}%</Text></div>
+                    </Card>
+                  </Col>
+                  <Col xs={24} sm={8}>
+                    <Card bordered={false} className="shadow-sm" style={{ height: '100%' }}>
+                      <Statistic title="Đang chờ duyệt" value={stats.pendingAdmissions} valueStyle={{ color: '#faad14' }} prefix={<ClockCircleOutlined />} />
+                      <div style={{ marginTop: 8 }}><Text type="secondary">Đang nhập học</Text></div>
+                    </Card>
+                  </Col>
+                </Row>
 
-            <Row gutter={[16, 16]}>
-              <Col xs={24} lg={16}>
-                <Card title="Thống kê sinh viên theo ngành (Top 5)" bordered={false} className="shadow-sm">
-                  <div style={{ width: '100%', height: 350 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={stats.byMajor}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis
-                          dataKey="major"
-                          angle={-45}
-                          textAnchor="end"
-                          interval={0}
-                          height={80}
-                          tick={{ fontSize: 12 }}
-                        />
-                        <YAxis allowDecimals={false} />
-                        <RechartsTooltip
-                          cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
-                          contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                        />
-                        <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={40}>
-                          {stats.byMajor?.map((_: any, index: any) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </Card>
-              </Col>
-              <Col xs={24} lg={8}>
-                <Card title="Tỉ lệ theo chương trình đào tạo" bordered={false} className="shadow-sm">
-                  <div style={{ width: '100%', height: 350 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={stats.byCtdt}
-                          innerRadius={60}
-                          outerRadius={80}
-                          paddingAngle={5}
-                          dataKey="count"
-                          nameKey="name"
-                          label={({ percent }) => `${((percent || 0) * 100).toFixed(1)}%`}
-                        >
-                          {stats.byCtdt?.map((_: any, index: any) => (
-                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                          ))}
-                        </Pie>
-                        <RechartsTooltip
-                          formatter={(value: any, name: any, props: any) => [
-                            `${value} sinh viên`,
-                            props?.payload?.fullName || name
-                          ]}
-                        />
-                        <Legend formatter={(value: any, entry: any) => entry?.payload?.fullName || value} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </Card>
+                <Row gutter={[16, 16]}>
+                  <Col xs={24} lg={16}>
+                    <Card title="Thống kê sinh viên theo ngành (Top 5)" bordered={false} className="shadow-sm">
+                      <div style={{ width: '100%', height: 350 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={stats.byMajor}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                            <XAxis
+                              dataKey="major"
+                              angle={-45}
+                              textAnchor="end"
+                              interval={0}
+                              height={80}
+                              tick={{ fontSize: 12 }}
+                            />
+                            <YAxis allowDecimals={false} />
+                            <RechartsTooltip
+                              cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
+                              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                            />
+                            <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={40}>
+                              {stats.byMajor?.map((_: any, index: any) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </Card>
+                  </Col>
+                  <Col xs={24} lg={8}>
+                    <Card title="Tỉ lệ theo chương trình đào tạo" bordered={false} className="shadow-sm">
+                      <div style={{ width: '100%', height: 350 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={stats.byCtdt}
+                              innerRadius={60}
+                              outerRadius={80}
+                              paddingAngle={5}
+                              dataKey="count"
+                              nameKey="name"
+                              label={({ percent }) => `${((percent || 0) * 100).toFixed(1)}%`}
+                            >
+                              {stats.byCtdt?.map((_: any, index: any) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <RechartsTooltip
+                              formatter={(value: any, name: any, props: any) => [
+                                `${value} sinh viên`,
+                                props?.payload?.fullName || name
+                              ]}
+                            />
+                            <Legend formatter={(value: any, entry: any) => entry?.payload?.fullName || value} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </Card>
                   </Col>
                 </Row>
               </>
@@ -891,7 +891,7 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
                             ['B', 'Họ và tên', 'Nguyễn Văn A'],
                             ['C', 'Email cá nhân', 'nguyenvana@gmail.com'],
                             ['D', 'Ngành', 'Công nghệ thông tin'],
-                            ['E', 'Khóa / Lớp', '2022'],
+                            ['E', 'Khóa', '2022'],
                           ].map(([col, name, ex]) => (
                             <tr key={col}>
                               <td style={{ padding: '5px 10px', border: '1px solid #d9d9d9', fontWeight: 600, color: '#1890ff' }}>{col}</td>
@@ -1558,15 +1558,15 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
             name="moTa"
             label={<Text strong>Mô tả / Yêu cầu chi tiết (Tùy chọn)</Text>}
           >
-            <Input.TextArea 
-              placeholder="Mô tả hướng dẫn sinh viên chuẩn bị (ví dụ: Bản sao công chứng, photo 2 mặt...)" 
-              rows={3} 
+            <Input.TextArea
+              placeholder="Mô tả hướng dẫn sinh viên chuẩn bị (ví dụ: Bản sao công chứng, photo 2 mặt...)"
+              rows={3}
             />
           </Form.Item>
 
           <Form.Item style={{ marginBottom: 0, textAlign: "right", marginTop: 24 }}>
             <Space size="middle">
-              <Button 
+              <Button
                 onClick={() => {
                   setIsNewDocModalOpen(false);
                   newDocForm.resetFields();
@@ -1575,9 +1575,9 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
               >
                 Hủy bỏ
               </Button>
-              <Button 
-                type="primary" 
-                htmlType="submit" 
+              <Button
+                type="primary"
+                htmlType="submit"
                 loading={isCreatingNewDoc}
                 size="large"
                 style={{ background: '#1a73e8', borderColor: '#1a73e8' }}
@@ -1670,10 +1670,10 @@ export default function ManagePage({ messageApi }: { messageApi: any }) {
                           transition: 'all 0.2s'
                         }}
                       >
-                        <Checkbox 
-                          checked={isChecked} 
+                        <Checkbox
+                          checked={isChecked}
                           style={{ marginTop: 2 }}
-                          onChange={() => {}} 
+                          onChange={() => { }}
                         />
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                           <Text strong={isChecked} style={{ color: isChecked ? '#1890ff' : 'inherit', fontSize: 14 }}>
