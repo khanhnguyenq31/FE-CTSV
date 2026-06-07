@@ -318,7 +318,7 @@ function DisciplineConfigTab({ messageApi }: { messageApi: any }) {
                     <Form.List name="gpaRules">
                         {(fields, { add, remove, move }) => (
                             <>
-                                <h4>1. Vòng kết quả Học vụ (GPA / Tín chỉ) (Tất cả điều kiện áp dụng kiểu OR, dính 1 cái là dính án - Ưu tiên từ cao tới thấp)</h4>
+                                <h4>1. Vòng kết quả Học vụ (GPA / Tín chỉ) (Chỉ cần vi phạm một trong các điều kiện thì sẽ chịu hình thức kỷ luật - Ưu tiên từ cao tới thấp)</h4>
                                 {fields.map(({ key, name, ...restField }, index) => (
                                     <Card size="small" key={key} style={{ marginBottom: 16 }}
                                         title={<Text strong>Độ ưu tiên: {index + 1}</Text>}
