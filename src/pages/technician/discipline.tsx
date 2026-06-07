@@ -1,6 +1,6 @@
 import useDocumentTitle from '../../hooks/useDocumentTitle';
 import React, { useState } from 'react';
-import { Tabs, Table, Button, Modal, Form, Input, InputNumber, Select, Space, Popconfirm, Switch, Drawer, Card, Row, Col, Typography, Tag, Divider, Tooltip, DatePicker } from 'antd';
+import { Tabs, Table, Button, Modal, Form, Input, InputNumber, Select, Space, Popconfirm, Switch, Drawer, Card, Row, Col, Typography, Tag, Divider, Tooltip, DatePicker, Descriptions } from 'antd';
 import {
     PlusOutlined, EditOutlined, DeleteOutlined, SettingOutlined,
     ArrowUpOutlined, ArrowDownOutlined, EyeOutlined, SaveOutlined,
@@ -150,7 +150,7 @@ function DisciplineFormTab({ messageApi }: { messageApi: any }) {
                     <Form.Item name="tenHinhThuc" label="Tên hình thức" rules={[{ required: true }]}>
                         <Input />
                     </Form.Item>
-                    <Form.Item name="mucDo" label="Mức độ nghiêm trọng (1 là nhẹ nhất, số càng to càng nặng)" rules={[{ required: true }]}>
+                    <Form.Item name="mucDo" label="Mức độ nghiêm trọng (1 là nhẹ nhất, số càng lớn càng nặng)" rules={[{ required: true }]}>
                         <InputNumber min={1} max={100} style={{ width: '100%' }} />
                     </Form.Item>
                     <Form.Item name="chuyenTrangThaiHoc" label="Chuyển trạng thái học" valuePropName="checked">
@@ -504,15 +504,27 @@ function EvaluateDisciplineTab({ messageApi }: { messageApi: any }) {
     };
 
     const columns = [
-        { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName', width: 160 },
-        { title: 'MSSV', dataIndex: 'studentId', key: 'studentId', width: 110 },
-        { title: 'Ngành', dataIndex: 'major', key: 'major', width: 160 },
-        { title: 'CTDT áp dụng', dataIndex: 'ctdtName', key: 'ctdtName', width: 180, render: (t: string) => t ? <Tag color="geekblue">{t}</Tag> : <Text type="secondary">-</Text> },
-        { title: 'Tiến trình vi phạm', dataIndex: ['matchedRule', 'escalationPath'], key: 'escalationPath', render: (t: string) => <Text type="secondary">{t}</Text> },
-        { title: 'Kết quả vòng Học vụ', dataIndex: ['matchedRule', 'gpaForm', 'tenHinhThuc'], key: 'gpaForm', width: 160, render: (t: string) => <Tag color="blue">{t}</Tag> },
-        { title: 'Kết quả vòng Lũy tiến', dataIndex: ['matchedRule', 'luyTienForm', 'tenHinhThuc'], key: 'luyTienForm', width: 160, render: (t: string) => t ? <Tag color="orange">{t}</Tag> : <Text type="secondary">-</Text> },
-        { title: 'Kết quả Cuối cùng', dataIndex: ['matchedRule', 'hinhThuc', 'tenHinhThuc'], key: 'hinhThuc', width: 160, render: (t: string) => <Tag color="red">{t}</Tag> },
-        { title: 'Kết quả thực tế', key: 'actualGpa', render: (_: any, r: any) => `GPA HK: ${r.actualGpaSem?.toFixed(2)} | GPA TL: ${r.actualGpaTotal?.toFixed(2)} | TC HK: ${r.actualCreditsSem || 0} | TC TL: ${r.actualCreditsTotal || 0}` }
+        {
+            title: 'Sinh viên',
+            key: 'student',
+            fixed: 'left' as const,
+            width: 180,
+            render: (_: any, r: any) => (
+                <div>
+                    <Text strong>{r.fullName}</Text>
+                    <br />
+                    <Text type="secondary" style={{ fontSize: '12px' }}>{r.studentId}</Text>
+                </div>
+            )
+        },
+        { title: 'Ngành', dataIndex: 'major', key: 'major', width: 180 },
+        {
+            title: 'Kết quả Cuối cùng',
+            dataIndex: ['matchedRule', 'hinhThuc', 'tenHinhThuc'],
+            key: 'hinhThuc',
+            width: 180,
+            render: (t: string) => <Tag color="red">{t}</Tag>
+        }
     ];
 
     return (
@@ -581,7 +593,44 @@ function EvaluateDisciplineTab({ messageApi }: { messageApi: any }) {
                     extra={<Button type="primary" danger icon={<SaveOutlined />} onClick={handleSaveList} loading={mutationSaveEvaluation.isPending} style={{ borderRadius: 8 }}>Ghim & Lưu Lịch Sử Nhắc Nhở</Button>}
                 >
                     <AppLoading loading={mutationEvaluate.isPending} tip="Đang chạy thuật toán xét kỷ luật...">
-                        <Table rowKey="studentEmail" columns={columns} dataSource={evalResults} pagination={{ pageSize: 15 }} scroll={{ x: 1400 }} />
+                        <Table 
+                            rowKey="studentEmail" 
+                            columns={columns} 
+                            dataSource={evalResults} 
+                            pagination={{ pageSize: 15 }}
+                            expandable={{
+                                expandedRowRender: (record: any) => (
+                                    <div style={{ padding: '8px 24px', backgroundColor: '#fafafa', borderRadius: 8 }}>
+                                        <Descriptions title="Chi tiết kết quả học vụ & Lũy tiến" bordered size="small" column={{ xxl: 4, xl: 3, lg: 2, md: 1, sm: 1, xs: 1 }}>
+                                            <Descriptions.Item label="Chương trình đào tạo (CTDT)">
+                                                {record.ctdtName ? <Tag color="geekblue">{record.ctdtName}</Tag> : <Text type="secondary">-</Text>}
+                                            </Descriptions.Item>
+                                            <Descriptions.Item label="Tiến trình vi phạm">
+                                                <Text type="secondary" style={{ fontWeight: 500 }}>{record.matchedRule?.escalationPath}</Text>
+                                            </Descriptions.Item>
+                                            <Descriptions.Item label="Vòng Học kỳ (GPA)">
+                                                <Tag color="blue">{record.matchedRule?.gpaForm?.tenHinhThuc}</Tag>
+                                            </Descriptions.Item>
+                                            <Descriptions.Item label="Vòng Lũy tiến (Lặp lại)">
+                                                {record.matchedRule?.luyTienForm?.tenHinhThuc ? <Tag color="orange">{record.matchedRule?.luyTienForm?.tenHinhThuc}</Tag> : <Text type="secondary">-</Text>}
+                                            </Descriptions.Item>
+                                            <Descriptions.Item label="GPA Học kỳ này">
+                                                <Text strong>{record.actualGpaSem?.toFixed(2)}</Text>
+                                            </Descriptions.Item>
+                                            <Descriptions.Item label="GPA Tích lũy">
+                                                <Text strong>{record.actualGpaTotal?.toFixed(2)}</Text>
+                                            </Descriptions.Item>
+                                            <Descriptions.Item label="Số tín chỉ học kỳ">
+                                                <Text>{record.actualCreditsSem || 0}</Text>
+                                            </Descriptions.Item>
+                                            <Descriptions.Item label="Số tín chỉ tích lũy">
+                                                <Text>{record.actualCreditsTotal || 0}</Text>
+                                            </Descriptions.Item>
+                                        </Descriptions>
+                                    </div>
+                                )
+                            }}
+                        />
                     </AppLoading>
                 </Card>
             )}
@@ -656,12 +705,20 @@ function EvaluationHistoryTab({ messageApi }: { messageApi: any }) {
     ];
 
     const detColumns = [
-        { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName' },
-        { title: 'MSSV', dataIndex: 'studentId', key: 'studentId' },
-        { title: 'Lớp / Khóa', dataIndex: 'className', key: 'className' },
-        { title: 'Ngành', dataIndex: 'major', key: 'major' },
-        { title: 'Hình phạt', dataIndex: 'hinhThuc', key: 'hinhThuc', render: (t: string) => <Tag color="red">{t}</Tag> },
-        { title: 'Lý do', dataIndex: 'lyDo', key: 'lyDo' }
+        {
+            title: 'Sinh viên',
+            key: 'student',
+            width: 180,
+            render: (_: any, r: any) => (
+                <div>
+                    <Text strong>{r.fullName}</Text>
+                    <br />
+                    <Text type="secondary" style={{ fontSize: '12px' }}>{r.studentId}</Text>
+                </div>
+            )
+        },
+        { title: 'Lớp / Khóa', dataIndex: 'className', key: 'className', width: 120 },
+        { title: 'Hình phạt', dataIndex: 'hinhThuc', key: 'hinhThuc', width: 150, render: (t: string) => <Tag color="red">{t}</Tag> }
     ];
 
     return (
@@ -676,7 +733,26 @@ function EvaluationHistoryTab({ messageApi }: { messageApi: any }) {
             </AppLoading>
             <Drawer title="Chi tiết sinh viên trong đợt xét" width={800} open={!!detailId} onClose={() => setDetailId(null)}>
                 <AppLoading loading={isLoadingDetails} tip="Đang tải chi tiết danh sách...">
-                    <Table columns={detColumns} dataSource={details as any[]} rowKey="id" pagination={{ pageSize: 15 }} scroll={{ x: 1400 }} />
+                    <Table 
+                        columns={detColumns} 
+                        dataSource={details as any[]} 
+                        rowKey="id" 
+                        pagination={{ pageSize: 15 }} 
+                        expandable={{
+                            expandedRowRender: (record: any) => (
+                                <div style={{ padding: '8px 24px', backgroundColor: '#fafafa', borderRadius: 8 }}>
+                                    <Descriptions title="Thông tin chi tiết" bordered size="small" column={1}>
+                                        <Descriptions.Item label="Ngành học">
+                                            {record.major || <Text type="secondary">-</Text>}
+                                        </Descriptions.Item>
+                                        <Descriptions.Item label="Chi tiết lý do & thông số học tập">
+                                            <Text style={{ whiteSpace: 'pre-wrap' }}>{record.lyDo}</Text>
+                                        </Descriptions.Item>
+                                    </Descriptions>
+                                </div>
+                            )
+                        }}
+                    />
                 </AppLoading>
             </Drawer>
         </div>
@@ -730,8 +806,8 @@ function EvaluationDraftsTab({ messageApi }: { messageApi: any }) {
 
     // Lọc phía Client side
     const filteredDetails = (details as any[])?.filter(d => {
-        const matchesSearch = !searchText || 
-            d.fullName?.toLowerCase().includes(searchText.toLowerCase()) || 
+        const matchesSearch = !searchText ||
+            d.fullName?.toLowerCase().includes(searchText.toLowerCase()) ||
             d.studentId?.toLowerCase().includes(searchText.toLowerCase());
         const matchesCohort = !selectedCohort || d.className === selectedCohort;
         const matchesMajor = !selectedMajor || d.major === selectedMajor;
@@ -752,22 +828,39 @@ function EvaluationDraftsTab({ messageApi }: { messageApi: any }) {
     };
 
     const columns = [
-        { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName', width: 160 },
-        { title: 'MSSV', dataIndex: 'studentId', key: 'studentId', width: 110 },
-        { title: 'Ngành', dataIndex: 'major', key: 'major', width: 160 },
-        { title: 'CTDT áp dụng', dataIndex: 'ctdtName', key: 'ctdtName', width: 180, render: (t: string) => t ? <Tag color="geekblue">{t}</Tag> : <Text type="secondary">-</Text> },
-        { title: 'Lớp / Khóa', dataIndex: 'className', key: 'className', width: 100 },
-        { title: 'Bị phạt (vòng Học vụ)', dataIndex: 'hinhThucGpa', key: 'hinhThucGpa', width: 160, render: (t: string) => <Tag color="blue">{t}</Tag> },
-        { title: 'Hình phạt Dự kiến', dataIndex: 'hinhThuc', key: 'hinhThuc', width: 160, render: (t: string) => <Tag color="red">{t}</Tag> },
         {
-            title: 'Trạng thái', key: 'status', align: 'center' as const, width: 140, render: (_: any, r: any) => (
+            title: 'Sinh viên',
+            key: 'student',
+            fixed: 'left' as const,
+            width: 180,
+            render: (_: any, r: any) => (
+                <div>
+                    <Text strong>{r.fullName}</Text>
+                    <br />
+                    <Text type="secondary" style={{ fontSize: '12px' }}>{r.studentId}</Text>
+                </div>
+            )
+        },
+        { title: 'Lớp / Khóa', dataIndex: 'className', key: 'className', width: 110 },
+        { title: 'Hình phạt Dự kiến', dataIndex: 'hinhThuc', key: 'hinhThuc', width: 150, render: (t: string) => <Tag color="red">{t}</Tag> },
+        {
+            title: 'Trạng thái',
+            key: 'status',
+            align: 'center' as const,
+            width: 140,
+            render: (_: any, r: any) => (
                 r.isCuuXet
                     ? <Tag icon={<CheckCircleOutlined />} color="success" style={{ fontSize: 13, padding: '4px 12px' }}>Được cứu xét</Tag>
                     : <Tag icon={<ExclamationCircleOutlined />} color="error" style={{ fontSize: 13, padding: '4px 12px' }}>Bị kỷ luật</Tag>
             )
         },
         {
-            title: 'Hành động', key: 'action', align: 'center' as const, width: 160, render: (_: any, r: any) => (
+            title: 'Hành động',
+            key: 'action',
+            align: 'center' as const,
+            fixed: 'right' as const,
+            width: 140,
+            render: (_: any, r: any) => (
                 <Popconfirm
                     title={r.isCuuXet ? "Hủy cứu xét sinh viên này?" : "Khoan hồng cho sinh viên này?"}
                     description={r.isCuuXet ? "Sinh viên sẽ quay lại danh sách bị kỷ luật." : "Sinh viên sẽ được miễn hình phạt chính thức khi áp dụng."}
@@ -865,10 +958,66 @@ function EvaluationDraftsTab({ messageApi }: { messageApi: any }) {
 
             <Tabs defaultActiveKey="1" type="card">
                 <TabPane tab={`Danh sách kỷ luật (${dsKytLuat.length})`} key="1">
-                    <Table columns={columns} dataSource={dsKytLuat} rowKey="id" pagination={{ pageSize: 15 }} scroll={{ x: 1400 }} />
+                    <Table 
+                        columns={columns} 
+                        dataSource={dsKytLuat} 
+                        rowKey="id" 
+                        pagination={{ pageSize: 15 }} 
+                        scroll={{ x: 1000 }} 
+                        expandable={{
+                            expandedRowRender: (record: any) => (
+                                <div style={{ padding: '8px 24px', backgroundColor: '#fafafa', borderRadius: 8 }}>
+                                    <Descriptions title="Thông tin chi tiết" bordered size="small" column={{ xxl: 3, xl: 2, lg: 2, md: 1, sm: 1, xs: 1 }}>
+                                        <Descriptions.Item label="Ngành học">
+                                            {record.major || <Text type="secondary">-</Text>}
+                                        </Descriptions.Item>
+                                        <Descriptions.Item label="Chương trình đào tạo (CTDT)">
+                                            {record.ctdtName ? <Tag color="geekblue">{record.ctdtName}</Tag> : <Text type="secondary">-</Text>}
+                                        </Descriptions.Item>
+                                        <Descriptions.Item label="Bị phạt vòng Học vụ (GPA)">
+                                            <Tag color="blue">{record.hinhThucGpa}</Tag>
+                                        </Descriptions.Item>
+                                        {record.lyDo && (
+                                            <Descriptions.Item label="Chi tiết thông số & lý do" span={2}>
+                                                <Text type="secondary" style={{ whiteSpace: 'pre-wrap' }}>{record.lyDo}</Text>
+                                            </Descriptions.Item>
+                                        )}
+                                    </Descriptions>
+                                </div>
+                            )
+                        }}
+                    />
                 </TabPane>
                 <TabPane tab={`Danh sách được cứu xét (${dsCuuXet.length})`} key="2">
-                    <Table columns={columns} dataSource={dsCuuXet} rowKey="id" pagination={{ pageSize: 15 }} scroll={{ x: 1400 }} />
+                    <Table 
+                        columns={columns} 
+                        dataSource={dsCuuXet} 
+                        rowKey="id" 
+                        pagination={{ pageSize: 15 }} 
+                        scroll={{ x: 1000 }} 
+                        expandable={{
+                            expandedRowRender: (record: any) => (
+                                <div style={{ padding: '8px 24px', backgroundColor: '#fafafa', borderRadius: 8 }}>
+                                    <Descriptions title="Thông tin chi tiết" bordered size="small" column={{ xxl: 3, xl: 2, lg: 2, md: 1, sm: 1, xs: 1 }}>
+                                        <Descriptions.Item label="Ngành học">
+                                            {record.major || <Text type="secondary">-</Text>}
+                                        </Descriptions.Item>
+                                        <Descriptions.Item label="Chương trình đào tạo (CTDT)">
+                                            {record.ctdtName ? <Tag color="geekblue">{record.ctdtName}</Tag> : <Text type="secondary">-</Text>}
+                                        </Descriptions.Item>
+                                        <Descriptions.Item label="Bị phạt vòng Học vụ (GPA)">
+                                            <Tag color="blue">{record.hinhThucGpa}</Tag>
+                                        </Descriptions.Item>
+                                        {record.lyDo && (
+                                            <Descriptions.Item label="Chi tiết thông số & lý do" span={2}>
+                                                <Text type="secondary" style={{ whiteSpace: 'pre-wrap' }}>{record.lyDo}</Text>
+                                            </Descriptions.Item>
+                                        )}
+                                    </Descriptions>
+                                </div>
+                            )
+                        }}
+                    />
                 </TabPane>
             </Tabs>
         </div>
@@ -970,19 +1119,51 @@ function FormalListTab({ messageApi }: { messageApi: any }) {
     ];
 
     const detColumns = [
-        { title: 'Sinh viên', dataIndex: 'fullName', key: 'fullName', width: 160 },
-        { title: 'MSSV', dataIndex: 'studentId', key: 'studentId', width: 110 },
-        { title: 'Ngành', dataIndex: 'major', key: 'major', width: 160 },
-        { title: 'CTDT áp dụng', dataIndex: 'ctdtName', key: 'ctdtName', width: 180, render: (t: string) => t ? <Tag color="geekblue">{t}</Tag> : <Text type="secondary">-</Text> },
-        { title: 'Kết quả Cuối cùng', dataIndex: 'hinhThuc', key: 'hinhThuc', width: 160, render: (t: string) => <Tag color="red">{t}</Tag> },
-        { title: 'Trạng thái', dataIndex: 'isCuuXet', key: 'isCuuXet', width: 180, render: (isCuuXet: boolean) => isCuuXet ? <Tag color="green">Được Cứu Xét / Khoan hồng</Tag> : <Tag color="red">Bị Kỷ Luật</Tag> },
+        {
+            title: 'Sinh viên',
+            key: 'student',
+            width: 180,
+            render: (_: any, r: any) => (
+                <div>
+                    <Text strong>{r.fullName}</Text>
+                    <br />
+                    <Text type="secondary" style={{ fontSize: '12px' }}>{r.studentId}</Text>
+                </div>
+            )
+        },
+        { title: 'Kết quả Cuối cùng', dataIndex: 'hinhThuc', key: 'hinhThuc', width: 180, render: (t: string) => <Tag color="red">{t}</Tag> }
     ];
 
     return (
         <div>
             <Table loading={isLoading} columns={columns} dataSource={formalLists as any[]} rowKey="id" scroll={{ x: 1200 }} />
             <Drawer title="Chi tiết danh sách chính thức" width={900} open={!!detailId} onClose={() => setDetailId(null)}>
-                <Table loading={isLoadingDetails} columns={detColumns} dataSource={(details as any[])?.filter((d: any) => !d.isCuuXet)} rowKey="id" pagination={{ pageSize: 15 }} scroll={{ x: 1400 }} />
+                <Table 
+                    loading={isLoadingDetails} 
+                    columns={detColumns} 
+                    dataSource={(details as any[])?.filter((d: any) => !d.isCuuXet)} 
+                    rowKey="id" 
+                    pagination={{ pageSize: 15 }} 
+                    expandable={{
+                        expandedRowRender: (record: any) => (
+                            <div style={{ padding: '8px 24px', backgroundColor: '#fafafa', borderRadius: 8 }}>
+                                <Descriptions title="Thông tin chi tiết" bordered size="small" column={2}>
+                                    <Descriptions.Item label="Ngành học">
+                                        {record.major || <Text type="secondary">-</Text>}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Chương trình đào tạo (CTDT)">
+                                        {record.ctdtName ? <Tag color="geekblue">{record.ctdtName}</Tag> : <Text type="secondary">-</Text>}
+                                    </Descriptions.Item>
+                                    {record.lyDo && (
+                                        <Descriptions.Item label="Chi tiết thông số & lý do" span={2}>
+                                            <Text type="secondary" style={{ whiteSpace: 'pre-wrap' }}>{record.lyDo}</Text>
+                                        </Descriptions.Item>
+                                    )}
+                                </Descriptions>
+                            </div>
+                        )
+                    }}
+                />
             </Drawer>
 
             {/* Modal Tạo Quyết Định Kỷ Luật */}
