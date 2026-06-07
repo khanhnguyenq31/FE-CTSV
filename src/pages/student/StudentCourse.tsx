@@ -1,24 +1,20 @@
 import useDocumentTitle from '../../hooks/useDocumentTitle';
-import { Typography, Table } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Typography, Table, Spin, Tag } from 'antd';
 import type { ColumnsType } from 'antd/lib/table';
+import { api } from '../../api/auth';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 interface SemesterGPA {
-    key: string;
+    id: number;
     namHoc: string;
     hocKy: string;
     gpaSemester: number;
     gpaTotal: number;
+    creditsSemester?: number;
+    creditsAccumulated?: number;
 }
-
-const semesterData: SemesterGPA[] = [
-    { key: '1', namHoc: '2023-2024', hocKy: '1', gpaSemester: 3.2, gpaTotal: 3.2 },
-    { key: '2', namHoc: '2023-2024', hocKy: '2', gpaSemester: 3.5, gpaTotal: 3.35 },
-    { key: '3', namHoc: '2024-2025', hocKy: '1', gpaSemester: 3.8, gpaTotal: 3.5 },
-    { key: '4', namHoc: '2025-2026', hocKy: '1', gpaSemester: 0.5, gpaTotal: 0.8 }, // Dữ liệu từ seed kỷ luật
-    { key: '5', namHoc: '2025-2026', hocKy: '2', gpaSemester: 0.4, gpaTotal: 0.7 }, // Dữ liệu từ seed kỷ luật
-];
 
 const columns: ColumnsType<SemesterGPA> = [
     { title: 'Năm học', dataIndex: 'namHoc', key: 'namHoc', align: 'center' },
@@ -28,36 +24,99 @@ const columns: ColumnsType<SemesterGPA> = [
         dataIndex: 'gpaSemester', 
         key: 'gpaSemester', 
         align: 'center',
-        render: (val: number) => <span style={{ color: val < 1.0 ? '#ff4d4f' : 'inherit', fontWeight: val < 1.0 ? 'bold' : 'normal' }}>{val.toFixed(2)}</span>
+        render: (val: number) => {
+            if (val === null || val === undefined) return '-';
+            return <span style={{ color: val < 1.0 ? '#ff4d4f' : 'inherit', fontWeight: val < 1.0 ? 'bold' : 'normal' }}>{val.toFixed(2)}</span>;
+        }
     },
     { 
         title: 'GPA Tích lũy', 
         dataIndex: 'gpaTotal', 
         key: 'gpaTotal', 
         align: 'center',
-        render: (val: number) => val.toFixed(2)
+        render: (val: number) => {
+            if (val === null || val === undefined) return '-';
+            return val.toFixed(2);
+        }
     },
+    {
+        title: 'Số TC Học kỳ',
+        dataIndex: 'creditsSemester',
+        key: 'creditsSemester',
+        align: 'center',
+        render: (val: any) => (val !== null && val !== undefined) ? val : '-'
+    },
+    {
+        title: 'Số TC Tích lũy',
+        dataIndex: 'creditsAccumulated',
+        key: 'creditsAccumulated',
+        align: 'center',
+        render: (val: any) => (val !== null && val !== undefined) ? val : '-'
+    }
 ];
 
 export default function StudentCourse() {
-  useDocumentTitle("Tiến độ Học tập");
+    useDocumentTitle("Tiến độ Học tập");
+    const [loading, setLoading] = useState(false);
+    const [semesterData, setSemesterData] = useState<SemesterGPA[]>([]);
+    const [gpaTotal, setGpaTotal] = useState<number | null>(null);
+    const [creditsTotal, setCreditsTotal] = useState<number | null>(null);
+
+    useEffect(() => {
+        const fetchGrades = async () => {
+            setLoading(true);
+            try {
+                const res = await api.get('/student/academic-grades');
+                if (res.data) {
+                    setSemesterData(res.data.grades || []);
+                    setGpaTotal(res.data.gpaTotal);
+                    setCreditsTotal(res.data.creditsTotal);
+                }
+            } catch (err) {
+                console.error('Lỗi khi tải kết quả học tập:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchGrades();
+    }, []);
+
     return (
         <div style={{ padding: 24, background: '#f0f2f5' }}>
             <Title level={2} style={{ color: '#0052cc' }}>
                 <span role="img" aria-label="score">📊</span> Kết quả học tập
             </Title>
-            <Title level={4}>
-                Điểm trung bình tích lũy hiện tại (GPA): <span style={{ color: '#fa8c16' }}>0.70</span>
-            </Title>
             
-            <h3 style={{ marginTop: 24 }}>Bảng điểm chi tiết theo từng học kỳ</h3>
-            <Table 
-                columns={columns} 
-                dataSource={semesterData} 
-                pagination={false}
-                bordered
-                style={{ marginTop: 16 }}
-            />
+            {loading ? (
+                <div style={{ padding: 50, textAlign: 'center' }}><Spin size="large" /></div>
+            ) : (
+                <>
+                    <div style={{ marginBottom: 16 }}>
+                        <Title level={4} style={{ margin: 0 }}>
+                            Điểm trung bình tích lũy hiện tại (GPA):{' '}
+                            <span style={{ color: '#fa8c16' }}>
+                                {gpaTotal !== null && gpaTotal !== undefined ? gpaTotal.toFixed(2) : 'Chưa có'}
+                            </span>
+                        </Title>
+                        {creditsTotal !== null && creditsTotal !== undefined && (
+                            <Title level={5} style={{ marginTop: 8, color: '#555' }}>
+                                Tổng số tín chỉ tích lũy: <span style={{ color: '#52c41a' }}>{creditsTotal}</span>
+                            </Title>
+                        )}
+                    </div>
+                    
+                    <h3 style={{ marginTop: 24 }}>Bảng điểm chi tiết theo từng học kỳ</h3>
+                    <Table 
+                        columns={columns} 
+                        dataSource={semesterData} 
+                        rowKey="id"
+                        pagination={false}
+                        bordered
+                        style={{ marginTop: 16 }}
+                        locale={{ emptyText: 'Chưa có dữ liệu điểm học kỳ' }}
+                    />
+                </>
+            )}
             
             <div style={{ marginTop: 24, padding: 16, background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 8 }}>
                 <Typography.Text type="secondary">
@@ -66,4 +125,4 @@ export default function StudentCourse() {
             </div>
         </div>
     );
-}
+}
