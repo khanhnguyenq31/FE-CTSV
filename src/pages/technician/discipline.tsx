@@ -669,22 +669,16 @@ function EvaluationHistoryTab({ messageApi }: { messageApi: any }) {
     });
 
     const columns = [
-        { title: 'Tên Đợt Xét', dataIndex: 'tenDotXet', key: 'tenDotXet' },
+        { title: 'Tên Đợt Xét', dataIndex: 'tenDotXet', key: 'tenDotXet', fixed: 'left' as const, width: 220 },
         {
-            title: 'Khóa áp dụng', dataIndex: 'khoaSinhVien', key: 'khoaSinhVien', render: (val: string) => {
-                if (val && val.trim() !== '') {
-                    return val.split(',').join(', ');
-                }
-                return 'Tất cả';
-            }
+            title: 'Học kỳ',
+            key: 'hocKy',
+            width: 150,
+            render: (_: any, r: any) => `HK${r.hocKy} (${r.namHoc})`
         },
-        { title: 'Năm học', dataIndex: 'namHoc', key: 'namHoc' },
-        { title: 'Học kỳ', dataIndex: 'hocKy', key: 'hocKy' },
-        { title: 'Cấu hình', dataIndex: ['cauHinh', 'tenCauHinh'], key: 'cauHinh' },
-        { title: 'Người thực hiện', dataIndex: 'nguoiXet', key: 'nguoiXet' },
-        { title: 'Thời gian lưu', dataIndex: 'createdAt', key: 'createdAt', render: (t: string) => new Date(t).toLocaleString('vi-VN') },
+        { title: 'Cấu hình', dataIndex: ['cauHinh', 'tenCauHinh'], key: 'cauHinh', width: 200 },
         {
-            title: 'Thao tác', key: 'action', align: 'center' as const, render: (_: any, r: any) => (
+            title: 'Thao tác', key: 'action', align: 'center' as const, fixed: 'right' as const, width: 120, render: (_: any, r: any) => (
                 <Space>
                     <Tooltip title="Xem chi tiết">
                         <Button type="primary" shape="circle" ghost icon={<EyeOutlined />} onClick={() => setDetailId(r.id)} />
@@ -703,6 +697,7 @@ function EvaluationHistoryTab({ messageApi }: { messageApi: any }) {
             )
         }
     ];
+
 
     const detColumns = [
         {
@@ -729,7 +724,28 @@ function EvaluationHistoryTab({ messageApi }: { messageApi: any }) {
                 </Popconfirm>
             </div>
             <AppLoading loading={isLoading} tip="Đang tải lịch sử đợt xét...">
-                <Table columns={columns} dataSource={history as any[]} rowKey="id" scroll={{ x: 1200 }} />
+                <Table 
+                    columns={columns} 
+                    dataSource={history as any[]} 
+                    rowKey="id"
+                    expandable={{
+                        expandedRowRender: (record: any) => (
+                            <div style={{ padding: '8px 24px', backgroundColor: '#fafafa', borderRadius: 8 }}>
+                                <Descriptions title="Thông tin đợt xét" bordered size="small" column={2}>
+                                    <Descriptions.Item label="Khóa áp dụng">
+                                        {record.khoaSinhVien ? record.khoaSinhVien.split(',').join(', ') : 'Tất cả'}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Người thực hiện">
+                                        {record.nguoiXet}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Thời gian lưu" span={2}>
+                                        {new Date(record.createdAt).toLocaleString('vi-VN')}
+                                    </Descriptions.Item>
+                                </Descriptions>
+                            </div>
+                        )
+                    }}
+                />
             </AppLoading>
             <Drawer title="Chi tiết sinh viên trong đợt xét" width={800} open={!!detailId} onClose={() => setDetailId(null)}>
                 <AppLoading loading={isLoadingDetails} tip="Đang tải chi tiết danh sách...">
@@ -1085,27 +1101,22 @@ function FormalListTab({ messageApi }: { messageApi: any }) {
     };
 
     const columns = [
-        { title: 'Tên Đợt Xét', dataIndex: 'tenDotXet', key: 'tenDotXet' },
+        { title: 'Tên Đợt Xét', dataIndex: 'tenDotXet', key: 'tenDotXet', fixed: 'left' as const, width: 220 },
         {
-            title: 'Khóa áp dụng', dataIndex: 'khoaSinhVien', key: 'khoaSinhVien', render: (val: string) => {
-                if (val && val.trim() !== '') {
-                    return val.split(',').join(', ');
-                }
-                return 'Tất cả';
-            }
+            title: 'Học kỳ',
+            key: 'hocKy',
+            width: 150,
+            render: (_: any, r: any) => `HK${r.hocKy} (${r.namHoc})`
         },
-        { title: 'Năm học', dataIndex: 'namHoc', key: 'namHoc' },
-        { title: 'Học kỳ', dataIndex: 'hocKy', key: 'hocKy' },
         {
-            title: 'Quyết định', key: 'quyetDinh', render: (_: any, r: any) => (
+            title: 'Quyết định', key: 'quyetDinh', width: 220, render: (_: any, r: any) => (
                 r.quyetDinhs && r.quyetDinhs.length > 0
                     ? <Tag color="success" icon={<CheckCircleOutlined />}>Đã ban hành ({r.quyetDinhs[0].soQuyetDinh})</Tag>
                     : <Tag color="warning" icon={<ExclamationCircleOutlined />}>Chưa ban hành</Tag>
             )
         },
-        { title: 'Thực hiện lúc', dataIndex: 'createdAt', key: 'createdAt', render: (t: string) => new Date(t).toLocaleString('vi-VN') },
         {
-            title: 'Thao tác', key: 'action', align: 'center' as const, render: (_: any, r: any) => (
+            title: 'Thao tác', key: 'action', align: 'center' as const, fixed: 'right' as const, width: 160, render: (_: any, r: any) => (
                 <Space>
                     <Tooltip title="Chi tiết Sinh viên">
                         <Button type="primary" shape="circle" ghost icon={<EyeOutlined />} onClick={() => setDetailId(r.id)} />
@@ -1117,6 +1128,7 @@ function FormalListTab({ messageApi }: { messageApi: any }) {
             )
         }
     ];
+
 
     const detColumns = [
         {
@@ -1136,7 +1148,26 @@ function FormalListTab({ messageApi }: { messageApi: any }) {
 
     return (
         <div>
-            <Table loading={isLoading} columns={columns} dataSource={formalLists as any[]} rowKey="id" scroll={{ x: 1200 }} />
+            <Table 
+                loading={isLoading} 
+                columns={columns} 
+                dataSource={formalLists as any[]} 
+                rowKey="id" 
+                expandable={{
+                    expandedRowRender: (record: any) => (
+                        <div style={{ padding: '8px 24px', backgroundColor: '#fafafa', borderRadius: 8 }}>
+                            <Descriptions title="Thông tin chi tiết quyết định" bordered size="small" column={2}>
+                                <Descriptions.Item label="Khóa áp dụng">
+                                    {record.khoaSinhVien ? record.khoaSinhVien.split(',').join(', ') : 'Tất cả'}
+                                </Descriptions.Item>
+                                <Descriptions.Item label="Thời gian thực hiện">
+                                    {new Date(record.createdAt).toLocaleString('vi-VN')}
+                                </Descriptions.Item>
+                            </Descriptions>
+                        </div>
+                    )
+                }}
+            />
             <Drawer title="Chi tiết danh sách chính thức" width={900} open={!!detailId} onClose={() => setDetailId(null)}>
                 <Table 
                     loading={isLoadingDetails} 
