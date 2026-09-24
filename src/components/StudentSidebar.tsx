@@ -1,0 +1,165 @@
+import { useEffect, useState } from "react";
+import { Layout, Menu, Skeleton } from "antd";
+import type { MessageInstance } from "antd/es/message/interface";
+import {
+  HomeOutlined,
+  UserOutlined,
+  BookOutlined,
+  CalendarOutlined,
+  FilePdfOutlined,
+  LockOutlined,
+} from "@ant-design/icons";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { logoutApi } from "../api/auth";
+import { useAuthStore } from "../store/auth";
+import { getStudentProfileApi } from "../api/student";
+import SidebarBrand from './SidebarBrand';
+import SidebarLogout from './SidebarLogout';
+
+const { Sider } = Layout;
+const pathToKey: Record<string, string> = {
+  "/student/home": "1",
+  "/student/profile": "2",
+  "/student/course": "3",
+  "/student/event": "5",
+  "/student/enrollment-records": "6",
+};
+
+interface SidebarProps {
+  messageApi?: MessageInstance;
+  isMobile?: boolean;
+  onClose?: () => void;
+}
+
+export default function StudentSidebar({ messageApi, isMobile = false, onClose }: SidebarProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const logout = useAuthStore((s) => s.logout);
+
+
+  const [selectedKey, setSelectedKey] = useState(pathToKey[location.pathname] || "1");
+
+  useEffect(() => {
+    setSelectedKey(pathToKey[location.pathname] || "1");
+  }, [location.pathname]);
+
+
+  const mutation = useMutation({
+    mutationFn: logoutApi,
+    onSuccess: () => {
+      if (messageApi) messageApi.success("Đăng xuất thành công!");
+      logout();
+      navigate("/login");
+    },
+    onError: (error: unknown) => {
+      if (messageApi) messageApi.error(error instanceof Error ? error.message : "Đăng xuất thất bại!");
+    },
+  });
+
+  const handleLogout = () => mutation.mutate();
+
+  // Use useQuery for caching and loading state management
+  const { data, isLoading } = useQuery({
+    queryKey: ["studentProfile"],
+    queryFn: getStudentProfileApi,
+    staleTime: 0, // No cache stale time so it triggers refetch on mount/focus
+  });
+
+  const graduationType = data?.profile?.graduationType || "";
+
+  const handleMenuClick = (path: string) => {
+    navigate(path);
+    if (isMobile && onClose) {
+      onClose();
+    }
+  };
+
+  const isEnrollmentMode = graduationType === "Đang nhập học";
+
+  const menuItems = [
+    { key: "1", icon: <HomeOutlined />, label: "Tổng quan sinh viên", path: "/student/home" },
+    { key: "2", icon: <UserOutlined />, label: "Hồ sơ cá nhân", path: "/student/profile" },
+    { key: "3", icon: <BookOutlined />, label: "Kết quả học tập", path: "/student/course" },
+    { key: "5", icon: <CalendarOutlined />, label: "Sự kiện & hoạt động", path: "/student/event" },
+    { key: "6", icon: <FilePdfOutlined />, label: "Hồ sơ nhập học", path: "/student/enrollment-records", onlyInEnrollment: true },
+  ];
+
+  let filteredItems = menuItems;
+  if (!isEnrollmentMode) {
+    filteredItems = menuItems.filter(item => !item.onlyInEnrollment);
+  }
+
+  const visibleItems = filteredItems.map(item => {
+    const isLocked = isEnrollmentMode && !item.onlyInEnrollment;
+    return {
+      ...item,
+      label: isLocked ? (
+        <span style={{ color: "rgba(255, 255, 255, 0.45)" }}>
+          {item.label} <LockOutlined style={{ marginLeft: 8 }} />
+        </span>
+      ) : item.label,
+      isLocked
+    };
+  });
+
+  const renderMenuItems = () => {
+    if (isLoading) {
+      return (
+        <div style={{ padding: '0 16px' }}>
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} style={{ marginBottom: 16 }}>
+              <Skeleton active paragraph={{ rows: 0 }} title={{ width: '80%' }} />
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <Menu
+        theme="dark"
+        mode="inline"
+        selectedKeys={[selectedKey]}
+      >
+        {visibleItems.map(item => (
+          <Menu.Item
+            key={item.key}
+            icon={item.icon}
+            onClick={() => {
+              if (item.isLocked) {
+                if (messageApi) messageApi.warning("Vui lòng hoàn tất nộp hồ sơ nhập học để mở khóa tính năng này!");
+                return;
+              }
+              handleMenuClick(item.path);
+            }}
+          >
+            {item.label}
+          </Menu.Item>
+        ))}
+      </Menu>
+    );
+  };
+
+  const content = (
+    <div className="premium-sidebar" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <SidebarBrand label="SMS BK - STUDENT" onActivate={() => navigate("/student/home")} />
+
+      <div style={{ flex: 1, overflowY: 'auto', paddingTop: 16 }}>
+        {renderMenuItems()}
+      </div>
+
+      <SidebarLogout loading={mutation.isPending} onLogout={handleLogout} />
+    </div>
+  );
+
+  if (isMobile) {
+    return content;
+  }
+
+  return (
+    <Sider width={260} className="premium-sidebar">
+      {content}
+    </Sider>
+  );
+}

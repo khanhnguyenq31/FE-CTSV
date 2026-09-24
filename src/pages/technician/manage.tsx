@@ -1,0 +1,1741 @@
+import { useEffect, useMemo, useState } from "react";
+import type { ColumnsType } from "antd/es/table";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Row,
+  Col,
+  Card,
+  Typography,
+  Input,
+  Button,
+  Space,
+  Tag,
+  Table,
+  Modal,
+  Form,
+  DatePicker,
+  Upload,
+  Tooltip,
+  Popconfirm,
+  Badge,
+  Statistic,
+  Descriptions,
+  Divider,
+  Steps,
+  Tabs,
+  Select,
+  Spin,
+  Popover,
+  Checkbox,
+} from "antd";
+import {
+  ArrowLeftOutlined,
+  PlusOutlined,
+  EyeOutlined,
+  UploadOutlined,
+  MailOutlined,
+  LockOutlined,
+  UnlockOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  FileDoneOutlined,
+  AuditOutlined,
+  TeamOutlined,
+  UserOutlined,
+  FileTextOutlined,
+  SolutionOutlined,
+  ScanOutlined,
+  FilterOutlined,
+  DeleteOutlined,
+  InfoCircleOutlined,
+  SendOutlined,
+  StopOutlined,
+  BarChartOutlined,
+  CalendarOutlined,
+  SyncOutlined,
+} from "@ant-design/icons";
+// import { Html5QrcodeScanner } from "html5-qrcode"; // Remove this
+import { Html5Qrcode } from "html5-qrcode";
+import { useNavigate, useParams } from "react-router-dom";
+import dayjs from "dayjs";
+import AppLoading from "../../components/AppLoading";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  Cell,
+  PieChart,
+  Pie,
+  Legend,
+} from "recharts";
+import {
+  getAdmissionPeriods,
+  createAdmissionPeriod,
+  updatePeriodStatus,
+  uploadAdmissionExcel,
+  getAdmissionStudents,
+  notifyAdmissionStudents,
+  getAdmissionStats,
+  updateDocStatus,
+  finalizeAdmission,
+  searchAdmissionStudent,
+  cancelFinalizeAdmission,
+  deleteAdmissionPeriod,
+  updatePeriodDocuments,
+  getGiayTos,
+  createGiayTo,
+  getStudentSubmittedDocs,
+  updateStudentSubmittedDocs
+} from "../../api/admission";
+import type { AdmissionPeriod, AdmissionStudent, AdmissionStats } from "../../api/admission";
+const { Title, Text } = Typography;
+const { Search } = Input;
+
+// Component quét QR riêng để đảm bảo DOM element đã mount và có kiểm soát camera tốt hơn
+interface ScannerProps {
+  onScan: (text: string) => void;
+  messageApi?: any;
+}
+
+// Component quét QR riêng để đảm bảo DOM element đã mount và có kiểm soát camera tốt hơn
+const QRScanner: React.FC<ScannerProps> = ({ onScan, messageApi }) => {
+  useEffect(() => {
+    const html5QrCode = new Html5Qrcode("qr-reader");
+    let isMounted = true;
+
+    const startScanner = async () => {
+      try {
+        // Thêm một chút delay để Modal hoàn tất animation
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        if (!isMounted) return;
+
+        const config = {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0
+        };
+
+        // Ưu tiên camera trước (laptop)
+        await html5QrCode.start(
+          { facingMode: "user" },
+          config,
+          (decodedText: string) => {
+            if (isMounted) {
+              onScan(decodedText);
+            }
+          },
+          undefined
+        );
+      } catch (err: any) {
+        console.error("Error starting QR scanner:", err);
+        if (isMounted && messageApi) {
+          const errMsg = err?.message || "";
+          if (err?.name === "AbortError" || errMsg.includes("Timeout")) {
+            messageApi.error("Lỗi: Không thể khởi động Camera (Hết thời gian chờ). Vui lòng thử lại hoặc kiểm tra xem có ứng dụng khác đang dùng camera không.");
+          } else if (err?.name === "NotAllowedError") {
+            messageApi.error("Lỗi: Trình duyệt không có quyền truy cập Camera.");
+          } else {
+            messageApi.error("Lỗi khởi động Camera: " + (errMsg || "Không xác định"));
+          }
+        }
+      }
+    };
+
+    startScanner();
+
+    return () => {
+      isMounted = false;
+      if (html5QrCode.isScanning) {
+        html5QrCode.stop().catch(error => console.error("Failed to stop scanner", error));
+      }
+    };
+  }, [onScan, messageApi]);
+
+  return (
+    <div style={{ position: 'relative', width: '100%', minHeight: '300px', background: '#000', borderRadius: '8px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div id="qr-reader" style={{ width: "100%" }}></div>
+    </div>
+  );
+};
+
+export default function ManagePage({ messageApi }: { messageApi: any }) {
+  const navigate = useNavigate();
+  const { id: routeId } = useParams();
+  const queryClient = useQueryClient();
+
+  // Navigation states - Derived from routeId
+  const viewMode = routeId ? "detail" : "list";
+
+  // State cho Đợt nhập học
+  const [periods, setPeriods] = useState<AdmissionPeriod[]>([]);
+  const [periodLoading, setPeriodLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [form] = Form.useForm();
+
+  // Derived state cho Đợt nhập học đang xem
+  const selectedPeriod = useMemo(() => {
+    if (!routeId || !periods.length) return null;
+    return periods.find((item: any) => item.id.toString() === routeId) || null;
+  }, [routeId, periods]);
+  const [search, setSearch] = useState("");
+  const [isNotifyLoading, setIsNotifyLoading] = useState(false);
+
+  useDocumentTitle(selectedPeriod ? `Nhập học: ${selectedPeriod.name}` : "Quản lý nhập học");
+
+  // State cho Tab Công tác nhập học
+  const [searchId, setSearchId] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchedStudent, setSearchedStudent] = useState<AdmissionStudent | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  // React Query cho danh sách sinh viên
+  const [isCreatingPeriod, setIsCreatingPeriod] = useState(false);
+  const [isFinalizing, setIsFinalizing] = useState(false);
+  const [isTogglingDoc, setIsTogglingDoc] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // State cho Giấy tờ nhập học
+  const [allGiayTos, setAllGiayTos] = useState<{ id: number; tenGiayTo: string }[]>([]);
+  const [isSavingDocs, setIsSavingDocs] = useState(false);
+  const [editingDocIds, setEditingDocIds] = useState<number[] | null>(null); // null = not editing
+
+  // State cho Modal tạo giấy tờ mới đẹp đẽ
+  const [isNewDocModalOpen, setIsNewDocModalOpen] = useState(false);
+  const [newDocForm] = Form.useForm();
+  const [newDocTargetForm, setNewDocTargetForm] = useState<"create_modal" | "edit_card" | null>(null);
+  const [isCreatingNewDoc, setIsCreatingNewDoc] = useState(false);
+
+  // State cho Checklist hồ sơ giấy sinh viên
+  const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
+  const [checklistStudent, setChecklistStudent] = useState<any>(null);
+  const [requiredDocs, setRequiredDocs] = useState<any[]>([]);
+  const [submittedDocIds, setSubmittedDocIds] = useState<number[]>([]);
+  const [isSavingChecklist, setIsSavingChecklist] = useState(false);
+  const [isLoadingChecklist, setIsLoadingChecklist] = useState(false);
+
+
+  const { data: studentsData, isLoading: studentLoading } = useQuery({
+    queryKey: ["admissionStudents", routeId],
+    queryFn: () => getAdmissionStudents(routeId!),
+    enabled: !!routeId && viewMode === "detail",
+    refetchInterval: 3000, // 3s auto refresh
+  });
+
+  const students = useMemo(() => {
+    if (!studentsData) return [];
+    return Array.isArray(studentsData) ? studentsData : (studentsData.students || []);
+  }, [studentsData]);
+
+  const [statDateRange, setStatDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
+
+  // React Query cho thống kê
+  const { data: statsData, isFetching: isStatsFetching } = useQuery({
+    queryKey: [
+      "admissionStats",
+      routeId,
+      statDateRange?.[0]?.format("YYYY-MM-DD"),
+      statDateRange?.[1]?.format("YYYY-MM-DD")
+    ],
+    queryFn: () => getAdmissionStats(
+      routeId!,
+      statDateRange?.[0]?.format("YYYY-MM-DD"),
+      statDateRange?.[1]?.format("YYYY-MM-DD")
+    ),
+    enabled: !!routeId && viewMode === "detail",
+  });
+
+  const stats: AdmissionStats | null = statsData?.stats || null;
+
+  // Student Detail Modal
+  const [isStudentModalOpen, setIsStudentModalOpen] = useState(false);
+  const [currentStudentId, setCurrentStudentId] = useState<string | null>(null);
+
+  const currentStudent = useMemo(() => {
+    if (!currentStudentId) return null;
+    return students.find((s: AdmissionStudent) => s.studentId === currentStudentId) || null;
+  }, [students, currentStudentId]);
+
+  const displaySearchedStudent = useMemo(() => {
+    if (!searchedStudent) return null;
+    const inList = students.find((s: AdmissionStudent) => s.studentId === searchedStudent.studentId);
+    if (inList) {
+      return { ...searchedStudent, ...inList };
+    }
+    return searchedStudent;
+  }, [searchedStudent, students]);
+
+  // State cho Scanner
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+
+  useEffect(() => {
+    fetchPeriods();
+    fetchGiayTos();
+  }, []);
+
+  const fetchGiayTos = async () => {
+    try {
+      const data = await getGiayTos();
+      setAllGiayTos(data.giayTos || []);
+    } catch (e) {
+      console.error('Lỗi tải giấy tờ:', e);
+    }
+  };
+
+  const handleCreateNewDoc = async (values: { tenGiayTo: string; moTa?: string }) => {
+    setIsCreatingNewDoc(true);
+    try {
+      const res = await createGiayTo(values.tenGiayTo, values.moTa);
+      setAllGiayTos(prev => [...prev, res.giayTo]);
+      if (newDocTargetForm === "create_modal") {
+        const currentVals = form.getFieldValue("giayToIds") || [];
+        form.setFieldsValue({ giayToIds: [...currentVals, res.giayTo.id] });
+      } else if (newDocTargetForm === "edit_card") {
+        setEditingDocIds(prev => [...(prev || []), res.giayTo.id]);
+      }
+      if (messageApi) messageApi.success('Đã thêm giấy tờ mới vào danh mục thành công');
+      setIsNewDocModalOpen(false);
+      newDocForm.resetFields();
+    } catch (error) {
+      if (messageApi) messageApi.error('Không thể tạo giấy tờ. Tên giấy tờ có thể đã tồn tại.');
+    } finally {
+      setIsCreatingNewDoc(false);
+    }
+  };
+
+  const fetchPeriods = async () => {
+    setPeriodLoading(true);
+    try {
+      const data = await getAdmissionPeriods();
+      const periodList = Array.isArray(data) ? data : (data.periods || []);
+      setPeriods(periodList);
+    } catch (error) {
+      console.error(error);
+      if (messageApi) messageApi.error("Không thể lấy danh sách đợt nhập học");
+    } finally {
+      setPeriodLoading(false);
+    }
+  };
+
+  const handleCreatePeriod = async (values: any) => {
+    setIsCreatingPeriod(true);
+    try {
+      await createAdmissionPeriod({
+        name: values.name,
+        startDate: values.range[0].format("YYYY-MM-DD"),
+        endDate: values.range[1].format("YYYY-MM-DD"),
+        giayToIds: values.giayToIds || []
+      });
+      if (messageApi) messageApi.success("Tạo đợt nhập học thành công");
+      setIsModalOpen(false);
+      form.resetFields();
+      fetchPeriods();
+    } catch (error) {
+      if (messageApi) messageApi.error("Tạo đợt nhập học thất bại");
+    } finally {
+      setIsCreatingPeriod(false);
+    }
+  };
+
+  const toggleStatus = async (period: AdmissionPeriod) => {
+    const newStatus = period.status === "active" ? "locked" : "active";
+    try {
+      await updatePeriodStatus(period.id, newStatus);
+      if (messageApi) messageApi.success(`Đã ${newStatus === "locked" ? "khóa" : "mở"} đợt nhập học`);
+      fetchPeriods();
+    } catch (error) {
+      if (messageApi) messageApi.error("Cập nhật trạng thái thất bại");
+    }
+  };
+
+  const handleDeletePeriod = async (id: string) => {
+    try {
+      await deleteAdmissionPeriod(id);
+      if (messageApi) messageApi.success("Đã xóa đợt nhập học thành công");
+      fetchPeriods();
+    } catch (error: any) {
+      if (messageApi) messageApi.error(error.response?.data?.message || "Xóa đợt thất bại");
+    }
+  };
+
+  const handleNotify = async () => {
+    if (!selectedPeriod) return;
+    setIsNotifyLoading(true);
+    try {
+      await notifyAdmissionStudents(selectedPeriod.id);
+      if (messageApi) messageApi.success("Đã gửi email thông báo cho toàn bộ sinh viên");
+    } catch (error) {
+      if (messageApi) messageApi.error("Gửi thông báo thất bại");
+    } finally {
+      setIsNotifyLoading(false);
+    }
+  };
+
+  const handleUpload = async (file: File) => {
+    if (!selectedPeriod) return false;
+    setIsUploading(true);
+    try {
+      const res = await uploadAdmissionExcel(selectedPeriod.id, file);
+      const { results, message } = res;
+
+      if (results.failed > 0) {
+        const errorSummary = results.errors.length > 3
+          ? `${results.errors.slice(0, 3).join(", ")}... và ${results.errors.length - 3} lỗi khác.`
+          : results.errors.join(", ");
+
+        if (results.success > 0) {
+          messageApi.warning({
+            content: `Đã bổ sung ${results.success} sinh viên. Có ${results.failed} trường hợp bị trùng hoặc lỗi dữ liệu.`,
+            duration: 5
+          });
+        } else {
+          messageApi.error({
+            content: `Không thể bổ sung: Có ${results.failed} trường hợp bị trùng MSSV/Email hoặc lỗi định dạng.`,
+            duration: 5
+          });
+        }
+      } else {
+        messageApi.success("Bổ sung danh sách sinh viên thành công!");
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["admissionStudents", selectedPeriod.id] });
+      queryClient.invalidateQueries({ queryKey: ["admissionStats", selectedPeriod.id] });
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.message || "Upload thất bại. Vui lòng kiểm tra định dạng file Excel.";
+      messageApi.error(errorMsg);
+    } finally {
+      setIsUploading(false);
+    }
+    return false;
+  };
+
+  const handleToggleDocStatus = async (studentId: string) => {
+    setIsTogglingDoc(true);
+    try {
+      await updateDocStatus(studentId);
+      if (messageApi) messageApi.success("Cập nhật trạng thái hồ sơ giấy thành công");
+      // Refresh searched student if matches
+      if (searchedStudent?.studentId === studentId) {
+        handleSearchStudent();
+      }
+      queryClient.invalidateQueries({ queryKey: ["admissionStudents", selectedPeriod?.id] });
+      queryClient.invalidateQueries({ queryKey: ["admissionStats", selectedPeriod?.id] });
+    } catch (error) {
+      if (messageApi) messageApi.error("Cập nhật thất bại");
+    } finally {
+      setIsTogglingDoc(false);
+    }
+  };
+
+  const openChecklistModal = async (student: any) => {
+    setChecklistStudent(student);
+    setIsChecklistModalOpen(true);
+    setIsLoadingChecklist(true);
+    try {
+      const res = await getStudentSubmittedDocs(student.studentId);
+      setRequiredDocs(res.requiredDocs || []);
+      setSubmittedDocIds(res.submittedDocIds || []);
+    } catch {
+      if (messageApi) messageApi.error("Không thể lấy danh sách giấy tờ của sinh viên");
+    } finally {
+      setIsLoadingChecklist(false);
+    }
+  };
+
+  const handleSaveChecklist = async () => {
+    if (!checklistStudent) return;
+    setIsSavingChecklist(true);
+    try {
+      const res = await updateStudentSubmittedDocs(checklistStudent.studentId, submittedDocIds);
+      if (messageApi) messageApi.success(res.isPhysicalDocSubmitted ? "Đã nhận ĐẦY ĐỦ hồ sơ giấy của sinh viên!" : "Đã cập nhật danh sách giấy tờ nộp thành công.");
+      setIsChecklistModalOpen(false);
+      // Refresh searched student if matches
+      if (searchedStudent?.studentId === checklistStudent.studentId) {
+        handleSearchStudent();
+      }
+      queryClient.invalidateQueries({ queryKey: ["admissionStudents", selectedPeriod?.id] });
+      queryClient.invalidateQueries({ queryKey: ["admissionStats", selectedPeriod?.id] });
+    } catch {
+      if (messageApi) messageApi.error("Cập nhật thất bại");
+    } finally {
+      setIsSavingChecklist(false);
+    }
+  };
+
+
+  const handleFinalize = async (studentId: string) => {
+    setIsFinalizing(true);
+    try {
+      await finalizeAdmission(studentId);
+      if (messageApi) messageApi.success("Hoàn tất nhập học thành công. Sinh viên đã chuyển sang trạng thái Đang học.");
+      setIsStudentModalOpen(false);
+      // Refresh searched student if matches
+      if (searchedStudent?.studentId === studentId) {
+        handleSearchStudent();
+      }
+      queryClient.invalidateQueries({ queryKey: ["admissionStudents", selectedPeriod?.id] });
+      queryClient.invalidateQueries({ queryKey: ["admissionStats", selectedPeriod?.id] });
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || "Hoàn tất thất bại. Vui lòng kiểm tra điều kiện (Login, Export file, Hồ sơ giấy).";
+      if (messageApi) messageApi.error(msg);
+    } finally {
+      setIsFinalizing(false);
+    }
+  };
+
+  const handleSearchStudent = async (pid?: string) => {
+    const idToSearch = pid || searchId;
+    if (!idToSearch) return;
+    setSearching(true);
+    try {
+      const data = await searchAdmissionStudent(idToSearch);
+      setSearchedStudent(data.student);
+    } catch (error) {
+      if (messageApi) messageApi.error("Không tìm thấy sinh viên hoặc có lỗi xảy ra");
+      setSearchedStudent(null);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleCancelFinalize = async (studentId: string) => {
+    setIsCancelling(true);
+    try {
+      await cancelFinalizeAdmission(studentId);
+      if (messageApi) messageApi.success("Đã hủy xác nhận nhập học thành công");
+      // Refresh state if it's the searched student
+      if (searchedStudent?.studentId === studentId) {
+        handleSearchStudent();
+      }
+      // Refresh current table if in detail view
+      queryClient.invalidateQueries({ queryKey: ["admissionStudents", selectedPeriod?.id] });
+      queryClient.invalidateQueries({ queryKey: ["admissionStats", selectedPeriod?.id] });
+    } catch (error) {
+      if (messageApi) messageApi.error("Hủy xác nhận thất bại");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  const filteredStudents = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return students;
+    return students.filter(
+      (s: AdmissionStudent) =>
+        s.fullName.toLowerCase().includes(q) ||
+        s.studentId.toLowerCase().includes(q) ||
+        s.emailPersonal.toLowerCase().includes(q)
+    );
+  }, [students, search]);
+
+  const periodColumns: ColumnsType<AdmissionPeriod> = [
+    {
+      title: "Tên đợt",
+      dataIndex: "name",
+      key: "name",
+      render: (text) => <Text strong>{text}</Text>,
+    },
+    {
+      title: "Thời gian",
+      key: "time",
+      render: (_, record) => (
+        <Text type="secondary">
+          {dayjs(record.startDate).format("DD/MM/YYYY")} - {dayjs(record.endDate).format("DD/MM/YYYY")}
+        </Text>
+      ),
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      render: (status: string) => (
+        <Badge status={status === "active" ? "processing" : "default"}
+          text={status === "active" ? <Tag color="blue">Đang mở</Tag> : <Tag color="default">Đã khóa</Tag>} />
+      ),
+    },
+    {
+      title: "Thao tác",
+      key: "action",
+      align: "center",
+      render: (_, record) => (
+        <Space size="middle">
+          <Tooltip title="Xem chi tiết">
+            <Button
+              type="primary"
+              shape="circle"
+              ghost
+              icon={<EyeOutlined />}
+              onClick={() => {
+                navigate(`/technician/manage/${record.id}`);
+              }}
+            />
+          </Tooltip>
+          <Tooltip title={record.status === "active" ? "Khóa" : "Mở"}>
+            <Popconfirm
+              title={record.status === "active" ? "Khóa đợt này?" : "Mở đợt này?"}
+              onConfirm={() => toggleStatus(record)}
+            >
+              <Button
+                shape="circle"
+                type="default"
+                danger={record.status === "active"}
+                icon={record.status === "active" ? <LockOutlined /> : <UnlockOutlined />}
+              />
+            </Popconfirm>
+          </Tooltip>
+          <Tooltip title="Xóa đợt">
+            <Popconfirm
+              title="Bạn có chắc muốn xóa đợt này?"
+              description="Lưu ý: Không thể xóa đợt nếu đã có sinh viên tồn tại."
+              onConfirm={() => handleDeletePeriod(record.id)}
+              okButtonProps={{ danger: true }}
+            >
+              <Button
+                type="primary"
+                danger
+                shape="circle"
+                ghost
+                icon={<DeleteOutlined />}
+              />
+            </Popconfirm>
+          </Tooltip>
+        </Space>
+      ),
+    },
+  ];
+
+  const studentColumns: ColumnsType<AdmissionStudent> = [
+    { title: "MSSV", dataIndex: "studentId", key: "studentId", width: 100 },
+    { title: "Họ và tên", dataIndex: "fullName", key: "fullName", width: 180 },
+    { title: "Khóa", dataIndex: "className", key: "className", width: 100 },
+    { title: "Ngành", dataIndex: "major", key: "major", width: 180 },
+    {
+      title: "Người duyệt",
+      key: "admissionApprovedBy",
+      width: 150,
+      render: (_, s) => s.graduationType === "Đang học" ? s.admissionApprovedBy || "N/A" : "N/A"
+    },
+    {
+      title: "Thời gian duyệt",
+      key: "admissionApprovedAt",
+      width: 180,
+      render: (_, s) => s.graduationType === "Đang học" && s.admissionApprovedAt
+        ? dayjs(s.admissionApprovedAt).format("HH:mm DD/MM/YYYY")
+        : "N/A"
+    },
+    {
+      title: () => (
+        <Tooltip title="Trạng thái gửi email thông báo nhập học">
+          <Space size={4}><MailOutlined /> Email</Space>
+        </Tooltip>
+      ),
+      key: "isNotified",
+      width: 90,
+      align: "center" as const,
+      render: (_, s) => s.isNotified
+        ? <Tooltip title="Đã gửi email thông báo nhập học"><SendOutlined style={{ color: '#52c41a', fontSize: 16 }} /></Tooltip>
+        : <Tooltip title="Chưa gửi email thông báo"><StopOutlined style={{ color: '#bfbfbf', fontSize: 16 }} /></Tooltip>
+    },
+    {
+      title: "Trạng thái",
+      key: "status",
+      width: 150,
+      render: (_, s) => (
+        <Space>
+          {s.graduationType === "Đang học" ? (
+            <Tag color="success" icon={<CheckCircleOutlined />}>Hoàn tất</Tag>
+          ) : (
+            <Tag color="warning" icon={<ClockCircleOutlined />}>Đang nhập học</Tag>
+          )}
+          {s.isPhysicalDocSubmitted && <Tooltip title="Đã nộp hồ sơ giấy"><FileDoneOutlined style={{ color: '#52c41a' }} /></Tooltip>}
+        </Space>
+      )
+    },
+  ];
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+
+  const renderStats = () => {
+    if (!stats) return null;
+    return (
+      <Space direction="vertical" style={{ width: '100%', marginBottom: 24 }} size="large">
+        <Card bordered={false} className="shadow-sm" style={{ borderRadius: 12, background: '#fafafa' }}>
+          <Row gutter={[16, 24]} align="middle">
+            <Col xs={24} md={8}>
+              <div>
+                <Title level={4} style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <BarChartOutlined style={{ color: '#1890ff' }} />
+                  Báo cáo & Thống kê
+                </Title>
+                <Text type="secondary" style={{ fontSize: 13 }}>Phân tích tiến độ nhập học theo thời gian</Text>
+              </div>
+            </Col>
+            <Col xs={24} md={16}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <CalendarOutlined style={{ color: '#8c8c8c' }} />
+                  <Text strong style={{ fontSize: 13, color: '#595959' }}>Ngày tạo hồ sơ:</Text>
+                </div>
+                <Space wrap>
+                  <DatePicker.RangePicker
+                    value={statDateRange}
+                    onChange={(val) => {
+                      setStatDateRange(val as any);
+                    }}
+                    format="DD/MM/YYYY"
+                    placeholder={['Từ ngày', 'Đến ngày']}
+                    style={{ borderRadius: 6, width: 280 }}
+                    allowClear={false}
+                  />
+                  <Button
+                    icon={<SyncOutlined />}
+                    type="link"
+                    size="small"
+                    style={{ color: '#8c8c8c' }}
+                    onClick={() => {
+                      setStatDateRange(null);
+                    }}
+                  >
+                    Mặc định
+                  </Button>
+                </Space>
+              </div>
+            </Col>
+          </Row>
+        </Card>
+
+        <Spin spinning={isStatsFetching} tip="Đang cập nhật thống kê...">
+          <div style={{ minHeight: '400px' }}>
+            {stats ? (
+              <>
+                <Row gutter={[16, 16]}>
+                  <Col xs={24} sm={8}>
+                    <Card bordered={false} className="shadow-sm" style={{ height: '100%' }}>
+                      <Statistic
+                        title="Tổng sinh viên đợt"
+                        value={stats.totalStudents}
+                        prefix={<TeamOutlined style={{ color: '#1890ff' }} />}
+                      />
+                      <div style={{ marginTop: 8 }}><Text type="secondary">Tất cả hồ sơ</Text></div>
+                    </Card>
+                  </Col>
+                  <Col xs={24} sm={8}>
+                    <Card bordered={false} className="shadow-sm" style={{ height: '100%' }}>
+                      <Statistic title="Đã hoàn tất" value={stats.completedAdmissions} valueStyle={{ color: '#52c41a' }} prefix={<CheckCircleOutlined />} />
+                      <div style={{ marginTop: 8 }}><Text type="secondary">Tỉ lệ: {stats.totalStudents ? Math.round((stats.completedAdmissions / stats.totalStudents) * 100) : 0}%</Text></div>
+                    </Card>
+                  </Col>
+                  <Col xs={24} sm={8}>
+                    <Card bordered={false} className="shadow-sm" style={{ height: '100%' }}>
+                      <Statistic title="Đang chờ duyệt" value={stats.pendingAdmissions} valueStyle={{ color: '#faad14' }} prefix={<ClockCircleOutlined />} />
+                      <div style={{ marginTop: 8 }}><Text type="secondary">Đang nhập học</Text></div>
+                    </Card>
+                  </Col>
+                </Row>
+
+                <Row gutter={[16, 16]}>
+                  <Col xs={24} lg={16}>
+                    <Card title="Thống kê sinh viên theo ngành (Top 5)" bordered={false} className="shadow-sm">
+                      <div style={{ width: '100%', height: 350 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={stats.byMajor}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                            <XAxis
+                              dataKey="major"
+                              angle={-45}
+                              textAnchor="end"
+                              interval={0}
+                              height={80}
+                              tick={{ fontSize: 12 }}
+                            />
+                            <YAxis allowDecimals={false} />
+                            <RechartsTooltip
+                              cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
+                              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                            />
+                            <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={40}>
+                              {stats.byMajor?.map((_: any, index: any) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </Card>
+                  </Col>
+                  <Col xs={24} lg={8}>
+                    <Card title="Tỉ lệ theo chương trình đào tạo" bordered={false} className="shadow-sm">
+                      <div style={{ width: '100%', height: 350 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={stats.byCtdt}
+                              innerRadius={60}
+                              outerRadius={80}
+                              paddingAngle={5}
+                              dataKey="count"
+                              nameKey="name"
+                              label={({ percent }) => `${((percent || 0) * 100).toFixed(1)}%`}
+                            >
+                              {stats.byCtdt?.map((_: any, index: any) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                              ))}
+                            </Pie>
+                            <RechartsTooltip
+                              formatter={(value: any, name: any, props: any) => [
+                                `${value} sinh viên`,
+                                props?.payload?.fullName || name
+                              ]}
+                            />
+                            <Legend formatter={(value: any, entry: any) => entry?.payload?.fullName || value} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </Card>
+                  </Col>
+                </Row>
+              </>
+            ) : (
+              <div style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Text type="secondary">Chưa có dữ liệu thống kê cho khoảng thời gian này</Text>
+              </div>
+            )}
+          </div>
+        </Spin>
+      </Space>
+    );
+  };
+
+  return (
+    <div style={{ padding: "0 8px" }}>
+      {viewMode === "list" ? (
+        <div animate-fade-in>
+          <Row align="middle" justify="space-between" style={{ marginBottom: 24 }}>
+            <Col>
+              <Space align="center" size="large">
+                <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} style={{ fontSize: 18 }} />
+                <div>
+                  <Title level={3} style={{ margin: 0 }}>Quản lý nhập học</Title>
+                  <Text type="secondary">Danh sách các đợt nhập học của nhà trường</Text>
+                </div>
+              </Space>
+            </Col>
+            <Col>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                size="large"
+                onClick={() => setIsModalOpen(true)}
+                style={{ borderRadius: 8 }}
+              >
+                Tạo đợt mới
+              </Button>
+            </Col>
+          </Row>
+
+          <Card bordered={false} style={{ borderRadius: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
+            <Table
+              columns={periodColumns}
+              dataSource={periods}
+              rowKey="id"
+              loading={periodLoading}
+              pagination={{ pageSize: 10 }}
+            />
+          </Card>
+        </div>
+      ) : (
+        <div animate-fade-in>
+          <Row align="middle" justify="space-between" style={{ marginBottom: 24 }}>
+            <Col>
+              <Space align="center" size="large">
+                <Button type="text" icon={<ArrowLeftOutlined />} onClick={() => navigate("/technician/manage")} style={{ fontSize: 18 }} />
+                <div>
+                  <Title level={3} style={{ margin: 0 }}>{selectedPeriod?.name || "Đang tải..."}</Title>
+                  <Text type="secondary">Chi tiết tiến độ và quản lý sinh viên trong đợt</Text>
+                </div>
+              </Space>
+            </Col>
+            <Col>
+              <Space>
+                <Popover
+                  title={
+                    <Space>
+                      <InfoCircleOutlined style={{ color: '#1890ff' }} />
+                      <span style={{ fontWeight: 600 }}>Hướng dẫn định dạng file Excel</span>
+                    </Space>
+                  }
+                  content={
+                    <div style={{ maxWidth: 380 }}>
+                      <p style={{ margin: '0 0 8px', color: '#595959' }}>
+                        File Excel (.xlsx/.xls) cần có các cột theo đúng thứ tự sau:
+                      </p>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                        <thead>
+                          <tr style={{ background: '#f0f5ff' }}>
+                            <th style={{ padding: '6px 10px', border: '1px solid #d9d9d9', textAlign: 'left' }}>Cột</th>
+                            <th style={{ padding: '6px 10px', border: '1px solid #d9d9d9', textAlign: 'left' }}>Tên cột (header)</th>
+                            <th style={{ padding: '6px 10px', border: '1px solid #d9d9d9', textAlign: 'left' }}>Ví dụ</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[
+                            ['A', 'MSSV', '22110001'],
+                            ['B', 'Họ và tên', 'Nguyễn Văn A'],
+                            ['C', 'Email cá nhân', 'nguyenvana@gmail.com'],
+                            ['D', 'Ngành', 'Công nghệ thông tin'],
+                            ['E', 'Khóa', '2022'],
+                          ].map(([col, name, ex]) => (
+                            <tr key={col}>
+                              <td style={{ padding: '5px 10px', border: '1px solid #d9d9d9', fontWeight: 600, color: '#1890ff' }}>{col}</td>
+                              <td style={{ padding: '5px 10px', border: '1px solid #d9d9d9' }}>{name}</td>
+                              <td style={{ padding: '5px 10px', border: '1px solid #d9d9d9', color: '#8c8c8c' }}>{ex}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <Divider style={{ margin: '10px 0' }} />
+                      <p style={{ margin: 0, fontSize: 12, color: '#8c8c8c' }}>
+                        ⚠️ Dòng đầu tiên là <b>header</b>. Dữ liệu bắt đầu từ dòng 2. Không để ô trống ở cột MSSV và Email.
+                      </p>
+                      <Divider style={{ margin: '10px 0' }} />
+                      <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: 13 }}>Ký hiệu trong danh sách:</p>
+                      <Space direction="vertical" size={4}>
+                        <Space size={6}>
+                          <SendOutlined style={{ color: '#52c41a', fontSize: 14 }} />
+                          <span style={{ fontSize: 12 }}>Đã gửi email thông báo nhập học</span>
+                        </Space>
+                        <Space size={6}>
+                          <StopOutlined style={{ color: '#bfbfbf', fontSize: 14 }} />
+                          <span style={{ fontSize: 12 }}>Chưa gửi email thông báo</span>
+                        </Space>
+                        <Space size={6}>
+                          <FileDoneOutlined style={{ color: '#52c41a', fontSize: 14 }} />
+                          <span style={{ fontSize: 12 }}>Đã nộp hồ sơ giấy</span>
+                        </Space>
+                      </Space>
+                    </div>
+                  }
+                  trigger="click"
+                  placement="bottomRight"
+                >
+                  <Button icon={<InfoCircleOutlined />} style={{ color: '#1890ff', borderColor: '#1890ff' }}>
+                    Hướng dẫn
+                  </Button>
+                </Popover>
+                <Upload beforeUpload={handleUpload} showUploadList={false} accept=".xlsx,.xls">
+                  <Button icon={<UploadOutlined />} loading={isUploading}>Bổ sung sinh viên (Excel)</Button>
+                </Upload>
+                <Popconfirm
+                  title="Gửi thông báo?"
+                  onConfirm={handleNotify}
+                >
+                  <Button type="primary" icon={<MailOutlined />} loading={isNotifyLoading} disabled={selectedPeriod?.status === "locked"}>
+                    Thông báo tất cả
+                  </Button>
+                </Popconfirm>
+              </Space>
+            </Col>
+          </Row>
+
+          <Tabs
+            defaultActiveKey="1"
+            items={[
+              {
+                key: "1",
+                label: (
+                  <span>
+                    <TeamOutlined /> Danh sách sinh viên
+                  </span>
+                ),
+                children: (
+                  <>
+                    {renderStats()}
+                    <Card bordered={false} style={{ borderRadius: 12 }}>
+                      <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <Title level={5} style={{ margin: 0 }}>Danh sách sinh viên ({filteredStudents.length})</Title>
+                        <Search
+                          placeholder="MSSV / Tên / Email"
+                          style={{ width: 300 }}
+                          onChange={(e) => setSearch(e.target.value)}
+                          allowClear
+                        />
+                      </div>
+                      <Table
+                        onRow={(record) => ({
+                          onClick: () => {
+                            setCurrentStudentId(record.studentId);
+                            setIsStudentModalOpen(true);
+                          },
+                          style: { cursor: 'pointer' }
+                        })}
+                        columns={studentColumns}
+                        dataSource={filteredStudents}
+                        rowKey="studentId"
+                        loading={studentLoading}
+                        pagination={{ pageSize: 10, showSizeChanger: true }}
+                        scroll={{ x: 1000 }}
+                      />
+                    </Card>
+                  </>
+                )
+              },
+              {
+                key: "2",
+                label: (
+                  <span>
+                    <SolutionOutlined /> Công tác nhập học
+                  </span>
+                ),
+                children: (
+                  <div style={{ padding: '8px 0' }}>
+                    <Row gutter={[24, 24]}>
+                      <Col xs={24} md={searchedStudent ? 8 : 24}>
+                        <Card bordered={false} className="shadow-sm">
+                          <Title level={4}>Tra cứu sinh viên</Title>
+                          <Text type="secondary">Nhập mã số sinh viên để kiểm tra tiến độ và thực hiện thao tác nhanh</Text>
+                          <div style={{ marginTop: 24, display: 'flex', gap: '8px' }}>
+                            <Search
+                              placeholder="Nhập MSSV (VD: 20110...)"
+                              enterButton="Tìm kiếm"
+                              size="large"
+                              value={searchId}
+                              onChange={(e) => setSearchId(e.target.value)}
+                              onSearch={handleSearchStudent}
+                              loading={searching}
+                            />
+                            <Button
+                              icon={<ScanOutlined />}
+                              size="large"
+                              onClick={() => setIsScannerOpen(true)}
+                              title="Quét mã QR"
+                            />
+                          </div>
+                        </Card>
+
+                        <Modal
+                          title="Quét mã QR từ camera"
+                          open={isScannerOpen}
+                          onCancel={() => setIsScannerOpen(false)}
+                          footer={null}
+                          destroyOnClose
+                          width={400}
+                        >
+                          <QRScanner
+                            messageApi={messageApi}
+                            onScan={(text) => {
+                              setSearchId(text);
+                              setIsScannerOpen(false);
+                              handleSearchStudent(text);
+                            }}
+                          />
+                          <div style={{ marginTop: 16, textAlign: 'center' }}>
+                            <Text type="secondary">Vui lòng đưa mã QR vào khung hình để quét</Text>
+                          </div>
+                        </Modal>
+
+                        {searchedStudent && (
+                          <Card bordered={false} className="shadow-sm" style={{ marginTop: 24 }}>
+                            <div style={{ textAlign: 'center' }}>
+                              <div style={{
+                                width: 120,
+                                height: 160,
+                                margin: '0 auto 16px',
+                                border: '1px solid #f0f0f0',
+                                borderRadius: 8,
+                                overflow: 'hidden',
+                                backgroundColor: '#fafafa'
+                              }}>
+                                {searchedStudent.avatar ? (
+                                  <img src={searchedStudent.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                  <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bfbfbf' }}>
+                                    <UserOutlined style={{ fontSize: 48 }} />
+                                  </div>
+                                )}
+                              </div>
+                              <Title level={4} style={{ marginBottom: 4 }}>{searchedStudent.fullName}</Title>
+                              <Tag color="blue">{searchedStudent.studentId}</Tag>
+                            </div>
+                            <Divider />
+                            <Descriptions column={1} size="small" bordered>
+                              <Descriptions.Item label="Khóa">{searchedStudent.className}</Descriptions.Item>
+                              <Descriptions.Item label="Ngành">{searchedStudent.major}</Descriptions.Item>
+                              <Descriptions.Item label="Ngày sinh">{searchedStudent.dateOfBirth ? dayjs(searchedStudent.dateOfBirth).format("DD/MM/YYYY") : "N/A"}</Descriptions.Item>
+                              <Descriptions.Item label="CCCD">{searchedStudent.idCard || searchedStudent.idCardNumber || "N/A"}</Descriptions.Item>
+                              <Descriptions.Item label="SĐT">{searchedStudent.phone || searchedStudent.phoneNumber || "N/A"}</Descriptions.Item>
+                              <Descriptions.Item label="Email">{searchedStudent.emailPersonal || "N/A"}</Descriptions.Item>
+                            </Descriptions>
+                            {!students.find((s: AdmissionStudent) => s.studentId === searchedStudent.studentId) && (
+                              <div style={{ marginTop: 12 }}>
+                                <Tag color="error">Sinh viên không thuộc đợt này</Tag>
+                              </div>
+                            )}
+                          </Card>
+                        )}
+                      </Col>
+
+                      {displaySearchedStudent && (
+                        <Col xs={24} md={16}>
+                          <Card title="Tiến độ & Thao tác nhanh" bordered={false} className="shadow-sm">
+                            <div style={{ padding: '20px', background: '#f8f9fa', borderRadius: '12px', border: '1px solid #f0f0f0', marginBottom: 24 }}>
+                              <Steps
+                                direction="vertical"
+                                size="small"
+                                current={
+                                  displaySearchedStudent.graduationType === "Đang học"
+                                    ? 3
+                                    : displaySearchedStudent.isPhysicalDocSubmitted
+                                      ? 2
+                                      : displaySearchedStudent.hasExportedFiles
+                                        ? 1
+                                        : displaySearchedStudent.user?.isFirstLogin === false
+                                          ? 1
+                                          : 0
+                                }
+                                items={[
+                                  {
+                                    title: '1. Kích hoạt tài khoản',
+                                    description: (
+                                      <div style={{ marginTop: 4 }}>
+                                        {displaySearchedStudent.user?.isFirstLogin === false ? (
+                                          <Tag color="success">Đã hoàn thành: Sinh viên đã đăng nhập thành công.</Tag>
+                                        ) : (
+                                          <Tag color="default">Chưa hoàn thành: Chờ sinh viên đăng nhập.</Tag>
+                                        )}
+                                      </div>
+                                    ),
+                                    icon: <UserOutlined />,
+                                  },
+                                  {
+                                    title: '2. Hồ sơ online',
+                                    description: (
+                                      <div style={{ marginTop: 4 }}>
+                                        {displaySearchedStudent.hasExportedFiles ? (
+                                          <Tag color="success">Đã hoàn thành: Đã điền thông tin và xuất PDF.</Tag>
+                                        ) : (
+                                          <Tag color="default">Chưa hoàn thành: Chờ hoàn thiện hồ sơ online.</Tag>
+                                        )}
+                                      </div>
+                                    ),
+                                    icon: <FileTextOutlined />,
+                                  },
+                                  {
+                                    title: '3. Hồ sơ giấy',
+                                    description: (
+                                      <div style={{ marginTop: 4 }}>
+                                        {displaySearchedStudent.isPhysicalDocSubmitted ? (
+                                          <Tag color="success">Đã hoàn thành: Đã tiếp nhận hồ sơ bản cứng.</Tag>
+                                        ) : (
+                                          <Tag color="default">Chưa hoàn thành: Đang chờ tiếp nhận hồ sơ giấy.</Tag>
+                                        )}
+                                      </div>
+                                    ),
+                                    icon: <SolutionOutlined />,
+                                  },
+                                ]}
+                              />
+                            </div>
+
+                            <Row gutter={[16, 16]}>
+                              <Col span={12}>
+                                <Button
+                                  block
+                                  size="large"
+                                  icon={<SolutionOutlined />}
+                                  onClick={() => openChecklistModal(displaySearchedStudent)}
+                                  type="primary"
+                                  disabled={displaySearchedStudent.graduationType === "Đang học"}
+                                >
+                                  Kiểm tra hồ sơ giấy
+                                </Button>
+                              </Col>
+                              <Col span={12}>
+                                {displaySearchedStudent.graduationType !== "Đang học" ? (
+                                  <Popconfirm
+                                    title="Xác nhận hoàn tất nhập học?"
+                                    onConfirm={() => handleFinalize(displaySearchedStudent.studentId)}
+                                    disabled={!displaySearchedStudent.isPhysicalDocSubmitted}
+                                    okButtonProps={{ loading: isFinalizing }}
+                                  >
+                                    <Button
+                                      block
+                                      size="large"
+                                      type="primary"
+                                      icon={<AuditOutlined />}
+                                      style={{ background: '#52c41a', borderColor: '#52c41a' }}
+                                      disabled={!displaySearchedStudent.isPhysicalDocSubmitted}
+                                    >
+                                      Hoàn tất nhập học
+                                    </Button>
+                                  </Popconfirm>
+                                ) : (
+                                  <Popconfirm
+                                    title="Hủy xác nhận nhập học?"
+                                    description="Sinh viên sẽ chuyển lại trạng thái Đang nhập học."
+                                    onConfirm={() => handleCancelFinalize(displaySearchedStudent.studentId)}
+                                    okButtonProps={{ danger: true }}
+                                  >
+                                    <Button block size="large" danger icon={<LockOutlined />} loading={isCancelling}>
+                                      Hủy nhập học (🔴)
+                                    </Button>
+                                  </Popconfirm>
+                                )}
+                              </Col>
+                            </Row>
+
+                            {displaySearchedStudent.graduationType === "Đang học" && (
+                              <div style={{ marginTop: 24, padding: 16, background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 8 }}>
+                                <Text strong><CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8 }} /> Trạng thái: Đã hoàn tất nhập học</Text>
+                                <div style={{ marginTop: 8, fontSize: 13 }}>
+                                  <Text type="secondary">Cán bộ duyệt: </Text>
+                                  <Text strong>{displaySearchedStudent.admissionApprovedBy}</Text>
+                                  <br />
+                                  <Text type="secondary">Thời điểm duyệt: </Text>
+                                  <Text strong>{displaySearchedStudent.admissionApprovedAt ? dayjs(displaySearchedStudent.admissionApprovedAt).format("HH:mm DD/MM/YYYY") : "N/A"}</Text>
+                                </div>
+                              </div>
+                            )}
+                          </Card>
+                        </Col>
+                      )}
+                    </Row>
+                  </div>
+                )
+              }
+            ]}
+          />
+          <div style={{ marginTop: 16 }}>
+            <Card
+              bordered={false}
+              style={{ borderRadius: 12 }}
+              title={
+                <span>
+                  <FileDoneOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+                  Giấy tờ nhập học của đợt này
+                </span>
+              }
+              extra={
+                editingDocIds === null ? (
+                  <Button type="link" icon={<FilterOutlined />} onClick={() => {
+                    const current = (selectedPeriod as any)?.giayTos?.map((g: any) => g.id) || [];
+                    setEditingDocIds(current);
+                  }}>
+                    Chỉnh sửa
+                  </Button>
+                ) : (
+                  <Space>
+                    <Button onClick={() => setEditingDocIds(null)}>Hủy</Button>
+                    <Button
+                      type="primary"
+                      loading={isSavingDocs}
+                      onClick={async () => {
+                        if (!routeId) return;
+                        setIsSavingDocs(true);
+                        try {
+                          await updatePeriodDocuments(routeId, editingDocIds!);
+                          if (messageApi) messageApi.success('Đã lưu danh sách giấy tờ');
+                          setEditingDocIds(null);
+                          fetchPeriods();
+                        } catch {
+                          if (messageApi) messageApi.error('Lưu thất bại');
+                        } finally {
+                          setIsSavingDocs(false);
+                        }
+                      }}
+                    >
+                      Lưu
+                    </Button>
+                  </Space>
+                )
+              }
+            >
+              {editingDocIds === null ? (
+                <div style={{ minHeight: 48 }}>
+                  {((selectedPeriod as any)?.giayTos || []).length === 0 ? (
+                    <Text type="secondary">Chưa cấu hình giấy tờ cho đợt này. Nhấn "Chỉnh sửa" để thêm.</Text>
+                  ) : (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {((selectedPeriod as any)?.giayTos || []).map((g: any, idx: number) => (
+                        <Tag key={g.id} color="blue" style={{ fontSize: 13, padding: '4px 10px', borderRadius: 16 }}>
+                          {idx + 1}. {g.tenGiayTo}
+                        </Tag>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <Select
+                    mode="multiple"
+                    allowClear
+                    placeholder="Chọn các loại giấy tờ..."
+                    style={{ width: '100%' }}
+                    value={editingDocIds}
+                    onChange={(vals) => setEditingDocIds(vals)}
+                    options={allGiayTos.map(g => ({ label: g.tenGiayTo, value: g.id }))}
+                    filterOption={(input, option) =>
+                      (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+                    }
+                    dropdownRender={(menu) => (
+                      <>
+                        {menu}
+                        <Divider style={{ margin: '8px 0' }} />
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          style={{ padding: '4px 8px', cursor: 'pointer', color: '#1890ff', display: 'flex', alignItems: 'center', gap: 4 }}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setNewDocTargetForm("edit_card");
+                            setIsNewDocModalOpen(true);
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              setNewDocTargetForm("edit_card");
+                              setIsNewDocModalOpen(true);
+                            }
+                          }}
+                        >
+                          <PlusOutlined /> Thêm giấy tờ mới vào danh mục
+                        </div>
+                      </>
+                    )}
+                  />
+                  <Text type="secondary" style={{ fontSize: 12, marginTop: 8, display: 'block' }}>
+                    Các giấy tờ được chọn sẽ hiển thị trên Biên nhận hồ sơ của sinh viên trong đợt này.
+                  </Text>
+                </div>
+              )}
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Tạo đợt mới */}
+      <Modal
+        title="Tạo đợt nhập học mới"
+        open={isModalOpen}
+        onCancel={() => setIsModalOpen(false)}
+        footer={null}
+      >
+        <Form form={form} layout="vertical" onFinish={handleCreatePeriod} style={{ marginTop: 16 }}>
+          <Form.Item name="name" label="Tên đợt nhập học" rules={[{ required: true, message: "Nhập tên đợt" }]}>
+            <Input placeholder="Ví dụ: Nhập học Khóa 2024 - Đợt 1" />
+          </Form.Item>
+          <Form.Item name="range" label="Thời gian diễn ra" rules={[{ required: true, message: "Chọn thời gian" }]}>
+            <DatePicker.RangePicker format="DD/MM/YYYY" style={{ width: "100%" }} />
+          </Form.Item>
+
+          <Form.Item name="giayToIds" label="Cấu hình giấy tờ nộp (Biên nhận)">
+            <Select
+              mode="multiple"
+              allowClear
+              placeholder="Chọn các loại giấy tờ yêu cầu..."
+              style={{ width: '100%' }}
+              options={allGiayTos.map(g => ({ label: g.tenGiayTo, value: g.id }))}
+              filterOption={(input, option) =>
+                (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+              }
+              dropdownRender={(menu) => (
+                <>
+                  {menu}
+                  <Divider style={{ margin: '8px 0' }} />
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    style={{ padding: '4px 8px', cursor: 'pointer', color: '#1890ff', display: 'flex', alignItems: 'center', gap: 4 }}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setNewDocTargetForm("create_modal");
+                      setIsNewDocModalOpen(true);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        setNewDocTargetForm("create_modal");
+                        setIsNewDocModalOpen(true);
+                      }
+                    }}
+                  >
+                    <PlusOutlined /> Thêm giấy tờ mới vào danh mục
+                  </div>
+                </>
+              )}
+            />
+          </Form.Item>
+
+          <Form.Item style={{ marginBottom: 0, textAlign: "right" }}>
+            <Space>
+              <Button onClick={() => setIsModalOpen(false)}>Hủy</Button>
+              <Button type="primary" htmlType="submit" loading={isCreatingPeriod}>Xác nhận</Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Modal Quản lý Sinh viên */}
+      <Modal
+        title="Quản lý tiến độ sinh viên"
+        open={isStudentModalOpen}
+        onCancel={() => setIsStudentModalOpen(false)}
+        footer={null}
+        width={700}
+      >
+        {currentStudent && (
+          <Space direction="vertical" style={{ width: '100%' }} size="large">
+            <div style={{ display: 'flex', gap: '24px' }}>
+              <div style={{
+                width: 120,
+                height: 160,
+                border: '1px solid #f0f0f0',
+                borderRadius: 8,
+                overflow: 'hidden',
+                flexShrink: 0,
+                background: '#fafafa'
+              }}>
+                {currentStudent.avatar ? (
+                  <img src={currentStudent.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bfbfbf' }}>
+                    <UserOutlined style={{ fontSize: 32 }} />
+                  </div>
+                )}
+              </div>
+              <Descriptions bordered column={2} size="small" style={{ flex: 1 }}>
+                <Descriptions.Item label="Họ và tên" span={2}>{currentStudent.fullName}</Descriptions.Item>
+                <Descriptions.Item label="MSSV">{currentStudent.studentId}</Descriptions.Item>
+                <Descriptions.Item label="Khóa">{currentStudent.className}</Descriptions.Item>
+                <Descriptions.Item label="Ngành" span={2}>{currentStudent.major}</Descriptions.Item>
+                <Descriptions.Item label="Email" span={2}>{currentStudent.emailPersonal}</Descriptions.Item>
+              </Descriptions>
+            </div>
+
+            <div style={{ padding: '20px', background: '#f8f9fa', borderRadius: '12px', border: '1px solid #f0f0f0' }}>
+              <Title level={5} style={{ marginBottom: 20, fontSize: '14px', color: '#595959', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                Tiến độ & Thao tác
+              </Title>
+              <Steps
+                direction="vertical"
+                size="small"
+                current={
+                  currentStudent.graduationType === "Đang học"
+                    ? 3
+                    : currentStudent.isPhysicalDocSubmitted
+                      ? 2
+                      : currentStudent.hasExportedFiles
+                        ? 1
+                        : currentStudent.user?.isFirstLogin === false
+                          ? 1
+                          : 0
+                }
+                items={[
+                  {
+                    title: '1. Kích hoạt tài khoản',
+                    description: (
+                      <div style={{ marginTop: 4 }}>
+                        {currentStudent.user?.isFirstLogin === false ? (
+                          <Tag color="success">Đã hoàn thành: Sinh viên đã đăng nhập và đổi mật khẩu lần đầu.</Tag>
+                        ) : (
+                          <Tag color="default">Chưa hoàn thành: Chờ sinh viên đăng nhập hệ thống.</Tag>
+                        )}
+                      </div>
+                    ),
+                    icon: <UserOutlined />,
+                  },
+                  {
+                    title: '2. Nhập liệu hồ sơ online',
+                    description: (
+                      <div style={{ marginTop: 4 }}>
+                        {currentStudent.hasExportedFiles ? (
+                          <Tag color="success">Đã hoàn thành: Sinh viên đã điền đầy đủ thông tin và tải file PDF.</Tag>
+                        ) : (
+                          <Tag color="default">Chưa hoàn thành: Chờ sinh viên hoàn thiện thông tin và xuất hồ sơ.</Tag>
+                        )}
+                      </div>
+                    ),
+                    icon: <FileTextOutlined />,
+                  },
+                  {
+                    title: '3. Nộp hồ sơ giấy (Bản cứng)',
+                    description: (
+                      <div style={{ marginTop: 4 }}>
+                        {currentStudent.isPhysicalDocSubmitted ? (
+                          <Tag color="success">Đã hoàn thành: Nhà trường đã tiếp nhận và xác nhận bộ hồ sơ giấy.</Tag>
+                        ) : (
+                          <Tag color="default">Chưa hoàn thành: Đang chờ tiếp nhận hồ sơ trực tiếp tại văn phòng.</Tag>
+                        )}
+                        <div style={{ marginTop: 8 }}>
+                          <Button
+                            size="small"
+                            type="primary"
+                            icon={<SolutionOutlined />}
+                            onClick={() => openChecklistModal(currentStudent)}
+                            disabled={currentStudent.graduationType === "Đang học"}
+                          >
+                            Kiểm tra hồ sơ giấy
+                          </Button>
+                        </div>
+                      </div>
+                    ),
+                    icon: <SolutionOutlined />,
+                  },
+                ]}
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              {currentStudent.graduationType !== "Đang học" ? (
+                <Popconfirm
+                  title="Duyệt hoàn tất nhập học?"
+                  description="Sinh viên sẽ chính thức chuyển sang trạng thái Đang học."
+                  onConfirm={() => handleFinalize(currentStudent.studentId)}
+                  disabled={!currentStudent.isPhysicalDocSubmitted}
+                >
+                  <Button
+                    type="primary"
+                    size="large"
+                    icon={<AuditOutlined />}
+                    style={{ background: '#52c41a', borderColor: '#52c41a' }}
+                    disabled={!currentStudent.isPhysicalDocSubmitted}
+                  >
+                    Xác nhận hoàn tất nhập học
+                  </Button>
+                </Popconfirm>
+              ) : (
+                <div style={{ width: '100%' }}>
+                  <div style={{ padding: 16, background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 8, marginBottom: 16 }}>
+                    <Text strong><CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8 }} /> Trạng thái: Đã hoàn tất nhập học</Text>
+                    <div style={{ marginTop: 8, fontSize: 13 }}>
+                      <Text type="secondary">Cán bộ duyệt: </Text>
+                      <Text strong>{currentStudent.admissionApprovedBy}</Text>
+                      <br />
+                      <Text type="secondary">Thời điểm duyệt: </Text>
+                      <Text strong>{currentStudent.admissionApprovedAt ? dayjs(currentStudent.admissionApprovedAt).format("HH:mm DD/MM/YYYY") : "N/A"}</Text>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <Popconfirm
+                      title="Bạn có chắc muốn hủy nhập học?"
+                      description="Hành động này sẽ đưa sinh viên quay lại trạng thái Đang nhập học."
+                      onConfirm={() => handleCancelFinalize(currentStudent.studentId)}
+                      okButtonProps={{ danger: true }}
+                    >
+                      <Button type="primary" danger icon={<LockOutlined />} loading={isCancelling}>
+                        Hủy nhập học (🔴)
+                      </Button>
+                    </Popconfirm>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Space>
+        )}
+      </Modal>
+
+      {/* Modal Thêm giấy tờ mẫu mới (Premium design) */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1a73e8' }}>
+            <FileDoneOutlined style={{ fontSize: '20px' }} />
+            <span style={{ fontSize: '18px', fontWeight: 600 }}>Thêm giấy tờ mới vào danh mục mẫu</span>
+          </div>
+        }
+        open={isNewDocModalOpen}
+        onCancel={() => {
+          setIsNewDocModalOpen(false);
+          newDocForm.resetFields();
+        }}
+        footer={null}
+        width={500}
+        destroyOnClose
+      >
+        <Form
+          form={newDocForm}
+          layout="vertical"
+          onFinish={handleCreateNewDoc}
+          style={{ marginTop: 20 }}
+        >
+          <Form.Item
+            name="tenGiayTo"
+            label={<Text strong>Tên loại giấy tờ</Text>}
+            rules={[{ required: true, message: "Vui lòng nhập tên giấy tờ" }]}
+          >
+            <Input placeholder="Ví dụ: Giấy chứng nhận tốt nghiệp THPT tạm thời..." size="large" />
+          </Form.Item>
+
+          <Form.Item
+            name="moTa"
+            label={<Text strong>Mô tả / Yêu cầu chi tiết (Tùy chọn)</Text>}
+          >
+            <Input.TextArea
+              placeholder="Mô tả hướng dẫn sinh viên chuẩn bị (ví dụ: Bản sao công chứng, photo 2 mặt...)"
+              rows={3}
+            />
+          </Form.Item>
+
+          <Form.Item style={{ marginBottom: 0, textAlign: "right", marginTop: 24 }}>
+            <Space size="middle">
+              <Button
+                onClick={() => {
+                  setIsNewDocModalOpen(false);
+                  newDocForm.resetFields();
+                }}
+                size="large"
+              >
+                Hủy bỏ
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={isCreatingNewDoc}
+                size="large"
+                style={{ background: '#1a73e8', borderColor: '#1a73e8' }}
+              >
+                Thêm vào danh mục
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Modal Checklist Hồ sơ giấy (Premium design) */}
+      <Modal
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1890ff' }}>
+            <SolutionOutlined style={{ fontSize: '22px' }} />
+            <span style={{ fontSize: '18px', fontWeight: 600 }}>Kiểm tra & Tiếp nhận Hồ sơ giấy</span>
+          </div>
+        }
+        open={isChecklistModalOpen}
+        onCancel={() => setIsChecklistModalOpen(false)}
+        footer={null}
+        width={600}
+        destroyOnClose
+      >
+        <Spin spinning={isLoadingChecklist}>
+          {checklistStudent && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: 8, marginBottom: 16, border: '1px solid #e2e8f0' }}>
+                <Row gutter={[16, 8]}>
+                  <Col span={12}>
+                    <Text type="secondary">Sinh viên: </Text>
+                    <Text strong>{checklistStudent.fullName}</Text>
+                  </Col>
+                  <Col span={12}>
+                    <Text type="secondary">MSSV: </Text>
+                    <Text strong>{checklistStudent.studentId}</Text>
+                  </Col>
+                  <Col span={24}>
+                    <Text type="secondary">Ngành: </Text>
+                    <Text strong>{checklistStudent.major}</Text>
+                  </Col>
+                </Row>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <Text strong style={{ fontSize: 15 }}>Danh sách giấy tờ cần nộp:</Text>
+                {requiredDocs.length > 0 && (
+                  <div>
+                    {requiredDocs.every(d => submittedDocIds.includes(d.id)) ? (
+                      <Tag color="success" style={{ fontSize: 13, padding: '4px 8px', borderRadius: 4 }}>
+                        Đầy đủ hồ sơ (✓)
+                      </Tag>
+                    ) : (
+                      <Tag color="warning" style={{ fontSize: 13, padding: '4px 8px', borderRadius: 4 }}>
+                        Còn thiếu ({requiredDocs.filter(d => !submittedDocIds.includes(d.id)).length} / {requiredDocs.length})
+                      </Tag>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {requiredDocs.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '24px 0', background: '#fafafa', borderRadius: 8, border: '1px dashed #d9d9d9' }}>
+                  <Text type="secondary">Đợt nhập học này chưa cấu hình danh mục giấy tờ yêu cầu.</Text>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 350, overflowY: 'auto', paddingRight: 4 }}>
+                  {requiredDocs.map((doc: any, index: number) => {
+                    const isChecked = submittedDocIds.includes(doc.id);
+                    return (
+                      <div
+                        key={doc.id}
+                        role="checkbox"
+                        tabIndex={0}
+                        onClick={() => {
+                          if (isChecked) {
+                            setSubmittedDocIds(prev => prev.filter(id => id !== doc.id));
+                          } else {
+                            setSubmittedDocIds(prev => [...prev, doc.id]);
+                          }
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            if (isChecked) {
+                              setSubmittedDocIds(prev => prev.filter(id => id !== doc.id));
+                            } else {
+                              setSubmittedDocIds(prev => [...prev, doc.id]);
+                            }
+                          }
+                        }}
+                        style={{
+                          padding: '12px 16px',
+                          border: isChecked ? '1px solid #91d5ff' : '1px solid #f0f0f0',
+                          borderRadius: 8,
+                          backgroundColor: isChecked ? '#e6f7ff' : '#ffffff',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: 12,
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <Checkbox
+                          checked={isChecked}
+                          style={{ marginTop: 2 }}
+                          onChange={() => { }}
+                        />
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <Text strong={isChecked} style={{ color: isChecked ? '#1890ff' : 'inherit', fontSize: 14 }}>
+                            {index + 1}. {doc.tenGiayTo}
+                          </Text>
+                          {doc.moTa && (
+                            <Text type="secondary" style={{ fontSize: 12, marginTop: 4 }}>
+                              {doc.moTa}
+                            </Text>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div style={{ textAlign: 'right', marginTop: 24, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
+                <Space>
+                  <Button onClick={() => setIsChecklistModalOpen(false)}>Hủy</Button>
+                  <Button
+                    type="primary"
+                    loading={isSavingChecklist}
+                    onClick={handleSaveChecklist}
+                    style={{ background: '#1890ff', borderColor: '#1890ff' }}
+                  >
+                    Lưu kết quả
+                  </Button>
+                </Space>
+              </div>
+            </div>
+          )}
+        </Spin>
+      </Modal>
+    </div>
+  );
+}
+
